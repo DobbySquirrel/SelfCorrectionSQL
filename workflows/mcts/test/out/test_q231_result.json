@@ -1,0 +1,724 @@
+{
+  "231": {
+    "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY cnt DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT bc.bond_type, mi.carcinogenic\nFROM bond_counts bc\nCROSS JOIN molecule_info mi;",
+    "stats": {
+      "average_reward": 0.65,
+      "total_visits": 4,
+      "timing": {
+        "total_s": 1000.199136018753,
+        "rollout_s": 858.1992409229279,
+        "cte_gen_s": 118.4024555683136,
+        "sql_gen_s": 830.4397113323212,
+        "db_exec_s": 47.14690804481506,
+        "rollout_count": 4
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T.bond_type FROM ( SELECT T1.bond_type, COUNT(T1.molecule_id) FROM bond AS T1  WHERE T1.molecule_id = 'TR010' GROUP BY T1.bond_type ORDER BY COUNT(T1.molecule_id) DESC LIMIT 1 ) AS T"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.6,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "cte_buckets_per_node": [],
+        "leaf_depth": 0,
+        "leaf_visit_count": 0,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH bond_counts AS (\n    SELECT \n        bond_type, \n        COUNT(*) AS bond_count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT \n    bc.bond_type, \n    bc.bond_count,\n    (SELECT CASE WHEN m.label LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END \n     FROM molecule m \n     WHERE m.molecule_id = 'TR010') AS is_carcinogenic\nFROM bond_counts bc\nORDER BY bc.bond_count DESC\nLIMIT 1;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT \n    (SELECT bond_type FROM (SELECT bond_type, COUNT(*) AS cnt FROM bond WHERE molecule_id = 'TR010' GROUP BY bond_type ORDER BY cnt DESC LIMIT 1) AS max_bond) AS majority_bond_type,\n    (SELECT CASE WHEN label LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_28f9cfe74aec9293b4b678fb27f2bf57",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT \n        bond_type, \n        COUNT(*) AS bond_count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT \n    bc.bond_type, \n    bc.bond_count,\n    (SELECT CASE WHEN m.label LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END \n     FROM molecule m \n     WHERE m.molecule_id = 'TR010') AS is_carcinogenic\nFROM bond_counts bc\nORDER BY bc.bond_count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_0b44ecd4d09ca42a3dd2aa62c113993f",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    `bond_type`, \n    COUNT(*) AS `bond_count`,\n    CASE \n        WHEN `molecule`.`label` LIKE '%carcinogenic%' THEN 'Yes' \n        ELSE 'No' \n    END AS `is_carcinogenic`\nFROM `bond`\nJOIN `molecule` ON `bond`.`molecule_id` = `molecule`.`molecule_id`\nWHERE `molecule`.`molecule_id` = 'TR010'\nGROUP BY `bond_type`\nORDER BY `bond_count` DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_0b44ecd4d09ca42a3dd2aa62c113993f",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS bond_count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT bc.bond_type, bc.bond_count, \n       CASE WHEN m.label LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END AS is_carcinogenic\nFROM bond_counts bc\nCROSS JOIN molecule m\nWHERE m.molecule_id = 'TR010'\nORDER BY bc.bond_count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_0b44ecd4d09ca42a3dd2aa62c113993f",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    `bond_type`, \n    (SELECT `label` FROM `molecule` WHERE `molecule_id` = 'TR010') AS `label`, \n    (SELECT CASE WHEN `label` LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END FROM `molecule` WHERE `molecule_id` = 'TR010') AS `is_carcinogenic`\nFROM `bond`\nWHERE `molecule_id` = 'TR010'\nGROUP BY `bond_type`\nORDER BY COUNT(*) DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_0fc2c1f1fe041dab6fb361806b68d5a7",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_28f9cfe74aec9293b4b678fb27f2bf57": 1,
+          "1_3_0b44ecd4d09ca42a3dd2aa62c113993f": 3,
+          "1_3_0fc2c1f1fe041dab6fb361806b68d5a7": 1
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 0,
+        "is_quick_path": true
+      },
+      {
+        "reward": 0.4,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+          "WITH t_charcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcinogenic;",
+          "WITH final_answer AS (\n    SELECT bond_type, count, CASE WHEN count = (SELECT MAX(count) FROM t_bond_counts) THEN 'Yes' ELSE 'No' END AS is_majority\n    FROM t_bond_counts\n)\nSELECT * FROM final_answer;",
+          "WITH t_final AS (\n    SELECT f.bond_type, f.count, f.is_majority, c.label\n    FROM final_answer f\n    JOIN t_charcinogenic c ON 1=1\n)\nSELECT * FROM t_final;",
+          "WITH final_result AS (\n    SELECT bond_type, count, is_majority, label\n    FROM t_final\n    WHERE label = '-'\n)\nSELECT * FROM final_result;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          14,
+          6,
+          12,
+          14,
+          7
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+              "count": 1,
+              "result_signature": "5_2_9b3f00c86c67cc5d325a6b7cfd646a1c"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_charcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcinogenic;",
+              "count": 6,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            },
+            {
+              "cte": "WITH t_charcarcinogenic AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcarcinogenic;",
+              "count": 6,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            },
+            {
+              "cte": "WITH t_charc AS (\n    SELECT t_bond_counts.bond_type, t_bond_counts.count\n    FROM t_bond_counts\n    WHERE t_bond_counts.bond_type = '-'\n)\nSELECT * FROM t_charc;",
+              "count": 1,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT bond_type, count, CASE WHEN count = (SELECT MAX(count) FROM t_bond_counts) THEN 'Yes' ELSE 'No' END AS is_majority\n    FROM t_bond_counts\n)\nSELECT * FROM final_answer;",
+              "count": 12,
+              "result_signature": "2_3_9e1578c39b8c7c4fa4962c658e93c774"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT bond_type, COUNT(*) AS total_bonds\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total_bonds DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;",
+              "count": 1,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT MAX(count) AS max_count, COUNT(*) AS total_bonds, label\n    FROM t_bond_counts\n    JOIN t_charcinogenic ON 1=1\n    GROUP BY label\n)\nSELECT * FROM final_answer;",
+              "count": 2,
+              "result_signature": "1_3_12d9da816b58dfe6c3b8fab32ebedfff"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT f.bond_type, f.count, f.is_majority, c.label\n    FROM final_answer f\n    JOIN t_charcinogenic c ON 1=1\n)\nSELECT * FROM t_final;",
+              "count": 14,
+              "result_signature": "2_4_4893c8f5541b08e2a7674ee8d8155083"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type, count, is_majority\n    FROM final_answer\n    WHERE is_majority = 'Yes'\n)\nSELECT * FROM t_final;",
+              "count": 1,
+              "result_signature": "1_3_9ab72a350c2358a55da583f104fe3d1f"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_result AS (\n    SELECT bond_type, count, is_majority, label\n    FROM t_final\n    WHERE label = '-'\n)\nSELECT * FROM final_result;",
+              "count": 7,
+              "result_signature": "2_4_4893c8f5541b08e2a7674ee8d8155083"
+            },
+            {
+              "cte": "WITH t_final_answer AS (\n    SELECT bond_type, count, is_majority, label\n    FROM t_final\n    WHERE is_majority = 'Yes'\n)\nSELECT * FROM t_final_answer;",
+              "count": 6,
+              "result_signature": "1_4_f50e7c510382d48792e2a5390b4516b1"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 2,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nmax_count AS (\n    SELECT MAX(count) AS max_count\n    FROM bond_counts\n),\nmajority_bond AS (\n    SELECT bond_type\n    FROM bond_counts\n    WHERE count = (SELECT max_count FROM max_count)\n)\nSELECT mb.bond_type, m.label\nFROM majority_bond mb\nJOIN molecule m ON m.molecule_id = 'TR010';",
+        "all_sql_variants": [
+          {
+            "sql": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM (\n        SELECT bond_type\n        FROM bond\n        JOIN molecule ON bond.molecule_id = molecule.molecule_id\n        WHERE molecule.molecule_id = 'TR010'\n        AND bond_type IS NOT NULL\n    ) AS c_rows\n    GROUP BY bond_type\n),\nt_charcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_bond_counts.bond_type, t_bond_counts.count, \n       CASE WHEN t_bond_counts.count = (SELECT MAX(count) FROM t_bond_counts) THEN 'Yes' ELSE 'No' END AS is_majority,\n       t_charcinogenic.label\nFROM t_bond_counts\nJOIN t_charcinogenic ON 1=1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "2_4_4893c8f5541b08e2a7674ee8d8155083",
+            "result_row_count": 2
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nmax_count AS (\n    SELECT MAX(count) AS max_count\n    FROM bond_counts\n),\nmajority_bond AS (\n    SELECT bond_type\n    FROM bond_counts\n    WHERE count = (SELECT max_count FROM max_count)\n)\nSELECT mb.bond_type, m.label\nFROM majority_bond mb\nJOIN molecule m ON m.molecule_id = 'TR010';",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n),\nc_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n),\nt_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n),\nt_charcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n),\nfinal_answer AS (\n    SELECT bond_type, count, \n           CASE WHEN count = (SELECT MAX(count) FROM t_bond_counts) THEN 'Yes' ELSE 'No' END AS is_majority\n    FROM t_bond_counts\n)\nSELECT fa.bond_type, tc.label\nFROM final_answer fa\nJOIN t_charcinogenic tc ON 1=1\nWHERE fa.is_majority = 'Yes';",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM (\n        SELECT bond_type\n        FROM (\n            SELECT b.bond_type\n            FROM bond AS b\n            JOIN molecule AS m ON b.molecule_id = m.molecule_id\n            WHERE m.molecule_id = 'TR010'\n        ) AS c_cols\n        WHERE bond_type IS NOT NULL\n    ) AS c_rows\n    GROUP BY bond_type\n),\nt_charcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n),\nfinal_answer AS (\n    SELECT bond_type, count, CASE WHEN count = (SELECT MAX(count) FROM t_bond_counts) THEN 'Yes' ELSE 'No' END AS is_majority\n    FROM t_bond_counts\n),\nt_final AS (\n    SELECT f.bond_type, f.count, f.is_majority, c.label\n    FROM final_answer f\n    JOIN t_charcinogenic c ON 1=1\n)\nSELECT bond_type, count, is_majority, label\nFROM t_final\nWHERE label = '-';",
+            "valid": true,
+            "error": null,
+            "result_signature": "2_4_4893c8f5541b08e2a7674ee8d8155083",
+            "result_row_count": 2
+          },
+          {
+            "sql": "SELECT bond_type, label\nFROM final_result;",
+            "valid": false,
+            "error": "查询执行错误: no such table: final_result",
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {
+          "2_4_4893c8f5541b08e2a7674ee8d8155083": 2,
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 2
+        },
+        "valid_count": 4,
+        "error_reason": null,
+        "rollout_id": 1,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.6,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+          "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT * FROM t_agg;",
+          "WITH t_final AS (\n    SELECT bond_type, cnt\n    FROM t_agg\n    ORDER BY cnt DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+          "WITH c_carcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_carcinogenic;",
+          "WITH final_answer AS (\n    SELECT t_agg.bond_type, t_agg.cnt, c_carcinogenic.label\n    FROM t_agg\n    JOIN c_carcinogenic ON 1=1\n    ORDER BY t_agg.cnt DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          1,
+          15,
+          15,
+          1,
+          14
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+              "count": 1,
+              "result_signature": "5_2_9b3f00c86c67cc5d325a6b7cfd646a1c"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT * FROM t_agg;",
+              "count": 15,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type, cnt\n    FROM t_agg\n    ORDER BY cnt DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 15,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_carcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_carcinogenic;",
+              "count": 1,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            },
+            {
+              "cte": "WITH c_charc AS (\n    SELECT m.label AS molecule_label, m.molecule_id, b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_charc;",
+              "count": 1,
+              "result_signature": "5_3_437af8bd1ab85cf4551e154ec7613347"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT t_agg.bond_type, t_agg.cnt, c_carcinogenic.label\n    FROM t_agg\n    JOIN c_carcinogenic ON 1=1\n    ORDER BY t_agg.cnt DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;",
+              "count": 14,
+              "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 'bond_type' AS bond_type_name, 'carcinogenic' AS carcinogenic_status\n    FROM t_final\n    CROSS JOIN c_carcinogenic\n)\nSELECT * FROM final_answer;",
+              "count": 1,
+              "result_signature": "1_3_b6762652cb0910c70ff3cc980afab99f"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nc_carcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_agg.bond_type, c_carcinogenic.label\nFROM t_agg\nJOIN c_carcinogenic ON 1=1\nORDER BY t_agg.cnt DESC\nLIMIT 1;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nc_carcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_agg.bond_type, c_carcinogenic.label\nFROM t_agg\nJOIN c_carcinogenic ON 1=1\nORDER BY t_agg.cnt DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nmax_bond AS (\n    SELECT bond_type, cnt\n    FROM bond_counts\n    ORDER BY cnt DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT max_bond.bond_type, molecule_info.label\nFROM max_bond\nJOIN molecule_info ON 1=1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nc_carcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_agg.bond_type, t_agg.cnt, c_carcinogenic.label\nFROM t_agg\nJOIN c_carcinogenic ON 1=1\nORDER BY t_agg.cnt DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nt_final AS (\n    SELECT t_agg.bond_type, t_agg.cnt, m.label\n    FROM t_agg\n    JOIN molecule AS m ON t_agg.molecule_id = m.molecule_id\n    ORDER BY t_agg.cnt DESC\n    LIMIT 1\n)\nSELECT bond_type, cnt, label\nFROM t_final;",
+            "valid": false,
+            "error": "查询执行错误: no such column: t_agg.molecule_id",
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nc_carcinogenic AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_agg.bond_type, c_carcinogenic.label\nFROM t_agg\nJOIN c_carcinogenic ON 1=1\nORDER BY t_agg.cnt DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 3,
+          "1_3_01a13818940522aa6c479a6e79b80ef6": 1
+        },
+        "valid_count": 4,
+        "error_reason": null,
+        "rollout_id": 2,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.6,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+          "WITH t_charcarcinogenic AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcarcinogenic;",
+          "WITH t_final AS (\n    SELECT t_bond_counts.bond_type, t_bond_counts.count, t_charcarcinogenic.carcinogenic\n    FROM t_bond_counts\n    JOIN t_charcarcinogenic ON 1=1\n)\nSELECT * FROM t_final;",
+          "WITH final_answer AS (\n    SELECT bond_type, count, carcinogenic\n    FROM t_final\n    ORDER BY count DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          14,
+          6,
+          12,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          2,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+              "count": 1,
+              "result_signature": "5_2_9b3f00c86c67cc5d325a6b7cfd646a1c"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_charcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcinogenic;",
+              "count": 6,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            },
+            {
+              "cte": "WITH t_charcarcinogenic AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcarcinogenic;",
+              "count": 6,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            },
+            {
+              "cte": "WITH t_charc AS (\n    SELECT t_bond_counts.bond_type, t_bond_counts.count\n    FROM t_bond_counts\n    WHERE t_bond_counts.bond_type = '-'\n)\nSELECT * FROM t_charc;",
+              "count": 1,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT t_bond_counts.bond_type, t_bond_counts.count, t_charcarcinogenic.carcinogenic\n    FROM t_bond_counts\n    JOIN t_charcarcinogenic ON 1=1\n)\nSELECT * FROM t_final;",
+              "count": 12,
+              "result_signature": "2_3_9b26144a1cfc9b12e06b24455b969a03"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total_bonds\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total_bonds DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 3,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT bond_type, count, carcinogenic\n    FROM t_final\n    ORDER BY count DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;",
+              "count": 15,
+              "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 7,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nt_charcarcinogenic AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_bond_counts.bond_type, t_charcarcinogenic.carcinogenic\nFROM t_bond_counts\nCROSS JOIN t_charcarcinogenic\nORDER BY t_bond_counts.count DESC\nLIMIT 1;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nt_charcarcinogenic AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_bond_counts.bond_type, t_charcarcinogenic.carcinogenic\nFROM t_bond_counts\nCROSS JOIN t_charcarcinogenic\nORDER BY t_bond_counts.count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nt_charcarcinogenic AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_bond_counts.bond_type, t_charcarcinogenic.carcinogenic\nFROM t_bond_counts\nCROSS JOIN t_charcarcinogenic\nORDER BY t_bond_counts.count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n),\nc_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n),\nt_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n),\nt_charcarcinogenic AS (\n    SELECT m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT t_bond_counts.bond_type, t_bond_counts.count, t_charcarcinogenic.carcinogenic\nFROM t_bond_counts\nJOIN t_charcarcinogenic ON 1=1\nORDER BY t_bond_counts.count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n),\nt_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n    GROUP BY bond_type\n),\nt_charcarcinogenic AS (\n    SELECT m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n),\nt_final AS (\n    SELECT t_bond_counts.bond_type, t_bond_counts.count, t_charcarcinogenic.carcinogenic\n    FROM t_bond_counts\n    JOIN t_charcarcinogenic ON 1=1\n)\nSELECT bond_type, carcinogenic\nFROM t_final\nORDER BY count DESC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT \n        bond_type, \n        COUNT(*) AS count\n    FROM \n        bond\n    JOIN \n        molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE \n        molecule.molecule_id = 'TR010'\n    GROUP BY \n        bond_type\n    ORDER BY \n        count DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT \n        label AS carcinogenic\n    FROM \n        molecule\n    WHERE \n        molecule_id = 'TR010'\n)\nSELECT \n    bond_counts.bond_type, \n    bond_counts.count, \n    molecule_info.carcinogenic\nFROM \n    bond_counts\nCROSS JOIN \n    molecule_info;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 3,
+          "1_3_01a13818940522aa6c479a6e79b80ef6": 2
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 3,
+        "is_quick_path": false
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+          "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT * FROM t_agg;",
+          "WITH t_final AS (\n    SELECT bond_type, cnt\n    FROM t_agg\n    ORDER BY cnt DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+          "WITH c_charc AS (\n    SELECT m.label AS molecule_label, m.molecule_id, b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_charc;",
+          "WITH c_carcinogenic AS (\n    SELECT m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_carcinogenic;",
+          "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS count, 'carcinogenic' AS carcinogenic\n    FROM c_carcinogenic\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          1,
+          15,
+          15,
+          1,
+          15,
+          7
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          3,
+          3,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_counts;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_join AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_join;",
+              "count": 1,
+              "result_signature": "5_2_9b3f00c86c67cc5d325a6b7cfd646a1c"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_agg AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n)\nSELECT * FROM t_agg;",
+              "count": 15,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type, cnt\n    FROM t_agg\n    ORDER BY cnt DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 15,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_carcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_carcinogenic;",
+              "count": 1,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            },
+            {
+              "cte": "WITH c_charc AS (\n    SELECT m.label AS molecule_label, m.molecule_id, b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_charc;",
+              "count": 1,
+              "result_signature": "5_3_437af8bd1ab85cf4551e154ec7613347"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_carcinogenic AS (\n    SELECT m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_carcinogenic;",
+              "count": 15,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS cnt, '-' AS carcinogenic\n    FROM t_final\n    CROSS JOIN c_carcinogenic\n)\nSELECT * FROM final_answer;",
+              "count": 6,
+              "result_signature": "1_3_e441794ef4584a27a814a304865ded31"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS count, 'carcinogenic' AS carcinogenic\n    FROM c_carcinogenic\n)\nSELECT * FROM final_answer;",
+              "count": 7,
+              "result_signature": "1_3_272325b1c8b48d6e75f08e9b4be36ca8"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT t_agg.bond_type, t_agg.cnt, c_carcinogenic.carcinogenic\n    FROM t_agg\n    JOIN c_carcinogenic ON 1=1\n    ORDER BY t_agg.cnt DESC\n    LIMIT 1\n)\nSELECT * FROM final_answer;",
+              "count": 2,
+              "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY cnt DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT bc.bond_type, mi.carcinogenic\nFROM bond_counts bc\nCROSS JOIN molecule_info mi;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS cnt\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY cnt DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label AS carcinogenic\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT bc.bond_type, mi.carcinogenic\nFROM bond_counts bc\nCROSS JOIN molecule_info mi;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH majority_bond AS (\n    SELECT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT majority_bond.bond_type, molecule_info.label\nFROM majority_bond\nCROSS JOIN molecule_info;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH majority_bond AS (\n    SELECT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT majority_bond.bond_type, molecule_info.label AS carcinogenic\nFROM majority_bond, molecule_info;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    (SELECT bond_type FROM bond WHERE molecule_id = 'TR010' GROUP BY bond_type ORDER BY COUNT(*) DESC LIMIT 1) AS bond_type,\n    (SELECT label FROM molecule WHERE molecule_id = 'TR010') AS carcinogenic",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT bc.bond_type, m.label\nFROM (\n    SELECT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n) AS bc\nJOIN molecule AS m ON m.molecule_id = 'TR010';",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 4,
+        "is_quick_path": false
+      }
+    ]
+  }
+}

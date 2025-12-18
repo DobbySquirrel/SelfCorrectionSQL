@@ -1,0 +1,1 @@
+WITH bond_counts AS ( SELECT bond_type, COUNT(*) AS cnt FROM bond WHERE molecule_id = 'TR010' GROUP BY bond_type ORDER BY cnt DESC LIMIT 1 ), molecule_info AS ( SELECT label AS carcinogenic FROM molecule WHERE molecule_id = 'TR010' ) SELECT bc.bond_type, mi.carcinogenic FROM bond_counts bc CROSS JOIN molecule_info mi;

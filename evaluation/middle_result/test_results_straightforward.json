@@ -1,0 +1,314 @@
+[
+    {
+        "question_id": 9,
+        "db": "california_schools",
+        "question": "Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?",
+        "is_solved": true,
+        "python_code": "# Load the necessary data from the database\nsatscores_data = db_loader(\"california_schools\", \"satscores\")\nschools_data = db_loader(\"california_schools\", \"schools\")\n\n# Filter the schools with average Math scores over 560\nhigh_math_scores = data_filter(satscores_data, \"AvgScrMath>560\")\n\n# Extract the CDS codes of these schools\nhigh_math_cds = get_value(high_math_scores, \"cds, list\")\n\n# Filter the schools data for directly charter-funded schools that are in the high_math_cds\ndirectly_funded_charter_schools = data_filter(schools_data, \"CDSCode in ({}) && FundingType='Directly funded'\".format(','.join(map(str, high_math_cds))))\n\n# Count the number of directly charter-funded schools\ncount_directly_funded = get_value(directly_funded_charter_schools, \"CDSCode, count\")\n\n# Print the result\nprint(\"Number of schools with average Math score over 560 that are directly charter-funded:\", count_directly_funded)",
+        "python_result": "标准输出: Number of schools with average Math score over 560 that are directly charter-funded: 2\n\n",
+        "sql": "SELECT COUNT(*) \n    FROM schools AS s \n    INNER JOIN satscores AS ss ON s.CDSCode = ss.cds \n    WHERE ss.AvgScrMath > 560 AND s.FundingType = 'Directly funded';",
+        "sql_result": [
+            {
+                "COUNT(*)": 2
+            }
+        ],
+        "sql_error": null
+    },
+    {
+        "question_id": 21,
+        "db": "california_schools",
+        "question": "In Los Angeles how many schools have more than 500 free meals but less than 700 free or reduced price meals for K-12?",
+        "is_solved": true,
+        "python_code": "# Load the necessary tables from the database\nfrpm_data = db_loader(\"california_schools\", \"frpm\")\nschools_data = db_loader(\"california_schools\", \"schools\")\n\n# Filter the FRPM data for Los Angeles schools with more than 500 and less than 700 free meals\nfiltered_frpm = data_filter(frpm_data, \"County Name='Los Angeles' && Free Meal Count (K-12) > 500 && Free Meal Count (K-12) < 700\")\n\n# Get the number of schools that meet the criteria\nnumber_of_schools = get_value(filtered_frpm, \"CDSCode, list\")\nprint(len(number_of_schools))",
+        "python_result": "标准输出: 327\n\n",
+        "sql": "SELECT COUNT(*) \n    FROM frpm \n    WHERE `County Name` = 'Los Angeles' \n    AND `Free Meal Count (K-12)` > 500 \n    AND `Free Meal Count (K-12)` < 700;",
+        "sql_result": [
+            {
+                "COUNT(*)": 327
+            }
+        ],
+        "sql_error": null
+    },
+    {
+        "question_id": 25,
+        "db": "california_schools",
+        "question": "Name schools in Riverside which the average of average math score for SAT is grater than 400, what is the funding type of these schools?",
+        "is_solved": true,
+        "python_code": "# Load the necessary tables from the database\nschools_data = db_loader(\"california_schools\", \"schools\")\nsatscores_data = db_loader(\"california_schools\", \"satscores\")\n\n# Filter schools in Riverside County\nriverside_schools = data_filter(schools_data, \"County='Riverside'\")\n\n# Join the two dataframes on CDSCode to combine school information with SAT scores\ncombined_data = riverside_schools.merge(satscores_data, left_on='CDSCode', right_on='cds')\n\n# Group by school and calculate the average math score, filtering out any null scores\naverage_math_scores = combined_data.groupby(['School', 'FundingType']).agg({'AvgScrMath': 'mean'}).reset_index()\n\n# Filter schools with an average math score greater than 400\nhigh_math_score_schools = average_math_scores[average_math_scores['AvgScrMath'] > 400]\n\n# Get the school names and funding types from the filtered data\nschool_names = high_math_score_schools['School'].tolist()\nfunding_types = high_math_score_schools['FundingType'].tolist()\n\n# Print the results\nprint(\"Schools in Riverside with average math score greater than 400:\")\nprint(school_names)\nprint(\"Funding types of these schools:\")\nprint(funding_types)",
+        "python_result": "标准输出: Schools in Riverside with average math score greater than 400:\n['California Military Institute', 'College Prep High', 'NOVA Academy - Coachella', 'Nuview Bridge Early College High', 'River Springs Charter', 'San Jacinto Valley Academy', 'Santa Rosa Academy', 'Temecula Preparatory']\nFunding types of these schools:\n['Locally funded', 'Locally funded', 'Directly funded', 'Locally funded', 'Directly funded', 'Directly funded', 'Directly funded', 'Directly funded']\n\n",
+        "sql": "SELECT s.\"School\", s.\"FundingType\"\n    FROM schools s\n    JOIN satscores sa ON s.\"CDSCode\" = sa.\"cds\"\n    WHERE s.\"County\" = 'Riverside'\n    AND sa.\"AvgScrMath\" IS NOT NULL\n    GROUP BY s.\"School\", s.\"FundingType\"\n    HAVING AVG(sa.\"AvgScrMath\") > 400",
+        "sql_result": [
+            {
+                "School": null,
+                "FundingType": null
+            },
+            {
+                "School": "Arlington High",
+                "FundingType": null
+            },
+            {
+                "School": "Banning High",
+                "FundingType": null
+            },
+            {
+                "School": "Beaumont Senior High",
+                "FundingType": null
+            },
+            {
+                "School": "California Military Institute",
+                "FundingType": "Locally funded"
+            },
+            {
+                "School": "Canyon Springs High",
+                "FundingType": null
+            },
+            {
+                "School": "Cathedral City High",
+                "FundingType": null
+            },
+            {
+                "School": "Centennial High",
+                "FundingType": null
+            },
+            {
+                "School": "Chaparral High",
+                "FundingType": null
+            },
+            {
+                "School": "Citrus Hill High",
+                "FundingType": null
+            },
+            {
+                "School": "Coachella Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "College Prep High",
+                "FundingType": "Locally funded"
+            },
+            {
+                "School": "Corona High",
+                "FundingType": null
+            },
+            {
+                "School": "Desert Hot Springs High",
+                "FundingType": null
+            },
+            {
+                "School": "Desert Mirage High",
+                "FundingType": null
+            },
+            {
+                "School": "Eleanor Roosevelt High",
+                "FundingType": null
+            },
+            {
+                "School": "Elsinore High",
+                "FundingType": null
+            },
+            {
+                "School": "Great Oak High",
+                "FundingType": null
+            },
+            {
+                "School": "Hamilton High",
+                "FundingType": null
+            },
+            {
+                "School": "Hemet High",
+                "FundingType": null
+            },
+            {
+                "School": "Heritage High",
+                "FundingType": null
+            },
+            {
+                "School": "Indio High",
+                "FundingType": null
+            },
+            {
+                "School": "John F. Kennedy High",
+                "FundingType": null
+            },
+            {
+                "School": "John W. North High",
+                "FundingType": null
+            },
+            {
+                "School": "Jurupa Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "La Quinta High",
+                "FundingType": null
+            },
+            {
+                "School": "La Sierra High",
+                "FundingType": null
+            },
+            {
+                "School": "Lakeside High",
+                "FundingType": null
+            },
+            {
+                "School": "Martin Luther King Jr. High",
+                "FundingType": null
+            },
+            {
+                "School": "Moreno Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "Murrieta Mesa High",
+                "FundingType": null
+            },
+            {
+                "School": "Murrieta Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "NOVA Academy - Coachella",
+                "FundingType": "Directly funded"
+            },
+            {
+                "School": "Norco High",
+                "FundingType": null
+            },
+            {
+                "School": "Norte Vista High",
+                "FundingType": null
+            },
+            {
+                "School": "Nuview Bridge Early College High",
+                "FundingType": "Locally funded"
+            },
+            {
+                "School": "Palm Desert High",
+                "FundingType": null
+            },
+            {
+                "School": "Palm Springs High",
+                "FundingType": null
+            },
+            {
+                "School": "Palo Verde High",
+                "FundingType": null
+            },
+            {
+                "School": "Paloma Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "Patriot High",
+                "FundingType": null
+            },
+            {
+                "School": "Perris High",
+                "FundingType": null
+            },
+            {
+                "School": "Polytechnic High",
+                "FundingType": null
+            },
+            {
+                "School": "Ramona High",
+                "FundingType": null
+            },
+            {
+                "School": "Rancho Verde High",
+                "FundingType": null
+            },
+            {
+                "School": "River Springs Charter",
+                "FundingType": "Directly funded"
+            },
+            {
+                "School": "Rubidoux High",
+                "FundingType": null
+            },
+            {
+                "School": "San Jacinto High",
+                "FundingType": null
+            },
+            {
+                "School": "San Jacinto Valley Academy",
+                "FundingType": "Directly funded"
+            },
+            {
+                "School": "Santa Rosa Academy",
+                "FundingType": "Directly funded"
+            },
+            {
+                "School": "Santiago High",
+                "FundingType": null
+            },
+            {
+                "School": "Shadow Hills High",
+                "FundingType": null
+            },
+            {
+                "School": "Tahquitz High",
+                "FundingType": null
+            },
+            {
+                "School": "Temecula Preparatory",
+                "FundingType": "Directly funded"
+            },
+            {
+                "School": "Temecula Valley High",
+                "FundingType": null
+            },
+            {
+                "School": "Temescal Canyon High",
+                "FundingType": null
+            },
+            {
+                "School": "Valley View High",
+                "FundingType": null
+            },
+            {
+                "School": "Vista Murrieta High",
+                "FundingType": null
+            },
+            {
+                "School": "Vista del Lago High",
+                "FundingType": null
+            },
+            {
+                "School": "West Valley High",
+                "FundingType": null
+            }
+        ],
+        "sql_error": null
+    },
+    {
+        "question_id": 35,
+        "db": "california_schools",
+        "question": "What is the administrator's email address of the chartered school with the fewest students enrolled in grades 1 through 12?",
+        "is_solved": true,
+        "python_code": "# Load the necessary data from the database\nfrpm_data = db_loader(\"california_schools\", \"frpm\")\nschools_data = db_loader(\"california_schools\", \"schools\")\n\n# Filter for charter schools\ncharter_schools = data_filter(frpm_data, \"Charter School (Y/N)=1\")\n\n# Find the charter school with the fewest students enrolled in grades 1 through 12\nmin_enrollment_school = get_value(charter_schools, \"Enrollment (K-12), min()\")\n\n# Get the details of the school with the minimum enrollment\nmin_enrollment_school_details = data_filter(charter_schools, f\"Enrollment (K-12)={min_enrollment_school}\")\n\n# Get the school code of the school with the minimum enrollment\nschool_code = get_value(min_enrollment_school_details, \"CDSCode\")\n\n# Get the administrator's email address from the schools data\nadmin_email = get_value(data_filter(schools_data, f\"CDSCode='{school_code}'\"), \"AdmEmail1\")\n\n# Print the administrator's email address\nprint(admin_email)",
+        "python_result": "标准输出: mjennings@kesd.org\n\n",
+        "sql": "SELECT s.AdmEmail1\n    FROM frpm f\n    JOIN schools s ON f.CDSCode = s.CDSCode\n    WHERE f.`Charter School (Y/N)` = 1\n    ORDER BY f.`Enrollment (K-12)` ASC\n    LIMIT 1;",
+        "sql_result": [
+            {
+                "AdmEmail1": "mjennings@kesd.org"
+            }
+        ],
+        "sql_error": null
+    },
+    {
+        "question_id": 40,
+        "db": "california_schools",
+        "question": "What is the telephone number for the school with the lowest average score in reading in Fresno Unified?",
+        "is_solved": true,
+        "python_code": "# Load the necessary tables from the database\nsatscores_data = db_loader(\"california_schools\", \"satscores\")\nschools_data = db_loader(\"california_schools\", \"schools\")\n\n# Filter the scores for Fresno Unified School District\nfresno_schools = data_filter(satscores_data, \"dname='Fresno Unified'\")\n\n# Filter out NaN values in AvgScrRead\nvalid_reading_scores = data_filter(fresno_schools, \"AvgScrRead IS NOT NULL\")\n\n# Check if we have valid reading scores before proceeding\nif valid_reading_scores.shape[0] > 0:\n    # Find the minimum average reading score\n    min_reading_score = get_value(valid_reading_scores, \"AvgScrRead, min\")\n\n    # Find the school(s) with the lowest average reading score\n    lowest_reading_score_school = data_filter(valid_reading_scores, f\"AvgScrRead={min_reading_score}\")\n\n    # Get the CDSCode of the school with the lowest average reading score\n    school_cds_code = get_value(lowest_reading_score_school, \"cds\")\n\n    # Now, get the corresponding school details from the schools table to find the phone number\n    school_details = data_filter(schools_data, f\"CDSCode='{school_cds_code}'\")\n    phone_number = get_value(school_details, \"Phone\")\nelse:\n    phone_number = None  # Handle the case where there are no valid reading scores\n\nprint(phone_number)",
+        "python_result": "标准输出: (559) 248-5100\n\n",
+        "sql": "SELECT Phone \n    FROM schools \n    WHERE CDSCode = (\n        SELECT cds \n        FROM satscores \n        WHERE dname = 'Fresno Unified' \n        AND AvgScrRead IS NOT NULL \n        ORDER BY AvgScrRead ASC \n        LIMIT 1\n    );",
+        "sql_result": [
+            {
+                "Phone": "(559) 248-5100"
+            }
+        ],
+        "sql_error": null
+    }
+]

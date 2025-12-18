@@ -1,0 +1,1318 @@
+{
+  "summary": {
+    "1:1": {
+      "predicted": 2,
+      "ground_truth": 21,
+      "both": 2
+    },
+    "1:N": {
+      "predicted": 15,
+      "ground_truth": 37,
+      "both": 9
+    },
+    "N:1": {
+      "predicted": 27,
+      "ground_truth": 31,
+      "both": 12
+    },
+    "M:N": {
+      "predicted": 3,
+      "ground_truth": 10,
+      "both": 1
+    },
+    "unknown": {
+      "predicted": 0,
+      "ground_truth": 0,
+      "both": 0
+    }
+  },
+  "mismatch_ids": {
+    "missing_1_N_or_N_1": [
+      "93",
+      "97",
+      "130",
+      "158",
+      "176",
+      "189",
+      "267",
+      "338",
+      "350",
+      "353",
+      "470",
+      "479",
+      "483",
+      "515",
+      "538",
+      "541",
+      "549",
+      "575",
+      "586",
+      "593",
+      "600",
+      "613",
+      "617",
+      "619",
+      "623",
+      "631",
+      "720",
+      "732",
+      "734",
+      "758",
+      "772",
+      "797",
+      "944",
+      "956",
+      "972",
+      "1003",
+      "1013",
+      "1036",
+      "1040",
+      "1063",
+      "1085",
+      "1087",
+      "1098",
+      "1124"
+    ],
+    "missing_1_1": [
+      "9",
+      "25",
+      "35",
+      "40",
+      "43",
+      "76",
+      "81",
+      "98",
+      "130",
+      "139",
+      "176",
+      "483",
+      "484",
+      "847",
+      "860",
+      "896",
+      "929",
+      "939",
+      "1082"
+    ],
+    "missing_M_N": [
+      "164",
+      "309",
+      "326",
+      "448",
+      "520",
+      "857",
+      "864",
+      "896",
+      "929"
+    ],
+    "extra_joins": [
+      "164",
+      "176",
+      "231",
+      "240",
+      "287",
+      "470",
+      "484",
+      "529",
+      "586",
+      "593",
+      "600",
+      "613",
+      "623",
+      "631",
+      "656",
+      "657",
+      "857",
+      "896",
+      "929",
+      "939",
+      "944",
+      "956"
+    ],
+    "all_mismatches": [
+      "9",
+      "25",
+      "35",
+      "40",
+      "43",
+      "76",
+      "81",
+      "93",
+      "97",
+      "98",
+      "130",
+      "139",
+      "158",
+      "164",
+      "176",
+      "189",
+      "231",
+      "240",
+      "267",
+      "287",
+      "309",
+      "326",
+      "338",
+      "350",
+      "353",
+      "448",
+      "470",
+      "479",
+      "483",
+      "484",
+      "515",
+      "520",
+      "529",
+      "538",
+      "541",
+      "549",
+      "575",
+      "586",
+      "593",
+      "600",
+      "613",
+      "617",
+      "619",
+      "623",
+      "631",
+      "656",
+      "657",
+      "720",
+      "732",
+      "734",
+      "758",
+      "772",
+      "797",
+      "847",
+      "857",
+      "860",
+      "864",
+      "896",
+      "929",
+      "939",
+      "944",
+      "956",
+      "972",
+      "1003",
+      "1013",
+      "1036",
+      "1040",
+      "1063",
+      "1082",
+      "1085",
+      "1087",
+      "1098",
+      "1124"
+    ]
+  },
+  "detailed_results": [
+    {
+      "question_id": "9",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "21",
+      "predicted_types": [],
+      "truth_types": [],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "25",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "35",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "40",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "43",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "76",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "81",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "93",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "97",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "98",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "111",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "130",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1",
+        "1:N"
+      ],
+      "missing": [
+        "1:1",
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "139",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "158",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "164",
+      "predicted_types": [
+        "N:1",
+        "1:1",
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1",
+        "1:1",
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": [
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "176",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1",
+        "1:1"
+      ],
+      "missing": [
+        "N:1",
+        "1:1"
+      ],
+      "extra": [
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "189",
+      "predicted_types": [
+        "1:1"
+      ],
+      "truth_types": [
+        "N:1",
+        "1:1",
+        "1:N"
+      ],
+      "missing": [
+        "N:1",
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "231",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "240",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "257",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "267",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "286",
+      "predicted_types": [],
+      "truth_types": [],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "287",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "288",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "303",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "307",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "309",
+      "predicted_types": [],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "326",
+      "predicted_types": [],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "337",
+      "predicted_types": [
+        "M:N"
+      ],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "338",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1",
+        "1:N"
+      ],
+      "missing": [
+        "N:1",
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "347",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "350",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "353",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "362",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "448",
+      "predicted_types": [],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "470",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "479",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "483",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1",
+        "1:N"
+      ],
+      "missing": [
+        "1:1",
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "484",
+      "predicted_types": [
+        "1:N",
+        "M:N"
+      ],
+      "truth_types": [
+        "1:1",
+        "1:N"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": [
+        "M:N"
+      ]
+    },
+    {
+      "question_id": "515",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "520",
+      "predicted_types": [],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "529",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "538",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "541",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "549",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "575",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "586",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "593",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": [
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "600",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "613",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "617",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "619",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "623",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "631",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "656",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "657",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [],
+      "missing": [],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "690",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "720",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "726",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "729",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "732",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1",
+        "1:N"
+      ],
+      "missing": [
+        "N:1",
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "734",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "758",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "760",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "766",
+      "predicted_types": [
+        "N:1",
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1",
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "772",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "778",
+      "predicted_types": [
+        "N:1",
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1",
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "797",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "812",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "847",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "857",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "860",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "864",
+      "predicted_types": [],
+      "truth_types": [
+        "M:N"
+      ],
+      "missing": [
+        "M:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "896",
+      "predicted_types": [
+        "N:1"
+      ],
+      "truth_types": [
+        "1:1",
+        "M:N"
+      ],
+      "missing": [
+        "1:1",
+        "M:N"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "929",
+      "predicted_types": [
+        "N:1",
+        "1:N"
+      ],
+      "truth_types": [
+        "1:1",
+        "M:N"
+      ],
+      "missing": [
+        "1:1",
+        "M:N"
+      ],
+      "extra": [
+        "N:1",
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "937",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "939",
+      "predicted_types": [
+        "N:1",
+        "1:N"
+      ],
+      "truth_types": [
+        "1:1",
+        "1:N"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": [
+        "N:1"
+      ]
+    },
+    {
+      "question_id": "944",
+      "predicted_types": [
+        "M:N"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": [
+        "M:N"
+      ]
+    },
+    {
+      "question_id": "956",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": [
+        "1:N"
+      ]
+    },
+    {
+      "question_id": "972",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1003",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1013",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1032",
+      "predicted_types": [],
+      "truth_types": [],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "1036",
+      "predicted_types": [],
+      "truth_types": [
+        "N:1"
+      ],
+      "missing": [
+        "N:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1040",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1047",
+      "predicted_types": [
+        "1:N"
+      ],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "question_id": "1063",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1082",
+      "predicted_types": [],
+      "truth_types": [
+        "1:1"
+      ],
+      "missing": [
+        "1:1"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1085",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1087",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1098",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    },
+    {
+      "question_id": "1124",
+      "predicted_types": [],
+      "truth_types": [
+        "1:N"
+      ],
+      "missing": [
+        "1:N"
+      ],
+      "extra": []
+    }
+  ]
+}

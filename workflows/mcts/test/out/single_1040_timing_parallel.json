@@ -1,0 +1,18 @@
+{
+  "93": {
+    "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, d.A3, d.A11\n    FROM client AS c\n    INNER JOIN district AS d ON c.district_id = d.district_id\n)\nSELECT COUNT(*) \nFROM c_cols \nWHERE gender = 'M' \nAND A3 = 'North Bohemia' \nAND A11 > 8000;",
+    "stats": {
+      "average_reward": 0.12857131836744143,
+      "total_visits": 20,
+      "elapsed_time": 1058.2834432125092,
+      "timing": {
+        "total_s": 1058.2831523418427,
+        "rollout_s": 9325.717434883118,
+        "cte_gen_s": 7811.735738039017,
+        "sql_gen_s": 1439.1234176158905,
+        "db_exec_s": 8.683119058609009,
+        "rollout_count": 20
+      }
+    }
+  }
+}

@@ -1,0 +1,446 @@
+WITH avg_math_scores AS (
+    SELECT ss.cds, AVG(ss.`AvgScrMath`) AS avg_math_score
+    FROM satscores AS ss
+    GROUP BY ss.cds
+),
+filtered_schools AS (
+    SELECT f.`School Code`
+    FROM avg_math_scores am
+    INNER JOIN frpm f ON am.cds = f.`CDSCode`
+    WHERE am.avg_math_score > 560 AND f.`Charter Funding Type` = 'Directly funded'
+)
+SELECT COUNT(*) AS answer FROM filtered_schools;
+WITH c_cols AS (
+    SELECT fs.`CDSCode`, fs.`Free Meal Count (K-12)`, fs.`Percent (%) Eligible Free (K-12)`
+    FROM frpm AS fs
+    WHERE fs.`County Name` = 'Los Angeles'
+),
+c_rows AS (
+    SELECT `CDSCode`, `Free Meal Count (K-12)`, `Percent (%) Eligible Free (K-12)`
+    FROM c_cols
+    WHERE `Free Meal Count (K-12)` > 500 AND `Free Meal Count (K-12)` < 700
+),
+count_schools AS (
+    SELECT COUNT(*) AS answer
+    FROM c_rows
+)
+SELECT * FROM count_schools;
+WITH avg_math_scores AS (
+    SELECT cds, AVG(AvgScrMath) AS avg_math_score
+    FROM satscores
+    GROUP BY cds
+),
+filtered_avg_math_scores AS (
+    SELECT cds, avg_math_score
+    FROM avg_math_scores
+    WHERE avg_math_score > 400
+),
+school_details AS (
+    SELECT s.CDSCode, s.School, f.`Charter Funding Type`
+    FROM schools s
+    INNER JOIN frpm f ON s.CDSCode = f.CDSCode
+    WHERE s.County = 'Riverside' AND s.CDSCode IN (SELECT cds FROM filtered_avg_math_scores)
+)
+SELECT s.School, s.`Charter Funding Type` FROM school_details s;
+
+WITH avg_read_scores AS (
+    SELECT sc.CDSCode, AVG(ss.AvgScrRead) AS avg_read_score, sc.Phone
+    FROM satscores AS ss
+    INNER JOIN schools AS sc ON ss.cds = sc.CDSCode
+    WHERE sc.District = 'Fresno Unified'
+    GROUP BY sc.CDSCode, sc.Phone
+),
+min_avg_read AS (
+    SELECT MIN(avg_read_score) AS min_score
+    FROM avg_read_scores
+)
+SELECT avg_read_scores.Phone
+FROM avg_read_scores
+INNER JOIN min_avg_read ON avg_read_scores.avg_read_score = min_avg_read.min_score;
+WITH avg_scores AS (
+    SELECT s.cds, s.sname, s.cname, s.enroll12, s.NumTstTakr, (s.AvgScrMath + s.AvgScrRead + s.AvgScrWrite) / 3 AS avg_score
+    FROM satscores AS s
+),
+min_avg_score AS (
+    SELECT MIN(avg_score) AS min_score
+    FROM avg_scores
+),
+min_avg_school AS (
+    SELECT cds, sname, cname, enroll12, NumTstTakr, avg_score
+    FROM avg_scores
+    WHERE avg_score = (SELECT MIN(avg_score) FROM avg_scores)
+),
+school_details AS (
+    SELECT s.cds, s.sname, s.cname, s.enroll12, s.NumTstTakr, (s.AvgScrMath + s.AvgScrRead + s.AvgScrWrite) / 3 AS avg_score, sc.County
+    FROM satscores AS s
+    JOIN schools AS sc ON s.cds = sc.CDSCode
+    WHERE s.cds = (SELECT cds FROM min_avg_school)
+)
+SELECT AVG(s.avg_score) AS avg_math_score, sd.County
+FROM school_details AS s
+JOIN school_details AS sd ON s.cds = sd.cds;
+SELECT City
+FROM (
+    SELECT s.City
+    FROM schools s
+    INNER JOIN frpm f ON s.CDSCode = f.CDSCode
+    WHERE s.EILCode = 'HS' AND s.County = 'Merced' AND f.`NSLP Provision Status` = 'Lunch Provision 2' AND f.`Low Grade` = 9 AND f.`High Grade` = 12
+);
+
+WITH filtered_clients AS (
+    SELECT client_id
+    FROM client
+    JOIN district ON client.district_id = district.district_id
+    WHERE gender = 'M' AND A3 = 'north Bohemia' AND A11 > 8000
+)
+SELECT COUNT(*) AS answer FROM filtered_clients;
+
+WITH approved_loans AS (
+    SELECT l.account_id, MIN(l.amount) AS min_amount
+    FROM loan l
+    WHERE STRFTIME('%Y', l.date) = '1997'
+    GROUP BY l.account_id
+)
+SELECT d.A2, d.A3, d.A4, d.A5, d.A6, d.A7, d.A8, d.A9, d.A10, d.A11, d.A12, d.A13, d.A14, d.A15, d.A16
+FROM district d
+JOIN account a ON d.district_id = a.district_id
+JOIN approved_loans al ON a.account_id = al.account_id
+WHERE a.frequency = 'POPLATEK TYDNE';
+WITH d_info AS (
+    SELECT district_id
+    FROM district
+    WHERE A2 = 'Litomerice'
+),
+y_filter AS (
+    SELECT *
+    FROM account
+    WHERE STRFTIME('%Y', date) = '1996' AND district_id = (SELECT district_id FROM d_info)
+)
+SELECT COUNT(*) AS answer FROM y_filter;
+WITH c_districts AS (
+    SELECT district_id
+    FROM district
+    WHERE A3 = 'South Bohemia'
+)
+SELECT COUNT(DISTINCT a.account_id) AS count_of_account_holders_without_credit_cards
+FROM account a
+LEFT JOIN disp d ON a.account_id = d.account_id
+LEFT JOIN card c ON d.disp_id = c.disp_id
+WHERE a.district_id IN (SELECT district_id FROM c_districts)
+AND c.card_id IS NULL;
+SELECT COUNT(*) 
+FROM card 
+WHERE type = 'gold' AND disp_id IN (
+    SELECT disp_id 
+    FROM disp 
+    WHERE type = 'OWNER'
+);
+
+
+WITH final_amount AS (
+    SELECT SUM(amount) AS total_debt
+    FROM loan
+    WHERE account_id IN (
+        SELECT d.account_id
+        FROM disp d
+        WHERE d.client_id = 992
+    )
+),
+payment_details AS (
+    SELECT status, payments
+    FROM loan
+    WHERE account_id IN (
+        SELECT d.account_id
+        FROM disp d
+        WHERE d.client_id = 992
+    )
+)
+SELECT fa.total_debt, pd.status, pd.payments
+FROM final_amount fa
+CROSS JOIN payment_details pd;
+WITH c_cols AS (
+    SELECT cl.client_id, cl.gender, cl.birth_date, d.A11 AS avg_salary
+    FROM client AS cl
+    INNER JOIN district AS d ON cl.district_id = d.district_id
+    WHERE cl.gender = 'F'
+),
+t_order AS (
+    SELECT client_id, birth_date, avg_salary,
+           ROW_NUMBER() OVER (ORDER BY birth_date DESC) AS rn
+    FROM c_cols
+    WHERE avg_salary = (SELECT MIN(avg_salary) FROM c_cols)
+)
+SELECT client_id FROM t_order WHERE rn = 1;
+WITH b_types AS (
+    SELECT bond_type, COUNT(*) AS count
+    FROM bond
+    WHERE molecule_id = 'TR010'
+    GROUP BY bond_type
+),
+max_bond_type AS (
+    SELECT bond_type
+    FROM b_types
+    ORDER BY count DESC
+    LIMIT 1
+),
+is_carcinogenic AS (
+    SELECT CASE WHEN EXISTS (
+        SELECT 1
+        FROM molecule m
+        JOIN bond b ON m.molecule_id = b.molecule_id
+        WHERE m.label = 'TR010' AND b.bond_type = '-'
+    ) THEN 'Yes' ELSE 'No' END AS result
+)
+SELECT mt.bond_type, ic.result
+FROM max_bond_type mt
+CROSS JOIN is_carcinogenic ic;
+WITH m_toxicology AS (
+    SELECT T1.element, T2.bond_type
+    FROM atom AS T1
+    INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id
+    WHERE T1.molecule_id = 'TR004'
+),
+m_elements AS (
+    SELECT DISTINCT element
+    FROM m_toxicology
+),
+m_types AS (
+    SELECT DISTINCT bond_type
+    FROM m_toxicology
+)
+SELECT m_elements.element, m_types.bond_type FROM m_elements CROSS JOIN m_types;
+WITH sulfur_atoms AS (
+    SELECT atom_id
+    FROM atom
+    WHERE element = 's'
+),
+sulfur_bonds AS (
+    SELECT DISTINCT ca.atom_id2
+    FROM connected ca
+    JOIN sulfur_atoms sa ON ca.atom_id = sa.atom_id
+)
+SELECT * FROM sulfur_bonds;
+SELECT DISTINCT bond_type 
+FROM bond 
+WHERE molecule_id BETWEEN 'TR000' AND 'TR050';
+WITH total_compounds AS (
+    SELECT COUNT(*) AS total_molecules
+    FROM molecule
+),
+triple_bonds AS (
+    SELECT COUNT(*) AS num_triple_bonds
+    FROM bond
+    WHERE bond_type = '#'
+)
+SELECT 
+    (CAST(triple_bonds.num_triple_bonds AS REAL) / total_compounds.total_molecules) * 100 AS percentage_triple_bonds
+FROM 
+    total_compounds,
+    triple_bonds;
+WITH b_counts AS (
+    SELECT COUNT(bond_type) AS total_bonds, SUM(CASE WHEN bond_type = ' = ' THEN 1 ELSE 0 END) AS double_bonds
+    FROM bond
+    WHERE molecule_id = 'TR047'
+),
+b_percent AS (
+    SELECT CAST(double_bonds AS REAL) * 100 / total_bonds AS percent_double_bonds
+    FROM b_counts
+)
+SELECT * FROM b_percent;
+WITH t_final AS (
+    SELECT COUNT(*) AS answer
+    FROM molecule AS m
+    WHERE m.molecule_id IN (SELECT a.molecule_id FROM atom AS a WHERE a.atom_id = 'TR001_1') AND m.label = '+'
+)
+SELECT * FROM t_final;
+SELECT COUNT(*) 
+FROM molecule 
+WHERE label = '+';
+WITH mols AS (
+    SELECT molecule_id
+    FROM molecule
+    WHERE label = '+'
+),
+double_bonds AS (
+    SELECT COUNT(*) AS num_double_bonds
+    FROM bond
+    WHERE molecule_id IN (SELECT molecule_id FROM mols) AND bond_type = ' = '
+)
+SELECT num_double_bonds, EXISTS (SELECT 1 FROM mols) AS is_carcinogenic
+FROM double_bonds;
+WITH bond_info AS (
+    SELECT b.bond_id, b.molecule_id, b.bond_type
+    FROM bond b
+    WHERE b.bond_id = 'TR000_2_3'
+),
+bonded_elements AS (
+    SELECT a.element
+    FROM atom a
+    JOIN connected c ON a.atom_id = c.atom_id
+    WHERE c.bond_id = 'TR000_2_3'
+),
+unique_bonded_elements AS (
+    SELECT DISTINCT element
+    FROM bonded_elements
+)
+SELECT * FROM unique_bonded_elements;
+WITH molecule_id AS (
+    SELECT molecule_id
+    FROM molecule
+    WHERE label = 'TR346'
+),
+atom_ids AS (
+    SELECT atom_id
+    FROM atom
+    WHERE molecule_id IN (SELECT molecule_id FROM molecule_id)
+),
+bond_types AS (
+    SELECT DISTINCT bond_type
+    FROM bond
+    WHERE molecule_id IN (SELECT molecule_id FROM molecule_id)
+)
+SELECT COUNT(DISTINCT atom_id) AS atom_count, COUNT(DISTINCT bond_type) AS bond_type_count
+FROM atom_ids
+CROSS JOIN bond_types;
+WITH sulfur_atom_ids AS (
+    SELECT a.atom_id
+    FROM atom a
+    WHERE a.element = 's'
+),
+double_bond_ids AS (
+    SELECT b.bond_id
+    FROM bond b
+    WHERE b.bond_type = ' = '
+),
+connected_sulfur_atoms AS (
+    SELECT ca1.atom_id AS atom1_id, ca2.atom_id AS atom2_id
+    FROM connected ca1
+    JOIN connected ca2 ON ca1.bond_id = ca2.bond_id AND ca1.atom_id != ca2.atom_id
+    WHERE ca1.atom_id IN (SELECT atom_id FROM sulfur_atom_ids)
+      AND ca2.atom_id IN (SELECT atom_id FROM sulfur_atom_ids)
+)
+SELECT DISTINCT ma.molecule_id, ma.element
+FROM molecule m
+JOIN atom ma ON m.molecule_id = ma.molecule_id
+JOIN connected_sulfur_atoms csa ON ma.atom_id = csa.atom1_id OR ma.atom_id = csa.atom2_id
+WHERE ma.element = 's';
+SELECT DISTINCT a.element, b.bond_type
+FROM atom a
+JOIN bond b ON a.molecule_id = b.molecule_id
+WHERE a.molecule_id = 'TR002';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

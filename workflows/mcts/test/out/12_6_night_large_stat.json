@@ -1,0 +1,1130 @@
+{
+  "9": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM satscores\nJOIN frpm ON satscores.cds = frpm.`CDSCode`\nWHERE satscores.`AvgScrMath` > 560\nAND frpm.`Charter Funding Type` = 'Directly funded';",
+    "stats": {
+      "average_reward": 0.25,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 4921.371325492859,
+        "rollout_s": 4921.370547294617,
+        "cte_gen_s": 544.282075881958,
+        "sql_gen_s": 4331.893093585968,
+        "db_exec_s": 43.548722982406616,
+        "rollout_count": 8
+      },
+      "gold_match": true,
+      "gold_sql": "SELECT COUNT(T2.`School Code`) FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrMath > 560 AND T2.`Charter Funding Type` = 'Directly funded'"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 1
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 2
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 3
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 4
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 5,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 5
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 6,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM satscores\nJOIN frpm ON satscores.cds = frpm.`CDSCode`\nWHERE satscores.`AvgScrMath` > 560\nAND frpm.`Charter Funding Type` = 'Directly funded';",
+        "rollout_id": 6
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 7,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 7
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND...",
+          "WITH t_join AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH t_rows AS (\n    SELECT f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cd...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_rows\n)\nSELECT * FROM final_count;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 8,
+        "sql_bucket_count": 10,
+        "sql_total_variants": 10,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM satscores\nJOIN frpm ON satscores.cds = frpm.`CDSCode`\nWHERE satscores.`AvgScrMath` > 560\n  AND frpm.`Charter Funding Type` = 'Directly funded';",
+        "rollout_id": 8
+      }
+    ]
+  },
+  "35": {
+    "sql": "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Charter School (Y/N)` = '1'\n),\nc_agg AS (\n    SELECT `AdmEmail1`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` ASC\n    LIMIT 1\n)\nSELECT `AdmEmail1` FROM c_agg;",
+    "stats": {
+      "average_reward": 0.5,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 5981.199248313904,
+        "rollout_s": 5980.629415035248,
+        "cte_gen_s": 1960.1284000873566,
+        "sql_gen_s": 3983.9608306884766,
+        "db_exec_s": 34.901039838790894,
+        "rollout_count": 8
+      },
+      "gold_match": true,
+      "gold_sql": "SELECT T2.AdmEmail1 FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`Charter School (Y/N)` = 1 ORDER BY T1.`Enrollment (K-12)` ASC LIMIT 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmai...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY...",
+          "WITH c_final AS (\n    SELECT `AdmEmail1`\n    FROM c_rows\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          14,
+          15,
+          13
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 4,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 1
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM c_cols\n    ORDER BY `Enrollment ...",
+          "WITH t_join AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_email AS (\n    SELECT s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSC...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM final_answer;",
+          "WITH c_final AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          1,
+          15,
+          15,
+          15,
+          15,
+          12
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 7,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 3,
+        "selected_sql": "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Charter School (Y/N)` = '1'\n),\nc_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` ASC\n    LIMIT 1\n),\nc_email AS (\n    SELECT s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Charter School (Y/N)` = '1'\n    AND f.`CDSCode` = (\n        SELECT `CDSCode` FROM c_rows\n    )\n)\nSELECT `AdmEmail1` FROM c_email;",
+        "rollout_id": 2
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM c_cols\n    ORDER BY `Enrollment ...",
+          "WITH t_join AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_email AS (\n    SELECT s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSC...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM final_answer;",
+          "WITH c_final AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          1,
+          15,
+          15,
+          15,
+          15,
+          12
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "leaf_depth": 7,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 3
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmai...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY...",
+          "WITH c_agg AS (\n    SELECT `CDSCode`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` A...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_agg\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          14,
+          15,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 2,
+        "sql_total_variants": 2,
+        "selected_sql": "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Charter School (Y/N)` = '1'\n),\nc_agg AS (\n    SELECT `AdmEmail1`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` ASC\n    LIMIT 1\n)\nSELECT `AdmEmail1` FROM c_agg;",
+        "rollout_id": 4
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmai...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY...",
+          "WITH t_charter_schools AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n ...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM t_charter_schools\n)\nSELECT * FROM final_answe..."
+        ],
+        "cte_bucket_counts": [
+          14,
+          15,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "visit_counts": [
+          2,
+          2,
+          0,
+          0
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 5
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM c_cols\n    ORDER BY `Enrollment ...",
+          "WITH t_join AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_email AS (\n    SELECT s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSC...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM final_answer;",
+          "WITH c_final AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          1,
+          15,
+          15,
+          15,
+          15,
+          12
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "leaf_depth": 7,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 10,
+        "sql_total_variants": 10,
+        "selected_sql": "SELECT s.`AdmEmail1`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE f.`Charter School (Y/N)` = '1'\nORDER BY f.`Enrollment (K-12)` ASC\nLIMIT 1;",
+        "rollout_id": 6
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM c_cols\n    ORDER BY `Enrollment ...",
+          "WITH t_join AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n   ...",
+          "WITH c_email AS (\n    SELECT s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSC...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM final_answer;",
+          "WITH c_final AS (\n    SELECT `AdmEmail1`\n    FROM c_email\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          1,
+          15,
+          15,
+          15,
+          15,
+          12
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "leaf_depth": 7,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 7
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmai...",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY...",
+          "WITH c_agg AS (\n    SELECT `CDSCode`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` A...",
+          "WITH final_answer AS (\n    SELECT `AdmEmail1`\n    FROM c_agg\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          14,
+          15,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "visit_counts": [
+          3,
+          3,
+          1,
+          1
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 2,
+        "sql_total_variants": 2,
+        "selected_sql": "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`Charter School (Y/N)`, f.`Enrollment (K-12)`, s.`AdmEmail1`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Charter School (Y/N)` = '1'\n),\nc_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`, `AdmEmail1`\n    FROM c_cols\n    ORDER BY `Enrollment (K-12)` ASC\n    LIMIT 1\n),\nc_agg AS (\n    SELECT `CDSCode`, `AdmEmail1`\n    FROM c_rows\n)\nSELECT `AdmEmail1` FROM c_agg;",
+        "rollout_id": 8
+      }
+    ]
+  },
+  "81": {
+    "sql": "SELECT s.`City`, s.`School`, f.`Low Grade`\nFROM schools s\nJOIN frpm f ON s.`CDSCode` = f.`CDSCode`\nWHERE s.`State` = 'CA'\nORDER BY s.`Latitude` ASC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.07142857142857142,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 6396.303163290024,
+        "rollout_s": 6396.3027148246765,
+        "cte_gen_s": 2012.1682283878326,
+        "sql_gen_s": 4350.016706228256,
+        "db_exec_s": 30.23570704460144,
+        "rollout_count": 8
+      },
+      "gold_match": true,
+      "gold_sql": "SELECT T2.City, T1.`Low Grade`, T1.`School Name` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.State = 'CA' ORDER BY T2.Latitude ASC LIMIT 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 2,
+        "selected_sql": null,
+        "rollout_id": 1
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 2
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 3
+      },
+      {
+        "reward": 0.5714285714285714,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 4,
+        "sql_total_variants": 7,
+        "selected_sql": "SELECT s.`City`, s.`School`, f.`Low Grade`\nFROM schools s\nJOIN frpm f ON s.`CDSCode` = f.`CDSCode`\nWHERE s.`State` = 'CA'\nORDER BY s.`Latitude` ASC\nLIMIT 1;",
+        "rollout_id": 4
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 5,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 5
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 6,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 6
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 7,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 7
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "leaf_depth": 8,
+        "leaf_visit_count": 8,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 8
+      }
+    ]
+  },
+  "93": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM client c\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'M'\n  AND d.A11 > 8000\n  AND d.A3 = 'north Bohemia';",
+    "stats": {
+      "average_reward": 0.3125,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 6918.202934503555,
+        "rollout_s": 6918.2024269104,
+        "cte_gen_s": 2693.5909054279327,
+        "sql_gen_s": 4139.379094362259,
+        "db_exec_s": 84.10873937606812,
+        "rollout_count": 8
+      },
+      "gold_match": true,
+      "gold_sql": "SELECT COUNT(T1.client_id) FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.gender = 'M' AND T2.A3 = 'north Bohemia' AND T2.A11 > 8000"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.5,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d O...",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 = 'North Bohemia'\n)\nSELECT * FROM...",
+          "WITH fuzzy_match AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%north bohemia%'\n    O...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_count...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15,
+          1
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 1,
+        "sql_total_variants": 2,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM client\nJOIN district ON client.district_id = district.district_id\nWHERE client.gender = 'M'\n  AND district.A11 > 8000\n  AND district.A3 LIKE '%north bohemia%';",
+        "rollout_id": 1
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.district_id...",
+          "WITH fuzzy_match AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.distri...",
+          "WITH t_final AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM t_final;",
+          "WITH t_final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM t_final_c...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          5,
+          15,
+          9,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 2
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d O...",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 = 'North Bohemia'\n)\nSELECT * FROM...",
+          "WITH fuzzy_match AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%north bohemia%'\n    O...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_count...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15,
+          1
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "visit_counts": [
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 3
+      },
+      {
+        "reward": 0.5,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.district_id...",
+          "WITH fuzzy_match AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.distri...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n    WHERE A3 = 'North Bohem...",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM fuzzy_match\n    WHERE A3 = 'North Bohemia'\n)\nSELECT *...",
+          "WITH fuzzy_match2 AS (\n    SELECT r.client_id\n    FROM c_rows r\n    JOIN district d ON r.district_id..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          5,
+          15,
+          5,
+          13,
+          14
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          3,
+          3,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 10,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM client c\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'M' AND d.A11 > 8000 AND d.A3 = 'North Bohemia';",
+        "rollout_id": 4
+      },
+      {
+        "reward": 0.6,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d O...",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 = 'North Bohemia'\n)\nSELECT * FROM...",
+          "WITH fuzzy_match AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%north bohemia%'\n    O...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_count...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15,
+          1
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "visit_counts": [
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM client c\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'M'\n  AND d.A11 > 8000\n  AND d.A3 = 'north Bohemia';",
+        "rollout_id": 5
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.district_id...",
+          "WITH fuzzy_match AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.distri...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n    WHERE A3 = 'North Bohem...",
+          "WITH t_final AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n    WHERE A3 = 'North Bohemia'\n..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          5,
+          15,
+          5,
+          2
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          5,
+          5,
+          2,
+          2,
+          1,
+          0
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 6
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d O...",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 = 'North Bohemia'\n)\nSELECT * FROM...",
+          "WITH fuzzy_match AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%north bohemia%'\n    O...",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_count...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15,
+          1
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "visit_counts": [
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "rollout_id": 7
+      },
+      {
+        "reward": 0.9,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN d...",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = '...",
+          "WITH t_join AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.district_id...",
+          "WITH fuzzy_match AS (\n    SELECT r.client_id, d.A3\n    FROM c_rows r\n    JOIN district d ON r.distri...",
+          "WITH t_final AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM t_final;",
+          "WITH t_final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM t_final_c...",
+          "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM fuzzy_match\n)\nSELECT * FROM final_answ..."
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          5,
+          15,
+          9,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          7,
+          7,
+          3,
+          3,
+          1,
+          1,
+          1
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 9,
+        "sql_total_variants": 10,
+        "selected_sql": "SELECT COUNT(*) AS answer\nFROM client c\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'M' \n  AND d.A11 > 8000 \n  AND d.A3 LIKE '%North Bohemia%';",
+        "rollout_id": 8
+      }
+    ]
+  }
+}

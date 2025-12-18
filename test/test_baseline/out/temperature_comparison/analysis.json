@@ -1,0 +1,39 @@
+{
+    "total_sqls": 2205,
+    "unique_sqls": 1084,
+    "deduplication_rate": 50.8390022675737,
+    "original_sqls": 735,
+    "original_unique": 509,
+    "original_diversity": 30.74829931972789,
+    "permutation_sqls": 1470,
+    "permutation_unique": 745,
+    "permutation_diversity": 49.31972789115646,
+    "reversed_sqls": 1470,
+    "reversed_unique": 745,
+    "reversed_diversity": 49.31972789115646,
+    "random_sqls": 0,
+    "random_unique": 0,
+    "random_diversity": 0,
+    "overlap_rate": 15.682656826568268,
+    "permutation_stats": {
+        "1": 1470,
+        "0": 735
+    },
+    "per_tag_stats": {
+        "rev_and_temps": {
+            "count": 735,
+            "unique": 519,
+            "diversity": 29.387755102040813
+        },
+        "only_temps": {
+            "count": 735,
+            "unique": 509,
+            "diversity": 30.74829931972789
+        },
+        "only_reverse": {
+            "count": 735,
+            "unique": 406,
+            "diversity": 44.76190476190476
+        }
+    }
+}

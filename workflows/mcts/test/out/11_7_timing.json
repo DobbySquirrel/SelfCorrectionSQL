@@ -1,0 +1,2354 @@
+{
+  "9": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM satscores ss\nJOIN frpm f ON ss.cds = f.`CDSCode`\nWHERE ss.`AvgScrMath` > 560\n  AND ss.`AvgScrMath` IS NOT NULL\n  AND f.`Charter Funding Type` = 'Directly funded';",
+    "stats": {
+      "average_reward": 0.21424122784101324,
+      "total_visits": 10,
+      "elapsed_time": 611.123087644577,
+      "timing": {
+        "total_s": 611.1227436065674,
+        "rollout_s": 2650.5471699237823,
+        "cte_gen_s": 1125.4512667655945,
+        "sql_gen_s": 1488.7342035770416,
+        "db_exec_s": 3.200249195098877,
+        "rollout_count": 10
+      }
+    }
+  },
+  "21": {
+    "sql": "WITH c_cols AS (\n    SELECT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM frpm\n),\nc_rows AS (\n    SELECT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM c_cols\n    WHERE `County Name` = 'Los Angeles' \n      AND `Free Meal Count (K-12)` > 500 \n      AND `FRPM Count (K-12)` < 700\n),\nt_distinct AS (\n    SELECT DISTINCT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM c_rows\n)\nSELECT COUNT(*) AS answer\nFROM t_distinct;",
+    "stats": {
+      "average_reward": 0.3025857898549286,
+      "total_visits": 10,
+      "elapsed_time": 534.5038702487946,
+      "timing": {
+        "total_s": 534.5036242008209,
+        "rollout_s": 2607.4809050559998,
+        "cte_gen_s": 1767.9445955753326,
+        "sql_gen_s": 813.3653795719147,
+        "db_exec_s": 1.2442173957824707,
+        "rollout_count": 10
+      }
+    }
+  },
+  "25": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nschools_info AS (\n    SELECT s.`School`, s.`County`, s.`CDSCode`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nfrpm_join AS (\n    SELECT s.School, s.County, s.CDSCode, f.`Charter Funding Type`\n    FROM schools_info s\n    INNER JOIN frpm f ON s.CDSCode = f.`CDSCode`\n),\nriverside_filter AS (\n    SELECT School, `Charter Funding Type`\n    FROM frpm_join\n    WHERE County = 'Riverside'\n)\nSELECT * FROM riverside_filter;",
+    "stats": {
+      "average_reward": 0.07512529443907076,
+      "total_visits": 10,
+      "elapsed_time": 1507.701161623001,
+      "timing": {
+        "total_s": 1507.7009093761444,
+        "rollout_s": 7094.975110292435,
+        "cte_gen_s": 2106.077670097351,
+        "sql_gen_s": 4973.372784852982,
+        "db_exec_s": 1.0252082347869873,
+        "rollout_count": 10
+      }
+    }
+  },
+  "35": {
+    "sql": "SELECT `AdmEmail1`\nFROM schools\nJOIN frpm ON schools.`CDSCode` = frpm.`CDSCode`\nWHERE frpm.`Charter School (Y/N)` = 1\nORDER BY frpm.`Enrollment (K-12)` ASC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.23668512116809456,
+      "total_visits": 10,
+      "elapsed_time": 993.8969287872314,
+      "timing": {
+        "total_s": 993.896565914154,
+        "rollout_s": 4772.097943544388,
+        "cte_gen_s": 4077.8116800785065,
+        "sql_gen_s": 654.8666019439697,
+        "db_exec_s": 4.883614778518677,
+        "rollout_count": 10
+      }
+    }
+  },
+  "40": {
+    "sql": "WITH c_rows AS (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `District Name` = 'Fresno Unified'\n),\nc_filtered AS (\n    SELECT s.cds, s.AvgScrRead, sc.Phone\n    FROM c_rows r\n    INNER JOIN satscores s ON r.CDSCode = s.cds\n    INNER JOIN schools sc ON r.CDSCode = sc.CDSCode\n    WHERE s.AvgScrRead IS NOT NULL\n),\nmin_score AS (\n    SELECT MIN(AvgScrRead) AS min_score\n    FROM c_filtered\n),\nc_min_school AS (\n    SELECT cds, AvgScrRead, Phone\n    FROM c_filtered\n    WHERE AvgScrRead = (SELECT min_score FROM min_score)\n)\nSELECT Phone\nFROM c_min_school;",
+    "stats": {
+      "average_reward": 0.26848226124531477,
+      "total_visits": 10,
+      "elapsed_time": 827.9914517402649,
+      "timing": {
+        "total_s": 827.9911155700684,
+        "rollout_s": 3479.947444677353,
+        "cte_gen_s": 2826.2451388835907,
+        "sql_gen_s": 629.5213751792908,
+        "db_exec_s": 3.042398452758789,
+        "rollout_count": 10
+      }
+    }
+  },
+  "43": {
+    "sql": "WITH c_cols AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`\n    FROM satscores\n),\nt_join AS (\n    SELECT s.`CDSCode`, s.`County`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`\n    FROM c_cols ss\n    INNER JOIN schools s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `CDSCode`, `County`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`\n    FROM t_join\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_total AS (\n    SELECT `CDSCode`, `County`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, \n           (`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `TotalScore`\n    FROM c_rows\n)\nSELECT `AvgScrMath`, `County`\nFROM c_total\nWHERE `TotalScore` = (SELECT MIN(`TotalScore`) FROM c_total);",
+    "stats": {
+      "average_reward": 0.3080626144241466,
+      "total_visits": 10,
+      "elapsed_time": 818.6061973571777,
+      "timing": {
+        "total_s": 818.6059083938599,
+        "rollout_s": 3429.4964911937714,
+        "cte_gen_s": 2211.5368995666504,
+        "sql_gen_s": 1190.9714813232422,
+        "db_exec_s": 3.756688356399536,
+        "rollout_count": 10
+      }
+    }
+  },
+  "76": {
+    "sql": "WITH c_cols AS (\n    SELECT `County Name`, `NSLP Provision Status`, `Low Grade`, `High Grade`, `CDSCode`\n    FROM frpm\n),\nc_rows AS (\n    SELECT `County Name`, `NSLP Provision Status`, `Low Grade`, `High Grade`, `CDSCode`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' \n      AND `NSLP Provision Status` = 'Provision 2' \n      AND `Low Grade` = 9 \n      AND `High Grade` = 12\n),\nt_join AS (\n    SELECT s.`City`, s.`EILCode`\n    FROM c_rows f\n    INNER JOIN schools s ON f.CDSCode = s.CDSCode\n    WHERE s.`EILCode` = 'HS'\n)\nSELECT `City` FROM t_join;",
+    "stats": {
+      "average_reward": 0.4440526868425011,
+      "total_visits": 10,
+      "elapsed_time": 510.6006293296814,
+      "timing": {
+        "total_s": 510.6003153324127,
+        "rollout_s": 2093.141701698303,
+        "cte_gen_s": 1682.4113042354584,
+        "sql_gen_s": 382.087073802948,
+        "db_exec_s": 2.849046468734741,
+        "rollout_count": 10
+      }
+    }
+  },
+  "81": {
+    "sql": "SELECT s.`City`, s.`School`, f.`Low Grade`\nFROM schools s\nJOIN frpm f ON s.`CDSCode` = f.`CDSCode`\nWHERE s.`State` = 'CA'\nAND s.`Latitude` = (SELECT MIN(`Latitude`) FROM schools WHERE `State` = 'CA');",
+    "stats": {
+      "average_reward": 0.3590440115808729,
+      "total_visits": 10,
+      "elapsed_time": 678.4079689979553,
+      "timing": {
+        "total_s": 678.4077703952789,
+        "rollout_s": 3127.963938474655,
+        "cte_gen_s": 2497.274826526642,
+        "sql_gen_s": 604.0970618724823,
+        "db_exec_s": 2.6947240829467773,
+        "rollout_count": 10
+      }
+    }
+  },
+  "93": {
+    "sql": "SELECT COUNT(*) \nFROM client \nJOIN district ON client.district_id = district.district_id \nWHERE client.gender = 'M' \nAND district.A3 = 'North Bohemia' \nAND district.A11 > 8000;",
+    "stats": {
+      "average_reward": 0.46060564224099326,
+      "total_visits": 10,
+      "elapsed_time": 389.10585284233093,
+      "timing": {
+        "total_s": 389.10563921928406,
+        "rollout_s": 1672.1771776676178,
+        "cte_gen_s": 1360.5753729343414,
+        "sql_gen_s": 288.40488743782043,
+        "db_exec_s": 1.418142318725586,
+        "rollout_count": 10
+      }
+    }
+  },
+  "97": {
+    "sql": "SELECT `client_id` FROM disp WHERE `type` = 'DISPONENT';",
+    "stats": {
+      "average_reward": 0.5357138732996392,
+      "total_visits": 10,
+      "elapsed_time": 377.5837688446045,
+      "timing": {
+        "total_s": 377.5834929943085,
+        "rollout_s": 1755.6899664402008,
+        "cte_gen_s": 1144.861635684967,
+        "sql_gen_s": 576.7037279605865,
+        "db_exec_s": 16.358956813812256,
+        "rollout_count": 10
+      }
+    }
+  },
+  "98": {
+    "sql": "SELECT a.account_id, a.frequency\nFROM account a\nJOIN loan l ON a.account_id = l.account_id\nWHERE l.date BETWEEN '1997-01-01' AND '1997-12-31'\n  AND a.frequency = 'POPLATEK TYDNE'\n  AND l.amount = (\n      SELECT MIN(l2.amount)\n      FROM loan l2\n      JOIN account a2 ON l2.account_id = a2.account_id\n      WHERE l2.date BETWEEN '1997-01-01' AND '1997-12-31'\n        AND a2.frequency = 'POPLATEK TYDNE'\n  );",
+    "stats": {
+      "average_reward": 0.0999999000001,
+      "total_visits": 10,
+      "elapsed_time": 1099.4262256622314,
+      "timing": {
+        "total_s": 1099.4257576465607,
+        "rollout_s": 4273.49823641777,
+        "cte_gen_s": 2509.1373534202576,
+        "sql_gen_s": 1735.4522585868835,
+        "db_exec_s": 7.528230428695679,
+        "rollout_count": 10
+      }
+    }
+  },
+  "111": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM account\nJOIN district ON account.district_id = district.district_id\nWHERE district.A2 = 'Litomerice' AND account.date LIKE '1996%';",
+    "stats": {
+      "average_reward": 0.3056154543830993,
+      "total_visits": 10,
+      "elapsed_time": 411.0939118862152,
+      "timing": {
+        "total_s": 411.09349966049194,
+        "rollout_s": 2010.5666453838348,
+        "cte_gen_s": 1244.2140929698944,
+        "sql_gen_s": 736.5485684871674,
+        "db_exec_s": 1.64237380027771,
+        "rollout_count": 10
+      }
+    }
+  },
+  "130": {
+    "sql": "WITH c_cols AS (\n    SELECT `account_id`, `district_id`\n    FROM account\n),\nc_district AS (\n    SELECT a.account_id, d.A3\n    FROM c_cols a\n    JOIN district d ON a.district_id = d.district_id\n),\nc_south_bohemia AS (\n    SELECT account_id\n    FROM c_district\n    WHERE A3 = 'south Bohemia'\n),\nc_disp AS (\n    SELECT d.disp_id, d.account_id\n    FROM c_south_bohemia s\n    JOIN disp d ON s.account_id = d.account_id\n),\nc_no_card AS (\n    SELECT d.account_id\n    FROM c_disp d\n    LEFT JOIN card c ON d.disp_id = c.disp_id\n    WHERE c.card_id IS NULL\n)\nSELECT COUNT(*) FROM c_no_card;",
+    "stats": {
+      "average_reward": 0.21869507237540567,
+      "total_visits": 10,
+      "elapsed_time": 873.1082048416138,
+      "timing": {
+        "total_s": 873.1079339981079,
+        "rollout_s": 4020.5324923992157,
+        "cte_gen_s": 2779.6550419330597,
+        "sql_gen_s": 1182.401933670044,
+        "db_exec_s": 30.508161544799805,
+        "rollout_count": 10
+      }
+    }
+  },
+  "139": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM card c\nJOIN disp d ON c.disp_id = d.disp_id\nWHERE c.type = 'gold' AND d.type = 'OWNER';",
+    "stats": {
+      "average_reward": 0.3793384944685196,
+      "total_visits": 10,
+      "elapsed_time": 365.25037455558777,
+      "timing": {
+        "total_s": 365.25001525878906,
+        "rollout_s": 1748.5938909053802,
+        "cte_gen_s": 1366.4426791667938,
+        "sql_gen_s": 359.46412467956543,
+        "db_exec_s": 2.2236487865448,
+        "rollout_count": 10
+      }
+    }
+  },
+  "158": {
+    "sql": "SELECT a.`district_id`\nFROM `order` o\nINNER JOIN `account` a ON o.`account_id` = a.`account_id`\nWHERE o.`order_id` = 33333;",
+    "stats": {
+      "average_reward": 0.24999993750001565,
+      "total_visits": 10,
+      "elapsed_time": 289.292765378952,
+      "timing": {
+        "total_s": 289.292551279068,
+        "rollout_s": 1271.745052576065,
+        "cte_gen_s": 550.6935224533081,
+        "sql_gen_s": 705.5662593841553,
+        "db_exec_s": 0.460827112197876,
+        "rollout_count": 10
+      }
+    }
+  },
+  "164": {
+    "sql": "SELECT c.`client_id`, c.`gender`, c.`birth_date`\nFROM `order` o\nINNER JOIN `disp` d ON o.`account_id` = d.`account_id`\nINNER JOIN `client` c ON d.`client_id` = c.`client_id`\nWHERE o.`order_id` = 32423;",
+    "stats": {
+      "average_reward": 0.3340777525875792,
+      "total_visits": 10,
+      "elapsed_time": 574.213593006134,
+      "timing": {
+        "total_s": 574.2133841514587,
+        "rollout_s": 2609.469332933426,
+        "cte_gen_s": 1722.1199882030487,
+        "sql_gen_s": 861.8854982852936,
+        "db_exec_s": 1.7783327102661133,
+        "rollout_count": 10
+      }
+    }
+  },
+  "176": {
+    "sql": "SELECT l.amount, l.payments\nFROM client c\nINNER JOIN disp d ON c.client_id = d.client_id\nINNER JOIN loan l ON d.account_id = l.account_id\nWHERE c.client_id = 992;",
+    "stats": {
+      "average_reward": 0.27709782241608016,
+      "total_visits": 10,
+      "elapsed_time": 577.1993761062622,
+      "timing": {
+        "total_s": 577.1988525390625,
+        "rollout_s": 2553.0647201538086,
+        "cte_gen_s": 1660.251525402069,
+        "sql_gen_s": 862.1040313243866,
+        "db_exec_s": 3.7223851680755615,
+        "rollout_count": 10
+      }
+    }
+  },
+  "189": {
+    "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.birth_date, d.A11\n    FROM client AS c\n    INNER JOIN district AS d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, birth_date, A11\n    FROM c_cols\n    WHERE gender = 'F'\n),\nc_age_with_age AS (\n    SELECT d.account_id, c.birth_date, c.A11,\n           (STRFTIME('%Y', 'now') - STRFTIME('%Y', c.birth_date)) AS age\n    FROM c_rows c\n    INNER JOIN disp d ON c.client_id = d.client_id\n),\nmax_age_clients AS (\n    SELECT account_id, age, A11\n    FROM c_age_with_age\n    WHERE age = (SELECT MAX(age) FROM c_age_with_age)\n),\nmin_salary_clients AS (\n    SELECT account_id\n    FROM max_age_clients\n    WHERE A11 = (SELECT MIN(A11) FROM max_age_clients)\n)\nSELECT account_id FROM min_salary_clients;",
+    "stats": {
+      "average_reward": 0.194625584286297,
+      "total_visits": 10,
+      "elapsed_time": 1370.1959958076477,
+      "timing": {
+        "total_s": 1370.195601940155,
+        "rollout_s": 5788.344731092453,
+        "cte_gen_s": 4662.38173699379,
+        "sql_gen_s": 1085.9853253364563,
+        "db_exec_s": 8.216318130493164,
+        "rollout_count": 10
+      }
+    }
+  },
+  "231": {
+    "sql": "WITH c_rows AS (\n    SELECT bond_type, molecule_id\n    FROM bond\n    WHERE molecule_id = 'TR010'\n),\nc_agg AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n),\nmax_bond AS (\n    SELECT bond_type\n    FROM c_agg\n    ORDER BY count DESC\n    LIMIT 1\n),\nc_label AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT max_bond.bond_type, c_label.label\nFROM max_bond, c_label;",
+    "stats": {
+      "average_reward": 0.3444189722169694,
+      "total_visits": 10,
+      "elapsed_time": 792.7023825645447,
+      "timing": {
+        "total_s": 792.7021291255951,
+        "rollout_s": 3425.0954492092133,
+        "cte_gen_s": 2705.002724647522,
+        "sql_gen_s": 697.7832353115082,
+        "db_exec_s": 1.4135677814483643,
+        "rollout_count": 10
+      }
+    }
+  },
+  "240": {
+    "sql": "WITH c_cols AS (\n    SELECT `element`\n    FROM atom\n    WHERE `molecule_id` = 'TR004'\n)\nSELECT * FROM c_cols;",
+    "stats": {
+      "average_reward": 0.6999994500004749,
+      "total_visits": 10,
+      "elapsed_time": 404.70366072654724,
+      "timing": {
+        "total_s": 404.70344161987305,
+        "rollout_s": 1686.1658487319946,
+        "cte_gen_s": 814.5790319442749,
+        "sql_gen_s": 859.9072935581207,
+        "db_exec_s": 0.7928586006164551,
+        "rollout_count": 10
+      }
+    }
+  },
+  "257": {
+    "sql": "SELECT `connected`.`atom_id2`\nFROM `atom`\nINNER JOIN `connected` ON `atom`.`atom_id` = `connected`.`atom_id`\nWHERE `atom`.`element` = 's';",
+    "stats": {
+      "average_reward": 0.6029534358938842,
+      "total_visits": 10,
+      "elapsed_time": 427.9051446914673,
+      "timing": {
+        "total_s": 427.904901266098,
+        "rollout_s": 1925.5099577903748,
+        "cte_gen_s": 923.184490442276,
+        "sql_gen_s": 984.9488861560822,
+        "db_exec_s": 1.5886106491088867,
+        "rollout_count": 10
+      }
+    }
+  },
+  "267": {
+    "sql": "SELECT `bond_type` \nFROM `bond` \nWHERE `molecule_id` BETWEEN 'TR000' AND 'TR050';",
+    "stats": {
+      "average_reward": 0.6457138059799818,
+      "total_visits": 10,
+      "elapsed_time": 429.4913754463196,
+      "timing": {
+        "total_s": 429.4911069869995,
+        "rollout_s": 1943.2834284305573,
+        "cte_gen_s": 947.97736287117,
+        "sql_gen_s": 971.5650231838226,
+        "db_exec_s": 3.375518321990967,
+        "rollout_count": 10
+      }
+    }
+  },
+  "286": {
+    "sql": "WITH triple_count AS (\n    SELECT COUNT(*) AS triple_count\n    FROM (\n        SELECT DISTINCT molecule_id\n        FROM bond\n        WHERE bond_type = '#'\n    ) AS distinct_triple_molecules\n),\ntotal_molecules AS (\n    SELECT COUNT(*) AS total\n    FROM molecule\n)\nSELECT (triple_count.triple_count * 100.0 / total_molecules.total) AS percentage\nFROM triple_count, total_molecules;",
+    "stats": {
+      "average_reward": 0.4744163632602222,
+      "total_visits": 10,
+      "elapsed_time": 873.296243429184,
+      "timing": {
+        "total_s": 873.2959122657776,
+        "rollout_s": 3627.599041700363,
+        "cte_gen_s": 2934.6519911289215,
+        "sql_gen_s": 669.4160323143005,
+        "db_exec_s": 2.0057735443115234,
+        "rollout_count": 10
+      }
+    }
+  },
+  "287": {
+    "sql": "SELECT \n    (SUM(bond_type = ' = ') * 100.0 / COUNT(*)) AS percent\nFROM bond\nWHERE molecule_id = 'TR047';",
+    "stats": {
+      "average_reward": 0.3477373865777602,
+      "total_visits": 10,
+      "elapsed_time": 665.1959109306335,
+      "timing": {
+        "total_s": 665.1957643032074,
+        "rollout_s": 2486.095714569092,
+        "cte_gen_s": 1756.526901960373,
+        "sql_gen_s": 705.9154162406921,
+        "db_exec_s": 1.974656581878662,
+        "rollout_count": 10
+      }
+    }
+  },
+  "288": {
+    "sql": "WITH c_cols AS (\n    SELECT `atom_id`, `molecule_id`\n    FROM atom\n    WHERE `atom_id` = 'TR001_1'\n),\nt_join AS (\n    SELECT m.label\n    FROM c_cols c\n    INNER JOIN molecule m ON c.molecule_id = m.molecule_id\n)\nSELECT label FROM t_join;",
+    "stats": {
+      "average_reward": 0.4409088594652785,
+      "total_visits": 10,
+      "elapsed_time": 306.5028238296509,
+      "timing": {
+        "total_s": 306.50256276130676,
+        "rollout_s": 1428.6257717609406,
+        "cte_gen_s": 1166.1393740177155,
+        "sql_gen_s": 240.82239437103271,
+        "db_exec_s": 1.0321192741394043,
+        "rollout_count": 10
+      }
+    }
+  },
+  "291": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM molecule\nWHERE `label` = '+';",
+    "stats": {
+      "average_reward": 0.34776056930479105,
+      "total_visits": 10,
+      "elapsed_time": 216.47317671775818,
+      "timing": {
+        "total_s": 216.39671659469604,
+        "rollout_s": 914.6169974803925,
+        "cte_gen_s": 651.5557520389557,
+        "sql_gen_s": 246.21069169044495,
+        "db_exec_s": 0.757098913192749,
+        "rollout_count": 10
+      }
+    }
+  },
+  "303": {
+    "sql": "SELECT \n    COUNT(CASE WHEN bond_type = ' = ' THEN 1 END) AS double_bonds,\n    m.label AS carcinogenic\nFROM \n    bond\nJOIN \n    molecule m ON bond.molecule_id = m.molecule_id\nWHERE \n    bond.molecule_id = 'TR006';",
+    "stats": {
+      "average_reward": 0.33171022320464166,
+      "total_visits": 10,
+      "elapsed_time": 926.0182728767395,
+      "timing": {
+        "total_s": 926.0180127620697,
+        "rollout_s": 4279.98749256134,
+        "cte_gen_s": 3675.141526222229,
+        "sql_gen_s": 570.811604976654,
+        "db_exec_s": 2.758033037185669,
+        "rollout_count": 10
+      }
+    }
+  },
+  "307": {
+    "sql": "SELECT \n    CASE \n        WHEN a.element = 'cl' THEN 'Chlorine'\n        WHEN a.element = 'c' THEN 'Carbon'\n        WHEN a.element = 'h' THEN 'Hydrogen'\n        WHEN a.element = 'o' THEN 'Oxygen'\n        WHEN a.element = 's' THEN 'Sulfur'\n        WHEN a.element = 'n' THEN 'Nitrogen'\n        WHEN a.element = 'p' THEN 'Phosphorus'\n        WHEN a.element = 'na' THEN 'Sodium'\n        WHEN a.element = 'br' THEN 'Bromine'\n        WHEN a.element = 'f' THEN 'Fluorine'\n        WHEN a.element = 'i' THEN 'Iodine'\n        WHEN a.element = 'sn' THEN 'Tin'\n        WHEN a.element = 'pb' THEN 'Lead'\n        WHEN a.element = 'te' THEN 'Tellurium'\n        WHEN a.element = 'ca' THEN 'Calcium'\n        ELSE a.element\n    END AS element_name\nFROM connected c\nINNER JOIN atom a ON c.atom_id = a.atom_id\nWHERE c.bond_id = 'TR000_2_3';",
+    "stats": {
+      "average_reward": 0.4938591086594477,
+      "total_visits": 10,
+      "elapsed_time": 501.2015337944031,
+      "timing": {
+        "total_s": 501.20124983787537,
+        "rollout_s": 2372.6045672893524,
+        "cte_gen_s": 1634.596673965454,
+        "sql_gen_s": 713.8585679531097,
+        "db_exec_s": 1.828477144241333,
+        "rollout_count": 10
+      }
+    }
+  },
+  "309": {
+    "sql": "SELECT atom_id, \n       (SELECT COUNT(DISTINCT bond_type) \n        FROM bond \n        WHERE molecule_id = 'TR346') AS bond_type_count\nFROM atom\nWHERE molecule_id = 'TR346';",
+    "stats": {
+      "average_reward": 0.42304918928202895,
+      "total_visits": 10,
+      "elapsed_time": 763.7032740116119,
+      "timing": {
+        "total_s": 763.7030181884766,
+        "rollout_s": 3576.0287630558014,
+        "cte_gen_s": 2432.292303800583,
+        "sql_gen_s": 1121.5819327831268,
+        "db_exec_s": 2.267455816268921,
+        "rollout_count": 10
+      }
+    }
+  },
+  "326": {
+    "sql": "SELECT m.label\nFROM molecule AS m\nWHERE m.molecule_id IN (\n    SELECT a.molecule_id\n    FROM atom AS a\n    WHERE a.element = 's'\n    INTERSECT\n    SELECT b.molecule_id\n    FROM bond AS b\n    WHERE b.bond_type = '='\n);",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 10,
+      "elapsed_time": 665.4037292003632,
+      "timing": {
+        "total_s": 665.4033887386322,
+        "rollout_s": 2492.7277772426605,
+        "cte_gen_s": 2255.0443246364594,
+        "sql_gen_s": 205.49275851249695,
+        "db_exec_s": 5.487724781036377,
+        "rollout_count": 10
+      }
+    }
+  },
+  "337": {
+    "sql": "SELECT a.`element`, b.`bond_type`\nFROM atom a\nINNER JOIN bond b ON a.molecule_id = b.molecule_id\nWHERE a.molecule_id = 'TR002';",
+    "stats": {
+      "average_reward": 0.36161322933852935,
+      "total_visits": 10,
+      "elapsed_time": 963.0926179885864,
+      "timing": {
+        "total_s": 963.0923671722412,
+        "rollout_s": 4541.938041210175,
+        "cte_gen_s": 3636.3151609897614,
+        "sql_gen_s": 878.5464658737183,
+        "db_exec_s": 2.6313397884368896,
+        "rollout_count": 10
+      }
+    }
+  },
+  "338": {
+    "sql": "WITH cte_molecule_atoms AS (\n    SELECT a.atom_id, a.element\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR012'\n),\ncte_connected_atoms AS (\n    SELECT a.atom_id, c.atom_id2, c.bond_id\n    FROM cte_molecule_atoms a\n    JOIN connected c ON a.atom_id = c.atom_id\n),\ncte_bond_info AS (\n    SELECT c.atom_id, c.atom_id2, c.bond_id, b.bond_type\n    FROM cte_connected_atoms c\n    JOIN bond b ON c.bond_id = b.bond_id\n),\ncte_double_bonds AS (\n    SELECT c.atom_id, c.atom_id2, c.bond_id\n    FROM cte_bond_info c\n    WHERE c.bond_type = '='\n),\ncte_check_carbon AS (\n    SELECT c.atom_id, a.element\n    FROM cte_double_bonds c\n    JOIN atom a ON c.atom_id = a.atom_id\n    WHERE a.element = 'c'\n)\nSELECT atom_id FROM cte_check_carbon;",
+    "stats": {
+      "average_reward": 0.08163263640150277,
+      "total_visits": 10,
+      "elapsed_time": 689.1909000873566,
+      "timing": {
+        "total_s": 689.1907894611359,
+        "rollout_s": 3321.392446041107,
+        "cte_gen_s": 2655.576777458191,
+        "sql_gen_s": 634.3186409473419,
+        "db_exec_s": 7.026644706726074,
+        "rollout_count": 10
+      }
+    }
+  },
+  "347": {
+    "sql": "SELECT c.id, c.artist, r.text, c.hasContentWarning\nFROM cards c\nINNER JOIN rulings r ON c.uuid = r.uuid\nWHERE c.artist = 'Stephen Daniele';",
+    "stats": {
+      "average_reward": 0.15624995117189025,
+      "total_visits": 10,
+      "elapsed_time": 388.7886164188385,
+      "timing": {
+        "total_s": 388.78841972351074,
+        "rollout_s": 1346.520425081253,
+        "cte_gen_s": 1008.3186573982239,
+        "sql_gen_s": 306.572655916214,
+        "db_exec_s": 9.362622737884521,
+        "rollout_count": 10
+      }
+    }
+  },
+  "350": {
+    "sql": "WITH c_cols AS (\n    SELECT `name`, `number`, `uuid`\n    FROM cards\n),\nc_rows AS (\n    SELECT `uuid`\n    FROM c_cols\n    WHERE `name` = 'Annul' AND `number` = '29'\n),\nt_join AS (\n    SELECT f.`language`\n    FROM c_rows r\n    INNER JOIN foreign_data f ON r.uuid = f.uuid\n)\nSELECT `language` FROM t_join;",
+    "stats": {
+      "average_reward": 0.3340331167776214,
+      "total_visits": 10,
+      "elapsed_time": 472.5829544067383,
+      "timing": {
+        "total_s": 472.58269000053406,
+        "rollout_s": 1847.0773227214813,
+        "cte_gen_s": 1100.9001023769379,
+        "sql_gen_s": 686.1368901729584,
+        "db_exec_s": 34.02839517593384,
+        "rollout_count": 10
+      }
+    }
+  },
+  "353": {
+    "sql": "WITH c_sets AS (\n    SELECT t.`setCode`, s.`totalSetSize`\n    FROM set_translations t\n    INNER JOIN sets s ON t.`setCode` = s.`code`\n    WHERE t.`language` = 'Italian'\n)\nSELECT `setCode`, `totalSetSize` FROM c_sets;",
+    "stats": {
+      "average_reward": 0.6493501348397868,
+      "total_visits": 10,
+      "elapsed_time": 328.90164613723755,
+      "timing": {
+        "total_s": 328.90142154693604,
+        "rollout_s": 1558.7754940986633,
+        "cte_gen_s": 789.6762719154358,
+        "sql_gen_s": 753.8213515281677,
+        "db_exec_s": 0.964479923248291,
+        "rollout_count": 10
+      }
+    }
+  },
+  "362": {
+    "sql": "SELECT r.text\nFROM cards c\nINNER JOIN rulings r ON c.uuid = r.uuid\nWHERE c.name = 'Condemn';",
+    "stats": {
+      "average_reward": 0.35424467876885096,
+      "total_visits": 10,
+      "elapsed_time": 370.50221014022827,
+      "timing": {
+        "total_s": 370.5019271373749,
+        "rollout_s": 1749.925713300705,
+        "cte_gen_s": 1281.8208312988281,
+        "sql_gen_s": 439.30669116973877,
+        "db_exec_s": 10.794596195220947,
+        "rollout_count": 10
+      }
+    }
+  },
+  "387": {
+    "sql": "SELECT `name`, `colorIdentity` FROM cards WHERE `setCode` = 'OGW';",
+    "stats": {
+      "average_reward": 0.6401216042558568,
+      "total_visits": 10,
+      "elapsed_time": 368.8970379829407,
+      "timing": {
+        "total_s": 368.89674162864685,
+        "rollout_s": 1675.2634692192078,
+        "cte_gen_s": 1338.5160191059113,
+        "sql_gen_s": 312.13688921928406,
+        "db_exec_s": 4.971916675567627,
+        "rollout_count": 10
+      }
+    }
+  },
+  "402": {
+    "sql": "WITH count_story AS (\n    SELECT COUNT(*) AS count\n    FROM (\n        SELECT id\n        FROM cards\n        WHERE isStorySpotlight = 1 AND isTextless = 0\n    ) AS c_rows\n),\ntotal_cards AS (\n    SELECT COUNT(*) AS total\n    FROM cards\n)\nSELECT (count_story.count * 100.0 / total_cards.total) AS percentage\nFROM count_story, total_cards;",
+    "stats": {
+      "average_reward": 0.1900552617292516,
+      "total_visits": 10,
+      "elapsed_time": 1437.4998579025269,
+      "timing": {
+        "total_s": 1437.4995894432068,
+        "rollout_s": 6956.600754976273,
+        "cte_gen_s": 2635.8499007225037,
+        "sql_gen_s": 4283.062836408615,
+        "db_exec_s": 4.577237606048584,
+        "rollout_count": 10
+      }
+    }
+  },
+  "419": {
+    "sql": "SELECT COUNT(*) FROM cards WHERE borderColor = 'borderless' AND edhrecRank > 12000;",
+    "stats": {
+      "average_reward": 0.5499995625004093,
+      "total_visits": 10,
+      "elapsed_time": 288.8142640590668,
+      "timing": {
+        "total_s": 288.81401896476746,
+        "rollout_s": 1368.3148565292358,
+        "cte_gen_s": 743.4365701675415,
+        "sql_gen_s": 607.9857084751129,
+        "db_exec_s": 1.2126142978668213,
+        "rollout_count": 10
+      }
+    }
+  },
+  "423": {
+    "sql": "SELECT `cardKingdomFoilId`, `cardKingdomId`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+    "stats": {
+      "average_reward": 0.3599216375734276,
+      "total_visits": 10,
+      "elapsed_time": 719.2957897186279,
+      "timing": {
+        "total_s": 719.2954995632172,
+        "rollout_s": 3131.0542681217194,
+        "cte_gen_s": 2148.8174929618835,
+        "sql_gen_s": 953.2715058326721,
+        "db_exec_s": 4.807555675506592,
+        "rollout_count": 10
+      }
+    }
+  },
+  "436": {
+    "sql": "SELECT `id` FROM cards WHERE `frameEffects` = 'extendedart';",
+    "stats": {
+      "average_reward": 0.2583332576389116,
+      "total_visits": 10,
+      "elapsed_time": 743.6895179748535,
+      "timing": {
+        "total_s": 743.6893441677094,
+        "rollout_s": 3540.0746841430664,
+        "cte_gen_s": 1378.31422829628,
+        "sql_gen_s": 2131.1824791431427,
+        "db_exec_s": 5.0477166175842285,
+        "rollout_count": 10
+      }
+    }
+  },
+  "448": {
+    "sql": "WITH c_rows AS (\n    SELECT `id`, `watermark`, `type`, `uuid`\n    FROM cards\n    WHERE `watermark` LIKE '%Abzan%'\n)\nSELECT f.`name`, c.`type`\nFROM c_rows c\nINNER JOIN foreign_data f ON c.uuid = f.uuid;",
+    "stats": {
+      "average_reward": 0.3111062303752486,
+      "total_visits": 10,
+      "elapsed_time": 518.5993983745575,
+      "timing": {
+        "total_s": 518.5990717411041,
+        "rollout_s": 1658.7375729084015,
+        "cte_gen_s": 1222.377626657486,
+        "sql_gen_s": 387.2202830314636,
+        "db_exec_s": 28.46519899368286,
+        "rollout_count": 10
+      }
+    }
+  },
+  "470": {
+    "sql": "WITH c_cols AS (\n    SELECT `name`, `setCode`\n    FROM cards\n),\nt_join AS (\n    SELECT c.`name`, s.releaseDate\n    FROM c_cols c\n    INNER JOIN sets s ON c.setCode = s.code\n)\nSELECT releaseDate\nFROM t_join\nWHERE `name` = 'Ancestor''s Chosen';",
+    "stats": {
+      "average_reward": 0.47222196103409936,
+      "total_visits": 10,
+      "elapsed_time": 366.3997609615326,
+      "timing": {
+        "total_s": 366.3995087146759,
+        "rollout_s": 1645.8003029823303,
+        "cte_gen_s": 1076.2599897384644,
+        "sql_gen_s": 544.3975167274475,
+        "db_exec_s": 3.622694492340088,
+        "rollout_count": 10
+      }
+    }
+  },
+  "479": {
+    "sql": "SELECT COUNT(*) \nFROM cards \nJOIN sets ON cards.setCode = sets.code \nWHERE sets.name = 'Coldsnap' \n  AND cards.convertedManaCost > 5 \n  AND (cards.power = '*' OR cards.power IS NULL);",
+    "stats": {
+      "average_reward": 0.5046946799501633,
+      "total_visits": 10,
+      "elapsed_time": 474.79965353012085,
+      "timing": {
+        "total_s": 474.7993311882019,
+        "rollout_s": 2126.5125801563263,
+        "cte_gen_s": 1576.7072310447693,
+        "sql_gen_s": 523.3548128604889,
+        "db_exec_s": 7.2213146686553955,
+        "rollout_count": 10
+      }
+    }
+  },
+  "483": {
+    "sql": "SELECT f.text\nFROM cards\nJOIN sets ON cards.setCode = sets.code\nJOIN foreign_data f ON cards.uuid = f.uuid\nWHERE sets.name = 'Coldsnap' AND f.language = 'Italian';",
+    "stats": {
+      "average_reward": 0.16746248618151335,
+      "total_visits": 10,
+      "elapsed_time": 1196.2831482887268,
+      "timing": {
+        "total_s": 1196.282796382904,
+        "rollout_s": 5497.283426761627,
+        "cte_gen_s": 2813.7998046875,
+        "sql_gen_s": 2643.414582490921,
+        "db_exec_s": 22.736615896224976,
+        "rollout_count": 10
+      }
+    }
+  },
+  "484": {
+    "sql": "SELECT f.`name`\nFROM cards AS c\nINNER JOIN sets AS s ON c.`setCode` = s.`code`\nINNER JOIN foreign_data AS f ON c.`uuid` = f.`uuid`\nWHERE s.`name` = 'Coldsnap'\n  AND f.`language` = 'Italian'\n  AND c.`convertedManaCost` = (\n      SELECT MAX(c2.`convertedManaCost`)\n      FROM cards AS c2\n      INNER JOIN sets AS s2 ON c2.`setCode` = s2.`code`\n      WHERE s2.`name` = 'Coldsnap'\n  );",
+    "stats": {
+      "average_reward": 0.5759561836771779,
+      "total_visits": 10,
+      "elapsed_time": 887.9010310173035,
+      "timing": {
+        "total_s": 887.900741815567,
+        "rollout_s": 3471.323533296585,
+        "cte_gen_s": 2342.849986076355,
+        "sql_gen_s": 1087.2411153316498,
+        "db_exec_s": 26.011588096618652,
+        "rollout_count": 10
+      }
+    }
+  },
+  "489": {
+    "sql": "SELECT `keyruneCode` FROM sets WHERE `code` = 'PKHC';",
+    "stats": {
+      "average_reward": 0.3333332222222593,
+      "total_visits": 10,
+      "elapsed_time": 148.29032850265503,
+      "timing": {
+        "total_s": 148.29012370109558,
+        "rollout_s": 687.968759059906,
+        "cte_gen_s": 407.06692695617676,
+        "sql_gen_s": 263.84551525115967,
+        "db_exec_s": 0.4652881622314453,
+        "rollout_count": 10
+      }
+    }
+  },
+  "510": {
+    "sql": "SELECT artist\nFROM cards\nWHERE side IS NULL\nAND convertedManaCost = (\n    SELECT MAX(convertedManaCost)\n    FROM cards\n    WHERE side IS NULL\n);",
+    "stats": {
+      "average_reward": 0.2874138778537272,
+      "total_visits": 10,
+      "elapsed_time": 749.4087541103363,
+      "timing": {
+        "total_s": 749.4085068702698,
+        "rollout_s": 3588.275421142578,
+        "cte_gen_s": 2799.853193759918,
+        "sql_gen_s": 746.6238873004913,
+        "db_exec_s": 8.154146432876587,
+        "rollout_count": 10
+      }
+    }
+  },
+  "515": {
+    "sql": "WITH c_rows AS (\n    SELECT id, originalReleaseDate\n    FROM cards\n    WHERE rarity = 'mythic'\n),\nc_rows_cards AS (\n    SELECT r.id, r.originalReleaseDate, c.uuid\n    FROM c_rows r\n    JOIN cards c ON r.id = c.id\n),\nc_legalities AS (\n    SELECT c.originalReleaseDate, l.format\n    FROM c_rows_cards c\n    JOIN legalities l ON c.uuid = l.uuid\n    WHERE l.status = 'Legal'\n),\noldest_mythic AS (\n    SELECT originalReleaseDate, format\n    FROM c_legalities\n    WHERE originalReleaseDate = (SELECT MIN(originalReleaseDate) FROM c_legalities)\n)\nSELECT originalReleaseDate, format\nFROM oldest_mythic;",
+    "stats": {
+      "average_reward": 0.10859648797578467,
+      "total_visits": 10,
+      "elapsed_time": 916.1161682605743,
+      "timing": {
+        "total_s": 916.1155860424042,
+        "rollout_s": 4280.814094781876,
+        "cte_gen_s": 3283.7410757541656,
+        "sql_gen_s": 892.6306474208832,
+        "db_exec_s": 70.65396857261658,
+        "rollout_count": 10
+      }
+    }
+  },
+  "520": {
+    "sql": "WITH c_cols AS (\n    SELECT artist, uuid\n    FROM cards\n),\nc_join AS (\n    SELECT c.artist, l.format\n    FROM c_cols c\n    INNER JOIN legalities l ON c.uuid = l.uuid\n),\nc_agg AS (\n    SELECT artist, COUNT(*) AS card_count\n    FROM c_join\n    GROUP BY artist\n),\nc_min AS (\n    SELECT artist, card_count\n    FROM c_agg\n    WHERE card_count = (SELECT MIN(card_count) FROM c_agg)\n),\nc_min_format AS (\n    SELECT c_join.artist, c_join.format\n    FROM c_join\n    INNER JOIN c_min ON c_join.artist = c_min.artist\n)\nSELECT artist, format\nFROM c_min_format;",
+    "stats": {
+      "average_reward": 0.1521466123055586,
+      "total_visits": 10,
+      "elapsed_time": 664.0933771133423,
+      "timing": {
+        "total_s": 664.0929327011108,
+        "rollout_s": 3176.542621612549,
+        "cte_gen_s": 1953.9058003425598,
+        "sql_gen_s": 1108.2383377552032,
+        "db_exec_s": 88.47374963760376,
+        "rollout_count": 10
+      }
+    }
+  },
+  "529": {
+    "sql": "",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 10,
+      "elapsed_time": 605.4949493408203,
+      "timing": {
+        "total_s": 605.4947211742401,
+        "rollout_s": 2056.7962775230408,
+        "cte_gen_s": 1570.8236458301544,
+        "sql_gen_s": 456.80467104911804,
+        "db_exec_s": 2.391413688659668,
+        "rollout_count": 10
+      }
+    }
+  },
+  "538": {
+    "sql": "SELECT `Title` FROM `posts` INNER JOIN `users` ON `posts`.`OwnerUserId` = `users`.`Id` WHERE `users`.`DisplayName` = 'csgillespie';",
+    "stats": {
+      "average_reward": 0.6554197567064711,
+      "total_visits": 10,
+      "elapsed_time": 314.21494460105896,
+      "timing": {
+        "total_s": 314.2146780490875,
+        "rollout_s": 1377.350103855133,
+        "cte_gen_s": 864.2009727954865,
+        "sql_gen_s": 491.916476726532,
+        "db_exec_s": 6.068763732910156,
+        "rollout_count": 10
+      }
+    }
+  },
+  "541": {
+    "sql": "SELECT u.DisplayName\nFROM posts p\nJOIN users u ON p.OwnerUserId = u.Id\nORDER BY p.FavoriteCount DESC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.5303361077324975,
+      "total_visits": 10,
+      "elapsed_time": 587.5992002487183,
+      "timing": {
+        "total_s": 587.5989134311676,
+        "rollout_s": 2487.724842071533,
+        "cte_gen_s": 1975.5263485908508,
+        "sql_gen_s": 475.43938279151917,
+        "db_exec_s": 16.642963647842407,
+        "rollout_count": 10
+      }
+    }
+  },
+  "549": {
+    "sql": "SELECT p.`Body`\nFROM tags t\nINNER JOIN posts p ON t.`ExcerptPostId` = p.`Id`\nWHERE t.`TagName` = 'bayesian';",
+    "stats": {
+      "average_reward": 0.29946512339505477,
+      "total_visits": 10,
+      "elapsed_time": 270.1148934364319,
+      "timing": {
+        "total_s": 270.11467480659485,
+        "rollout_s": 1139.2608723640442,
+        "cte_gen_s": 673.9831080436707,
+        "sql_gen_s": 447.54737734794617,
+        "db_exec_s": 0.5375204086303711,
+        "rollout_count": 10
+      }
+    }
+  },
+  "575": {
+    "sql": "SELECT `badges`.`Name`\nFROM `badges`\nINNER JOIN `users` ON `badges`.`UserId` = `users`.`Id`\nWHERE `users`.`DisplayName` = 'SilentGhost';",
+    "stats": {
+      "average_reward": 0.5915146896018895,
+      "total_visits": 10,
+      "elapsed_time": 437.01581168174744,
+      "timing": {
+        "total_s": 437.0155565738678,
+        "rollout_s": 2004.938475370407,
+        "cte_gen_s": 1299.7885580062866,
+        "sql_gen_s": 676.1321439743042,
+        "db_exec_s": 5.6193320751190186,
+        "rollout_count": 10
+      }
+    }
+  },
+  "586": {
+    "sql": "SELECT u.DisplayName\nFROM votes v\nJOIN posts p ON v.PostId = p.Id\nJOIN users u ON v.UserId = u.Id\nWHERE p.Title LIKE '%variance%' AND v.BountyAmount = 50;",
+    "stats": {
+      "average_reward": 0.26410979008051827,
+      "total_visits": 10,
+      "elapsed_time": 515.511622428894,
+      "timing": {
+        "total_s": 515.5113034248352,
+        "rollout_s": 2395.2095880508423,
+        "cte_gen_s": 1979.5889956951141,
+        "sql_gen_s": 382.2043261528015,
+        "db_exec_s": 3.9688971042633057,
+        "rollout_count": 10
+      }
+    }
+  },
+  "591": {
+    "sql": "SELECT COUNT(DISTINCT `UserId`) \nFROM badges \nWHERE `Name` = 'Supporter' \nAND STRFTIME('%Y', `Date`) = '2011';",
+    "stats": {
+      "average_reward": 0.3566758992917435,
+      "total_visits": 10,
+      "elapsed_time": 425.8799991607666,
+      "timing": {
+        "total_s": 425.8797173500061,
+        "rollout_s": 1690.853353023529,
+        "cte_gen_s": 1257.1474030017853,
+        "sql_gen_s": 409.5920133590698,
+        "db_exec_s": 3.094142436981201,
+        "rollout_count": 10
+      }
+    }
+  },
+  "593": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM (\n    SELECT b.UserId\n    FROM badges b\n    INNER JOIN users u ON b.UserId = u.Id\n    WHERE u.Location = 'New York'\n    AND b.Name IN ('Teacher', 'Supporter')\n    GROUP BY b.UserId\n    HAVING COUNT(DISTINCT b.Name) = 2\n) AS user_with_badges;",
+    "stats": {
+      "average_reward": 0.32051271290021716,
+      "total_visits": 10,
+      "elapsed_time": 764.9082293510437,
+      "timing": {
+        "total_s": 764.9079320430756,
+        "rollout_s": 3767.7187445163727,
+        "cte_gen_s": 2820.904796361923,
+        "sql_gen_s": 896.5485076904297,
+        "db_exec_s": 12.579028129577637,
+        "rollout_count": 10
+      }
+    }
+  },
+  "600": {
+    "sql": "WITH c_rows AS (\n    SELECT PostId, RelatedPostId\n    FROM postLinks\n    WHERE PostId = 61217 OR RelatedPostId = 61217\n),\nt_join AS (\n    SELECT p.Id AS PostId, p.ViewCount\n    FROM c_rows rl\n    JOIN posts p ON rl.PostId = p.Id OR rl.RelatedPostId = p.Id\n)\nSELECT PostId, ViewCount\nFROM t_join;",
+    "stats": {
+      "average_reward": 0.3502549743697405,
+      "total_visits": 10,
+      "elapsed_time": 805.8989565372467,
+      "timing": {
+        "total_s": 805.8984160423279,
+        "rollout_s": 3770.9899351596832,
+        "cte_gen_s": 2570.0196397304535,
+        "sql_gen_s": 1164.8037612438202,
+        "db_exec_s": 1.7575178146362305,
+        "rollout_count": 10
+      }
+    }
+  },
+  "613": {
+    "sql": "SELECT `Date` FROM badges WHERE UserId IN (SELECT Id FROM users WHERE Location = 'Rochester, NY');",
+    "stats": {
+      "average_reward": 0.44407871743001354,
+      "total_visits": 10,
+      "elapsed_time": 367.48723244667053,
+      "timing": {
+        "total_s": 367.48702025413513,
+        "rollout_s": 1814.9653179645538,
+        "cte_gen_s": 626.629077911377,
+        "sql_gen_s": 1166.2006359100342,
+        "db_exec_s": 3.197920083999634,
+        "rollout_count": 10
+      }
+    }
+  },
+  "617": {
+    "sql": "SELECT `Text` \nFROM comments \nWHERE `CreationDate` = '2010-07-19 19:37:33.0';",
+    "stats": {
+      "average_reward": 0.48520899569167797,
+      "total_visits": 10,
+      "elapsed_time": 420.1879041194916,
+      "timing": {
+        "total_s": 420.187695980072,
+        "rollout_s": 1998.1239790916443,
+        "cte_gen_s": 1166.5218694210052,
+        "sql_gen_s": 806.7920520305634,
+        "db_exec_s": 4.902741432189941,
+        "rollout_count": 10
+      }
+    }
+  },
+  "619": {
+    "sql": "WITH supporter_users AS (\n    SELECT `UserId`\n    FROM badges\n    WHERE `Name` = 'Supporter'\n),\nadult_supporters AS (\n    SELECT u.`Id`\n    FROM supporter_users su\n    INNER JOIN users u ON su.`UserId` = u.`Id`\n    WHERE u.`Age` BETWEEN 19 AND 65\n)\nSELECT COUNT(*) AS answer\nFROM adult_supporters;",
+    "stats": {
+      "average_reward": 0.26086851305564274,
+      "total_visits": 10,
+      "elapsed_time": 401.9932999610901,
+      "timing": {
+        "total_s": 401.99304008483887,
+        "rollout_s": 1960.2711935043335,
+        "cte_gen_s": 986.745147228241,
+        "sql_gen_s": 933.0249879360199,
+        "db_exec_s": 3.9637787342071533,
+        "rollout_count": 10
+      }
+    }
+  },
+  "623": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM badges\nINNER JOIN users ON badges.UserId = users.Id\nWHERE badges.Name = 'Supporter' AND users.Age > 65;",
+    "stats": {
+      "average_reward": 0.34945041689454753,
+      "total_visits": 10,
+      "elapsed_time": 429.9820110797882,
+      "timing": {
+        "total_s": 429.98174381256104,
+        "rollout_s": 1662.5037062168121,
+        "cte_gen_s": 969.6323218345642,
+        "sql_gen_s": 668.1378073692322,
+        "db_exec_s": 3.004573106765747,
+        "rollout_count": 10
+      }
+    }
+  },
+  "625": {
+    "sql": "SELECT COUNT(*) \nFROM users \nWHERE Location LIKE '%New York%';",
+    "stats": {
+      "average_reward": 0.5317924218387898,
+      "total_visits": 10,
+      "elapsed_time": 238.90648746490479,
+      "timing": {
+        "total_s": 238.90619730949402,
+        "rollout_s": 1152.8812124729156,
+        "cte_gen_s": 708.2794213294983,
+        "sql_gen_s": 423.26377034187317,
+        "db_exec_s": 0.9646406173706055,
+        "rollout_count": 10
+      }
+    }
+  },
+  "631": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM posts\nINNER JOIN users ON posts.OwnerUserId = users.Id\nWHERE users.DisplayName = 'Daniel Vassallo';",
+    "stats": {
+      "average_reward": 0.3550723298756047,
+      "total_visits": 10,
+      "elapsed_time": 446.5087902545929,
+      "timing": {
+        "total_s": 446.50852131843567,
+        "rollout_s": 1973.2245137691498,
+        "cte_gen_s": 1182.9953615665436,
+        "sql_gen_s": 750.6662192344666,
+        "db_exec_s": 13.273447751998901,
+        "rollout_count": 10
+      }
+    }
+  },
+  "653": {
+    "sql": "SELECT OwnerDisplayName\nFROM posts\nWHERE ViewCount = (SELECT MAX(ViewCount) FROM posts WHERE ViewCount IS NOT NULL);",
+    "stats": {
+      "average_reward": 0.5210522021472215,
+      "total_visits": 10,
+      "elapsed_time": 419.9164972305298,
+      "timing": {
+        "total_s": 419.9162640571594,
+        "rollout_s": 1951.652513742447,
+        "cte_gen_s": 1405.0636520385742,
+        "sql_gen_s": 520.7098798751831,
+        "db_exec_s": 9.319272518157959,
+        "rollout_count": 10
+      }
+    }
+  },
+  "656": {
+    "sql": "SELECT p.OwnerDisplayName\nFROM (\n    SELECT Id, ParentId\n    FROM posts\n    WHERE ParentId IS NOT NULL\n    AND Score = (SELECT MAX(Score) FROM posts WHERE ParentId IS NOT NULL)\n) AS c_rows\nINNER JOIN posts AS p ON c_rows.ParentId = p.Id;",
+    "stats": {
+      "average_reward": 0.29922641835237856,
+      "total_visits": 10,
+      "elapsed_time": 649.8001999855042,
+      "timing": {
+        "total_s": 649.7998781204224,
+        "rollout_s": 3025.7571988105774,
+        "cte_gen_s": 2346.8335514068604,
+        "sql_gen_s": 620.0871841907501,
+        "db_exec_s": 29.632513523101807,
+        "rollout_count": 10
+      }
+    }
+  },
+  "657": {
+    "sql": "SELECT u.DisplayName, u.WebsiteUrl\nFROM votes v\nJOIN users u ON v.UserId = u.Id\nWHERE v.VoteTypeId = 8\nAND v.BountyAmount = (\n    SELECT MAX(BountyAmount)\n    FROM votes\n    WHERE VoteTypeId = 8\n);",
+    "stats": {
+      "average_reward": 0.2950545163536481,
+      "total_visits": 10,
+      "elapsed_time": 717.910537481308,
+      "timing": {
+        "total_s": 717.9100341796875,
+        "rollout_s": 3459.582754611969,
+        "cte_gen_s": 2945.891224384308,
+        "sql_gen_s": 476.9813678264618,
+        "db_exec_s": 2.8279223442077637,
+        "rollout_count": 10
+      }
+    }
+  },
+  "690": {
+    "sql": "SELECT `Name`\nFROM badges\nWHERE `UserId` = (\n    SELECT `Id`\n    FROM users\n    WHERE `DisplayName` = 'Emmett'\n)\nAND `Date` = (\n    SELECT MAX(`Date`)\n    FROM badges\n    WHERE `UserId` = (\n        SELECT `Id`\n        FROM users\n        WHERE `DisplayName` = 'Emmett'\n    )\n);",
+    "stats": {
+      "average_reward": 0.24322876404123878,
+      "total_visits": 10,
+      "elapsed_time": 677.9016673564911,
+      "timing": {
+        "total_s": 677.9013879299164,
+        "rollout_s": 3288.8061244487762,
+        "cte_gen_s": 2531.2736310958862,
+        "sql_gen_s": 711.7757670879364,
+        "db_exec_s": 12.658715009689331,
+        "rollout_count": 10
+      }
+    }
+  },
+  "720": {
+    "sql": "SELECT s.full_name\nFROM superhero AS s\nJOIN hero_power AS hp ON s.id = hp.hero_id\nGROUP BY s.id\nHAVING COUNT(s.full_name) > 15;",
+    "stats": {
+      "average_reward": 0.37866605756749727,
+      "total_visits": 10,
+      "elapsed_time": 565.7878699302673,
+      "timing": {
+        "total_s": 565.7875397205353,
+        "rollout_s": 2257.949496984482,
+        "cte_gen_s": 1545.6548807621002,
+        "sql_gen_s": 690.5604598522186,
+        "db_exec_s": 1.7325387001037598,
+        "rollout_count": 10
+      }
+    }
+  },
+  "726": {
+    "sql": "SELECT s.superhero_name, s.height_cm\nFROM superhero s\nJOIN publisher p ON s.publisher_id = p.id\nWHERE p.publisher_name = 'Marvel Comics'\nORDER BY s.height_cm DESC;",
+    "stats": {
+      "average_reward": 0.37978429123561463,
+      "total_visits": 10,
+      "elapsed_time": 590.8143892288208,
+      "timing": {
+        "total_s": 590.8139886856079,
+        "rollout_s": 2599.631243944168,
+        "cte_gen_s": 1911.7119030952454,
+        "sql_gen_s": 663.6863605976105,
+        "db_exec_s": 3.573734998703003,
+        "rollout_count": 10
+      }
+    }
+  },
+  "729": {
+    "sql": "SELECT AVG(superhero.height_cm) AS average_height\nFROM superhero\nJOIN publisher ON superhero.publisher_id = publisher.id\nWHERE publisher.publisher_name = 'Marvel Comics';",
+    "stats": {
+      "average_reward": 0.3792918291170625,
+      "total_visits": 10,
+      "elapsed_time": 301.31283926963806,
+      "timing": {
+        "total_s": 301.3125891685486,
+        "rollout_s": 1331.8233184814453,
+        "cte_gen_s": 650.7353341579437,
+        "sql_gen_s": 659.2253005504608,
+        "db_exec_s": 1.1887309551239014,
+        "rollout_count": 10
+      }
+    }
+  },
+  "732": {
+    "sql": "SELECT p.publisher_name\nFROM superhero s\nJOIN publisher p ON s.publisher_id = p.id\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nWHERE a.attribute_name = 'Speed'\nAND ha.attribute_value = (\n    SELECT MIN(attribute_value)\n    FROM hero_attribute ha2\n    JOIN attribute a2 ON ha2.attribute_id = a2.id\n    WHERE a2.attribute_name = 'Speed'\n);",
+    "stats": {
+      "average_reward": 0.3458869104052883,
+      "total_visits": 10,
+      "elapsed_time": 867.2872099876404,
+      "timing": {
+        "total_s": 867.286856174469,
+        "rollout_s": 4000.5905482769012,
+        "cte_gen_s": 2901.5643553733826,
+        "sql_gen_s": 1068.775682926178,
+        "db_exec_s": 8.480660438537598,
+        "rollout_count": 10
+      }
+    }
+  },
+  "734": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.id, ss.publisher_id, ss.superhero_name\n    FROM superhero AS ss\n),\nc_rows AS (\n    SELECT publisher_id\n    FROM c_cols\n    WHERE superhero_name = 'Blue Beetle II'\n),\nt_join AS (\n    SELECT p.publisher_name\n    FROM c_rows r\n    INNER JOIN publisher p ON r.publisher_id = p.id\n)\nSELECT publisher_name FROM t_join;",
+    "stats": {
+      "average_reward": 0.567418228687312,
+      "total_visits": 10,
+      "elapsed_time": 325.2931549549103,
+      "timing": {
+        "total_s": 325.29291105270386,
+        "rollout_s": 1468.2361481189728,
+        "cte_gen_s": 1026.1271166801453,
+        "sql_gen_s": 426.7006893157959,
+        "db_exec_s": 0.7558739185333252,
+        "rollout_count": 10
+      }
+    }
+  },
+  "758": {
+    "sql": "SELECT c.colour\nFROM superhero s\nJOIN race r ON s.race_id = r.id\nJOIN colour c ON s.hair_colour_id = c.id\nWHERE s.height_cm = 185 AND r.race = 'Human';",
+    "stats": {
+      "average_reward": 0.2247677472290694,
+      "total_visits": 10,
+      "elapsed_time": 651.2162983417511,
+      "timing": {
+        "total_s": 651.2159900665283,
+        "rollout_s": 2888.1758675575256,
+        "cte_gen_s": 2481.3349373340607,
+        "sql_gen_s": 372.15752148628235,
+        "db_exec_s": 2.048421621322632,
+        "rollout_count": 10
+      }
+    }
+  },
+  "760": {
+    "sql": "SELECT \n    (COUNT(CASE WHEN p.publisher_name = 'Marvel Comics' THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM superhero s\nJOIN publisher p ON s.publisher_id = p.id\nWHERE s.height_cm BETWEEN 150 AND 180;",
+    "stats": {
+      "average_reward": 0.2255446212527424,
+      "total_visits": 10,
+      "elapsed_time": 968.2170433998108,
+      "timing": {
+        "total_s": 968.216742515564,
+        "rollout_s": 4604.3019478321075,
+        "cte_gen_s": 3672.9846789836884,
+        "sql_gen_s": 889.073180437088,
+        "db_exec_s": 3.865513563156128,
+        "rollout_count": 10
+      }
+    }
+  },
+  "766": {
+    "sql": "SELECT s.`full_name`\nFROM superhero s\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nWHERE a.attribute_name = 'Strength'\nAND ha.attribute_value = (\n    SELECT MAX(attribute_value)\n    FROM hero_attribute ha2\n    JOIN attribute a2 ON ha2.attribute_id = a2.id\n    WHERE a2.attribute_name = 'Strength'\n);",
+    "stats": {
+      "average_reward": 0.1369057189401271,
+      "total_visits": 10,
+      "elapsed_time": 778.9967634677887,
+      "timing": {
+        "total_s": 778.9964284896851,
+        "rollout_s": 3474.9225363731384,
+        "cte_gen_s": 3008.2200355529785,
+        "sql_gen_s": 435.2337906360626,
+        "db_exec_s": 4.81749153137207,
+        "rollout_count": 10
+      }
+    }
+  },
+  "772": {
+    "sql": "SELECT \n    ec.colour AS eye_colour,\n    hc.colour AS hair_colour,\n    sc.colour AS skin_colour\nFROM superhero s\nINNER JOIN publisher p ON s.publisher_id = p.id\nINNER JOIN colour ec ON s.eye_colour_id = ec.id\nINNER JOIN colour hc ON s.hair_colour_id = hc.id\nINNER JOIN colour sc ON s.skin_colour_id = sc.id\nWHERE p.publisher_name = 'Dark Horse Comics'\nAND s.gender_id = 2;",
+    "stats": {
+      "average_reward": 0.3619888912542328,
+      "total_visits": 10,
+      "elapsed_time": 573.8068556785583,
+      "timing": {
+        "total_s": 573.8065500259399,
+        "rollout_s": 2773.209470510483,
+        "cte_gen_s": 2077.086230278015,
+        "sql_gen_s": 673.2195680141449,
+        "db_exec_s": 1.9652552604675293,
+        "rollout_count": 10
+      }
+    }
+  },
+  "778": {
+    "sql": "SELECT s.`superhero_name`\nFROM superhero s\nINNER JOIN hero_power hp ON s.id = hp.hero_id\nINNER JOIN superpower sp ON hp.power_id = sp.id\nWHERE sp.power_name = 'Adaptation';",
+    "stats": {
+      "average_reward": 0.39219776054171895,
+      "total_visits": 10,
+      "elapsed_time": 553.9145967960358,
+      "timing": {
+        "total_s": 553.9143075942993,
+        "rollout_s": 2491.3334572315216,
+        "cte_gen_s": 2064.2994256019592,
+        "sql_gen_s": 399.3481147289276,
+        "db_exec_s": 1.7800884246826172,
+        "rollout_count": 10
+      }
+    }
+  },
+  "797": {
+    "sql": "WITH c_cols AS (\n    SELECT s.id, s.superhero_name, s.eye_colour_id, s.hair_colour_id\n    FROM superhero AS s\n),\nt_join AS (\n    SELECT s.id, s.superhero_name, c1.colour AS eye_colour, c2.colour AS hair_colour\n    FROM c_cols s\n    LEFT JOIN colour c1 ON s.eye_colour_id = c1.id\n    LEFT JOIN colour c2 ON s.hair_colour_id = c2.id\n)\nSELECT superhero_name\nFROM t_join\nWHERE eye_colour = 'Blue' AND hair_colour = 'Brown';",
+    "stats": {
+      "average_reward": 0.423873680586761,
+      "total_visits": 10,
+      "elapsed_time": 288.30306220054626,
+      "timing": {
+        "total_s": 288.302809715271,
+        "rollout_s": 1322.8626625537872,
+        "cte_gen_s": 929.2439212799072,
+        "sql_gen_s": 373.7217125892639,
+        "db_exec_s": 1.1348328590393066,
+        "rollout_count": 10
+      }
+    }
+  },
+  "812": {
+    "sql": "SELECT `full_name` \nFROM superhero \nINNER JOIN colour ON superhero.eye_colour_id = colour.id \nWHERE colour.colour = 'Blue';",
+    "stats": {
+      "average_reward": 0.29358446125385945,
+      "total_visits": 10,
+      "elapsed_time": 378.7061610221863,
+      "timing": {
+        "total_s": 378.7058901786804,
+        "rollout_s": 1564.0948524475098,
+        "cte_gen_s": 949.4215564727783,
+        "sql_gen_s": 590.2233459949493,
+        "db_exec_s": 1.0565292835235596,
+        "rollout_count": 10
+      }
+    }
+  },
+  "847": {
+    "sql": "WITH q2_times AS (\n    SELECT driverId, q2\n    FROM qualifying\n    WHERE raceId = 19\n),\nmin_q2 AS (\n    SELECT driverId\n    FROM q2_times\n    WHERE q2 = (SELECT MIN(q2) FROM q2_times)\n)\nSELECT d.surname\nFROM min_q2 m\nINNER JOIN drivers d ON m.driverId = d.driverId;",
+    "stats": {
+      "average_reward": 0.3628679886204794,
+      "total_visits": 10,
+      "elapsed_time": 511.59941720962524,
+      "timing": {
+        "total_s": 511.5991795063019,
+        "rollout_s": 2331.719877243042,
+        "cte_gen_s": 1665.32053399086,
+        "sql_gen_s": 639.0734605789185,
+        "db_exec_s": 2.48909592628479,
+        "rollout_count": 10
+      }
+    }
+  },
+  "857": {
+    "sql": "SELECT c.lat, c.lng\nFROM races r\nINNER JOIN circuits c ON r.circuitId = c.circuitId\nWHERE r.name = 'Abu Dhabi Grand Prix';",
+    "stats": {
+      "average_reward": 0.3332850214963251,
+      "total_visits": 10,
+      "elapsed_time": 303.8110077381134,
+      "timing": {
+        "total_s": 303.81070160865784,
+        "rollout_s": 1398.8715467453003,
+        "cte_gen_s": 1021.5777451992035,
+        "sql_gen_s": 353.1631042957306,
+        "db_exec_s": 1.1243276596069336,
+        "rollout_count": 10
+      }
+    }
+  },
+  "860": {
+    "sql": "",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 10,
+      "elapsed_time": 737.2937436103821,
+      "timing": {
+        "total_s": 737.2935261726379,
+        "rollout_s": 1932.0179526805878,
+        "cte_gen_s": 1778.7010431289673,
+        "sql_gen_s": 130.02781701087952,
+        "db_exec_s": 1.8715460300445557,
+        "rollout_count": 10
+      }
+    }
+  },
+  "864": {
+    "sql": "SELECT COUNT(DISTINCT rs.driverId) AS answer\nFROM races r\nJOIN results rs ON r.raceId = rs.raceId\nWHERE r.date = '2015-11-29' AND rs.time IS NOT NULL;",
+    "stats": {
+      "average_reward": 0.3228672832020971,
+      "total_visits": 10,
+      "elapsed_time": 485.2086272239685,
+      "timing": {
+        "total_s": 485.20833587646484,
+        "rollout_s": 2054.256806373596,
+        "cte_gen_s": 1331.1629493236542,
+        "sql_gen_s": 693.5989954471588,
+        "db_exec_s": 3.5079917907714844,
+        "rollout_count": 10
+      }
+    }
+  },
+  "882": {
+    "sql": "SELECT MIN(`year`) AS first_year\nFROM races\nWHERE `name` = 'Singapore Grand Prix';",
+    "stats": {
+      "average_reward": 0.28782886391428164,
+      "total_visits": 10,
+      "elapsed_time": 193.31304025650024,
+      "timing": {
+        "total_s": 193.31283831596375,
+        "rollout_s": 918.5077636241913,
+        "cte_gen_s": 582.3262550830841,
+        "sql_gen_s": 315.82877707481384,
+        "db_exec_s": 0.4318242073059082,
+        "rollout_count": 10
+      }
+    }
+  },
+  "896": {
+    "sql": "WITH c_cols AS (\n    SELECT driverId, surname\n    FROM drivers\n),\nc_rows AS (\n    SELECT driverId\n    FROM c_cols\n    WHERE surname = 'Hamilton'\n),\nc_rows_results AS (\n    SELECT r.raceId, r.position\n    FROM c_rows AS dr\n    INNER JOIN results AS r ON dr.driverId = r.driverId\n),\nc_rows_races AS (\n    SELECT r.raceId, r.position, rs.year\n    FROM c_rows_results AS r\n    INNER JOIN races AS rs ON r.raceId = rs.raceId\n),\nc_rows_year AS (\n    SELECT raceId, position\n    FROM c_rows_races\n    WHERE year >= 2010\n),\ncte6 AS (\n    SELECT \n        COUNT(*) AS total_races,\n        COUNT(CASE WHEN position != 1 THEN 1 END) AS non_first_place\n    FROM c_rows_year\n)\nSELECT \n    (non_first_place * 100.0 / total_races) AS percentage\nFROM cte6;",
+    "stats": {
+      "average_reward": 0.256772746826638,
+      "total_visits": 10,
+      "elapsed_time": 953.8010594844818,
+      "timing": {
+        "total_s": 953.8005714416504,
+        "rollout_s": 4642.463153600693,
+        "cte_gen_s": 3822.4507761001587,
+        "sql_gen_s": 769.4130399227142,
+        "db_exec_s": 7.201575756072998,
+        "rollout_count": 10
+      }
+    }
+  },
+  "929": {
+    "sql": "SELECT r.name\nFROM races r\nJOIN results res ON r.raceId = res.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE d.surname = 'Hamilton';",
+    "stats": {
+      "average_reward": 0.28863627600438974,
+      "total_visits": 10,
+      "elapsed_time": 494.803822517395,
+      "timing": {
+        "total_s": 494.8035674095154,
+        "rollout_s": 2261.261859893799,
+        "cte_gen_s": 1287.436377286911,
+        "sql_gen_s": 946.2212431430817,
+        "db_exec_s": 2.107473611831665,
+        "rollout_count": 10
+      }
+    }
+  },
+  "937": {
+    "sql": "SELECT `time` \nFROM results \nWHERE `raceId` = 34 AND `position` = 2;",
+    "stats": {
+      "average_reward": 0.4129210297255465,
+      "total_visits": 10,
+      "elapsed_time": 500.47419476509094,
+      "timing": {
+        "total_s": 500.4738383293152,
+        "rollout_s": 1987.3727753162384,
+        "cte_gen_s": 1629.7257204055786,
+        "sql_gen_s": 331.5107889175415,
+        "db_exec_s": 1.4683892726898193,
+        "rollout_count": 10
+      }
+    }
+  },
+  "939": {
+    "sql": "WITH c_cols AS (\n    SELECT raceId, year, name\n    FROM races\n),\nc_rows AS (\n    SELECT raceId\n    FROM c_cols\n    WHERE year = 2008 AND name = 'Australian Grand Prix'\n),\nt_join AS (\n    SELECT d.driverId, d.nationality\n    FROM results r\n    INNER JOIN drivers d ON r.driverId = d.driverId\n    WHERE r.raceId = (SELECT raceId FROM c_rows)\n),\nt_rows AS (\n    SELECT driverId\n    FROM t_join\n    WHERE nationality = 'British'\n)\nSELECT COUNT(*) AS answer\nFROM t_rows;",
+    "stats": {
+      "average_reward": 0.30660552818257003,
+      "total_visits": 10,
+      "elapsed_time": 535.809238910675,
+      "timing": {
+        "total_s": 535.80890417099,
+        "rollout_s": 2367.8808629512787,
+        "cte_gen_s": 1910.0130469799042,
+        "sql_gen_s": 422.9083960056305,
+        "db_exec_s": 2.829559564590454,
+        "rollout_count": 10
+      }
+    }
+  },
+  "944": {
+    "sql": "WITH c_race AS (\n    SELECT raceId\n    FROM races\n    WHERE year = 2008 AND name = 'Australian Grand Prix'\n),\nc_results_pos AS (\n    SELECT r.driverId, r.time, r.position\n    FROM c_race cr\n    JOIN results r ON cr.raceId = r.raceId\n),\nc_champion AS (\n    SELECT driverId, time\n    FROM c_results_pos\n    WHERE position = 1\n),\nc_last AS (\n    SELECT driverId, time\n    FROM c_results_pos\n    WHERE position = (SELECT MAX(position) FROM c_results_pos)\n)\nSELECT \n  ( ( \n    (CAST(STRFTIME('%H', c_champion.time) AS INTEGER) * 3600 + \n     CAST(STRFTIME('%M', c_champion.time) AS INTEGER) * 60 + \n     CAST(STRFTIME('%S', c_champion.time) AS INTEGER) + \n     (CAST(SUBSTR(c_champion.time, -6) AS REAL) / 1000)) \n    - \n    CAST(c_last.time AS REAL)\n  ) / CAST(c_last.time AS REAL) ) * 100 AS percentage_faster\nFROM c_champion, c_last;",
+    "stats": {
+      "average_reward": 0.08612823180926418,
+      "total_visits": 10,
+      "elapsed_time": 2011.1032252311707,
+      "timing": {
+        "total_s": 2011.102912902832,
+        "rollout_s": 9810.754951000214,
+        "cte_gen_s": 4366.796587944031,
+        "sql_gen_s": 5386.176607131958,
+        "db_exec_s": 9.206652641296387,
+        "rollout_count": 10
+      }
+    }
+  },
+  "956": {
+    "sql": "SELECT d.`forename`, d.`surname`\nFROM drivers d\nINNER JOIN driverStandings ds ON d.driverId = ds.driverId\nWHERE ds.position = 2\nAND strftime('%Y', d.dob) > '1975';",
+    "stats": {
+      "average_reward": 0.30085460767626626,
+      "total_visits": 10,
+      "elapsed_time": 461.39519786834717,
+      "timing": {
+        "total_s": 461.3949613571167,
+        "rollout_s": 2020.0403220653534,
+        "cte_gen_s": 1138.4225285053253,
+        "sql_gen_s": 855.8960702419281,
+        "db_exec_s": 1.2862088680267334,
+        "rollout_count": 10
+      }
+    }
+  },
+  "971": {
+    "sql": "SELECT `driverRef` FROM drivers WHERE `nationality` = 'German' ORDER BY `dob` ASC LIMIT 1;",
+    "stats": {
+      "average_reward": 0.271570109405611,
+      "total_visits": 10,
+      "elapsed_time": 535.7018361091614,
+      "timing": {
+        "total_s": 535.7015817165375,
+        "rollout_s": 2582.408947467804,
+        "cte_gen_s": 1599.3339908123016,
+        "sql_gen_s": 957.9249866008759,
+        "db_exec_s": 1.510488748550415,
+        "rollout_count": 10
+      }
+    }
+  },
+  "972": {
+    "sql": "SELECT d.driverId, d.code\nFROM drivers d\nJOIN results r ON d.driverId = r.driverId\nWHERE strftime('%Y', d.dob) = '1971'\n  AND r.fastestLapTime IS NOT NULL\n  AND r.fastestLapTime = (\n    SELECT MIN(r2.fastestLapTime)\n    FROM drivers d2\n    JOIN results r2 ON d2.driverId = r2.driverId\n    WHERE strftime('%Y', d2.dob) = '1971'\n      AND r2.fastestLapTime IS NOT NULL\n  );",
+    "stats": {
+      "average_reward": 0.27909013582654746,
+      "total_visits": 10,
+      "elapsed_time": 772.0837421417236,
+      "timing": {
+        "total_s": 772.0822582244873,
+        "rollout_s": 3814.9538128376007,
+        "cte_gen_s": 2433.6579134464264,
+        "sql_gen_s": 1285.503574848175,
+        "db_exec_s": 64.79010963439941,
+        "rollout_count": 10
+      }
+    }
+  },
+  "996": {
+    "sql": "SELECT AVG(num_races) AS annual_average\nFROM (\n    SELECT year, COUNT(*) AS num_races\n    FROM races\n    WHERE date BETWEEN '2000-01-01' AND '2010-12-31'\n    GROUP BY year\n) AS yearly_races;",
+    "stats": {
+      "average_reward": 0.30444049863328876,
+      "total_visits": 10,
+      "elapsed_time": 890.3133509159088,
+      "timing": {
+        "total_s": 890.3130879402161,
+        "rollout_s": 4187.467618942261,
+        "cte_gen_s": 1873.5719981193542,
+        "sql_gen_s": 2283.992513179779,
+        "db_exec_s": 1.4561548233032227,
+        "rollout_count": 10
+      }
+    }
+  },
+  "997": {
+    "sql": "SELECT nationality\nFROM drivers\nGROUP BY nationality\nORDER BY COUNT(*) DESC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.5183758613868699,
+      "total_visits": 10,
+      "elapsed_time": 427.82067918777466,
+      "timing": {
+        "total_s": 427.8204252719879,
+        "rollout_s": 1789.6617290973663,
+        "cte_gen_s": 1221.20862865448,
+        "sql_gen_s": 548.7276470661163,
+        "db_exec_s": 0.9162945747375488,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1003": {
+    "sql": "WITH c_cols AS (\n    SELECT r.raceId, r.name, res.driverId, res.statusId\n    FROM races AS r\n    LEFT JOIN results AS res ON r.raceId = res.raceId\n),\nc_rows AS (\n    SELECT raceId, driverId, statusId\n    FROM c_cols\n    WHERE name = 'Canadian Grand Prix' AND statusId = 3\n),\nc_agg AS (\n    SELECT driverId, COUNT(*) AS accident_count\n    FROM c_rows\n    GROUP BY driverId\n),\nmax_accident AS (\n    SELECT MAX(accident_count) AS max_accidents\n    FROM c_agg\n)\nSELECT max_accidents FROM max_accident;",
+    "stats": {
+      "average_reward": 0.3122240754839297,
+      "total_visits": 10,
+      "elapsed_time": 682.0869081020355,
+      "timing": {
+        "total_s": 682.0866088867188,
+        "rollout_s": 2780.360459804535,
+        "cte_gen_s": 2134.4378349781036,
+        "sql_gen_s": 615.123339176178,
+        "db_exec_s": 2.7398550510406494,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1013": {
+    "sql": "SELECT MIN(l.time) AS fastest_lap_time\nFROM races r\nJOIN lapTimes l ON r.raceId = l.raceId\nWHERE r.name = 'Austrian Grand Prix';",
+    "stats": {
+      "average_reward": 0.28415306986876315,
+      "total_visits": 10,
+      "elapsed_time": 518.1807568073273,
+      "timing": {
+        "total_s": 518.1805374622345,
+        "rollout_s": 2523.5439941883087,
+        "cte_gen_s": 1643.1023526191711,
+        "sql_gen_s": 855.1035957336426,
+        "db_exec_s": 5.441058874130249,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1032": {
+    "sql": "WITH c_agg AS (\n    SELECT league_id, COUNT(*) AS match_count\n    FROM Match\n    GROUP BY league_id\n),\nc_final AS (\n    SELECT l.name, ca.match_count\n    FROM c_agg ca\n    INNER JOIN League l ON ca.league_id = l.id\n),\nc_max AS (\n    SELECT name, match_count\n    FROM c_final\n    WHERE match_count = (SELECT MAX(match_count) FROM c_final)\n)\nSELECT * FROM c_max;",
+    "stats": {
+      "average_reward": 0.2578517888777952,
+      "total_visits": 10,
+      "elapsed_time": 517.1084070205688,
+      "timing": {
+        "total_s": 517.1081078052521,
+        "rollout_s": 2370.971259355545,
+        "cte_gen_s": 1757.816558599472,
+        "sql_gen_s": 578.4147324562073,
+        "db_exec_s": 10.39953875541687,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1035": {
+    "sql": "SELECT team_fifa_api_id \nFROM Team_Attributes \nWHERE buildUpPlaySpeed > 50 AND buildUpPlaySpeed < 60;",
+    "stats": {
+      "average_reward": 0.5999995333337554,
+      "total_visits": 10,
+      "elapsed_time": 241.48498368263245,
+      "timing": {
+        "total_s": 241.48477864265442,
+        "rollout_s": 1154.410650730133,
+        "cte_gen_s": 634.4879500865936,
+        "sql_gen_s": 506.7577340602875,
+        "db_exec_s": 0.7995960712432861,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1036": {
+    "sql": "SELECT t.`team_long_name`\nFROM `Team` t\nINNER JOIN `Team_Attributes` ta ON t.`team_api_id` = ta.`team_api_id`\nWHERE STRFTIME('%Y', ta.`date`) = '2012' \n  AND ta.`buildUpPlayPassing` IS NOT NULL\n  AND ta.`buildUpPlayPassing` > (\n    SELECT AVG(`buildUpPlayPassing`)\n    FROM `Team_Attributes`\n    WHERE STRFTIME('%Y', `date`) = '2012' \n      AND `buildUpPlayPassing` IS NOT NULL\n  );",
+    "stats": {
+      "average_reward": 0.4301617460502885,
+      "total_visits": 10,
+      "elapsed_time": 686.1943683624268,
+      "timing": {
+        "total_s": 686.1941025257111,
+        "rollout_s": 3322.18332862854,
+        "cte_gen_s": 2295.9292407035828,
+        "sql_gen_s": 985.4698495864868,
+        "db_exec_s": 4.342410326004028,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1040": {
+    "sql": "WITH c_agg AS (\n    SELECT p.player_api_id, p.player_name, p.height, AVG(pa.heading_accuracy) AS avg_heading_accuracy\n    FROM Player p\n    INNER JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    GROUP BY p.player_api_id\n),\nc_filter AS (\n    SELECT player_api_id, player_name, height, avg_heading_accuracy\n    FROM c_agg\n    WHERE height > 180\n),\nc_sorted AS (\n    SELECT player_api_id, player_name, avg_heading_accuracy\n    FROM c_filter\n    ORDER BY avg_heading_accuracy DESC\n    LIMIT 10\n)\nSELECT player_name\nFROM c_sorted;",
+    "stats": {
+      "average_reward": 0.2582010607299759,
+      "total_visits": 10,
+      "elapsed_time": 802.1776223182678,
+      "timing": {
+        "total_s": 802.1773056983948,
+        "rollout_s": 3457.4809181690216,
+        "cte_gen_s": 2532.6262395381927,
+        "sql_gen_s": 868.6272084712982,
+        "db_exec_s": 32.41660666465759,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1047": {
+    "sql": "SELECT `heading_accuracy` FROM (\n    WITH c_cols AS (\n        SELECT `player_api_id`, `player_name`\n        FROM Player\n    ),\n    c_join AS (\n        SELECT p.`player_api_id`, p.`player_name`, pa.`heading_accuracy`, pa.`date`\n        FROM c_cols p\n        INNER JOIN Player_Attributes pa ON p.`player_api_id` = pa.`player_api_id`\n    ),\n    c_filtered AS (\n        SELECT `player_api_id`, `player_name`, `heading_accuracy`\n        FROM c_join\n        WHERE `player_name` = 'Francois Affolter' AND `date` = '2014-09-18 00:00:00'\n    )\n    SELECT * FROM c_filtered\n) AS final_result;",
+    "stats": {
+      "average_reward": 0.4118486906995812,
+      "total_visits": 10,
+      "elapsed_time": 421.9035322666168,
+      "timing": {
+        "total_s": 421.90324354171753,
+        "rollout_s": 1759.6506307125092,
+        "cte_gen_s": 1338.059238433838,
+        "sql_gen_s": 392.51239109039307,
+        "db_exec_s": 6.683403491973877,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1063": {
+    "sql": "SELECT pa.potential\nFROM Player p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.player_name = 'Aaron Doran';",
+    "stats": {
+      "average_reward": 0.4222220372840336,
+      "total_visits": 10,
+      "elapsed_time": 332.19123792648315,
+      "timing": {
+        "total_s": 332.1909885406494,
+        "rollout_s": 1189.0877175331116,
+        "cte_gen_s": 713.6132905483246,
+        "sql_gen_s": 451.9165561199188,
+        "db_exec_s": 7.7218177318573,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1082": {
+    "sql": "WITH germany_leagues AS (\n    SELECT l.name\n    FROM League l\n    INNER JOIN Country c ON l.country_id = c.id\n    WHERE c.name = 'Germany'\n)\nSELECT name FROM germany_leagues;",
+    "stats": {
+      "average_reward": 0.655127735630445,
+      "total_visits": 10,
+      "elapsed_time": 257.30883979797363,
+      "timing": {
+        "total_s": 257.3085584640503,
+        "rollout_s": 1084.438499212265,
+        "cte_gen_s": 635.4766047000885,
+        "sql_gen_s": 434.3031876087189,
+        "db_exec_s": 0.8586657047271729,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1085": {
+    "sql": "SELECT player_name\nFROM Player\nJOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id\nWHERE Player.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\nAND Player_Attributes.crossing = (\n    SELECT MAX(crossing)\n    FROM Player\n    JOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id\n    WHERE Player.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n);",
+    "stats": {
+      "average_reward": 0.2986928016057059,
+      "total_visits": 10,
+      "elapsed_time": 676.9901983737946,
+      "timing": {
+        "total_s": 676.9897985458374,
+        "rollout_s": 3245.021047592163,
+        "cte_gen_s": 2115.567361831665,
+        "sql_gen_s": 1056.3271906375885,
+        "db_exec_s": 39.2827410697937,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1087": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM Player p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.height > 180 AND pa.volleys > 70;",
+    "stats": {
+      "average_reward": 0.28682571852731126,
+      "total_visits": 10,
+      "elapsed_time": 398.0980763435364,
+      "timing": {
+        "total_s": 398.0978436470032,
+        "rollout_s": 1963.8356807231903,
+        "cte_gen_s": 919.767341375351,
+        "sql_gen_s": 1013.6322810649872,
+        "db_exec_s": 4.810711860656738,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1098": {
+    "sql": "WITH ajax_team AS (\n    SELECT team_api_id\n    FROM Team\n    WHERE team_long_name = 'Ajax'\n)\nSELECT \n    MAX(ta.chanceCreationPassing) AS max_score,\n    ta.chanceCreationPassingClass AS classification\nFROM Team_Attributes ta\nJOIN ajax_team at ON ta.team_api_id = at.team_api_id\nWHERE ta.chanceCreationPassing = (\n    SELECT MAX(chanceCreationPassing)\n    FROM Team_Attributes\n    WHERE team_api_id = (SELECT team_api_id FROM ajax_team)\n);",
+    "stats": {
+      "average_reward": 0.2444750545475411,
+      "total_visits": 10,
+      "elapsed_time": 721.0881206989288,
+      "timing": {
+        "total_s": 721.0866153240204,
+        "rollout_s": 3304.5023713111877,
+        "cte_gen_s": 2526.8537514209747,
+        "sql_gen_s": 748.9285633563995,
+        "db_exec_s": 3.0179431438446045,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1104": {
+    "sql": "SELECT pa.potential\nFROM Player p\nINNER JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.player_name = 'Francesco Parravicini' AND pa.date = '2010-08-30 00:00:00';",
+    "stats": {
+      "average_reward": 0.4694431988408051,
+      "total_visits": 10,
+      "elapsed_time": 480.5906939506531,
+      "timing": {
+        "total_s": 480.59037041664124,
+        "rollout_s": 2217.4495058059692,
+        "cte_gen_s": 1622.2191317081451,
+        "sql_gen_s": 564.5687701702118,
+        "db_exec_s": 7.8514134883880615,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1124": {
+    "sql": "WITH c_cols AS (\n    SELECT `player_api_id`, `attacking_work_rate`\n    FROM Player_Attributes\n),\nc_rows AS (\n    SELECT player_api_id\n    FROM c_cols\n    WHERE attacking_work_rate = 'high'\n),\nt_join AS (\n    SELECT p.`player_name`\n    FROM c_rows r\n    INNER JOIN Player p ON r.player_api_id = p.`player_api_id`\n)\nSELECT `player_name` FROM t_join;",
+    "stats": {
+      "average_reward": 0.12907264833450402,
+      "total_visits": 10,
+      "elapsed_time": 581.8977444171906,
+      "timing": {
+        "total_s": 581.8971054553986,
+        "rollout_s": 2692.789855003357,
+        "cte_gen_s": 1368.667231798172,
+        "sql_gen_s": 1043.3065512180328,
+        "db_exec_s": 237.13695168495178,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1158": {
+    "sql": "SELECT `Patient`.`ID`, `Patient`.`Birthday`, `Laboratory`.`T-CHO`\nFROM `Patient`\nJOIN `Laboratory` ON `Patient`.`ID` = `Laboratory`.`ID`\nWHERE strftime('%Y', `Patient`.`Birthday`) = '1937' \n  AND `Laboratory`.`T-CHO` >= '250' \n  AND `Laboratory`.`T-CHO` IS NOT NULL;",
+    "stats": {
+      "average_reward": 0.5121262972890324,
+      "total_visits": 10,
+      "elapsed_time": 395.80970525741577,
+      "timing": {
+        "total_s": 395.8095107078552,
+        "rollout_s": 1775.358077287674,
+        "cte_gen_s": 868.3042433261871,
+        "sql_gen_s": 889.3069491386414,
+        "db_exec_s": 1.203906774520874,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1161": {
+    "sql": "SELECT AVG(`aCL IgG`) AS answer\nFROM Patient\nINNER JOIN Examination ON Patient.`ID` = Examination.`ID`\nWHERE Patient.`Admission` = '+'\n  AND (strftime('%Y', 'now') - strftime('%Y', Patient.`Birthday`) >= 50);",
+    "stats": {
+      "average_reward": 0.21999995100001107,
+      "total_visits": 10,
+      "elapsed_time": 395.81356167793274,
+      "timing": {
+        "total_s": 395.81326484680176,
+        "rollout_s": 1908.2474057674408,
+        "cte_gen_s": 690.126665353775,
+        "sql_gen_s": 1195.8674833774567,
+        "db_exec_s": 1.6966407299041748,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1182": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM Patient\nJOIN Laboratory ON Patient.ID = Laboratory.ID\nWHERE Patient.`First Date` = '1991-06-13'\n  AND Patient.Diagnosis = 'SJS'\n  AND Laboratory.Date LIKE '1995%';",
+    "stats": {
+      "average_reward": 0.352205062107118,
+      "total_visits": 10,
+      "elapsed_time": 629.312714099884,
+      "timing": {
+        "total_s": 629.3124558925629,
+        "rollout_s": 2744.7447414398193,
+        "cte_gen_s": 1602.8700370788574,
+        "sql_gen_s": 1110.376223564148,
+        "db_exec_s": 1.4084441661834717,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1195": {
+    "sql": "SELECT AVG(`ALB`) AS answer\nFROM Patient\nINNER JOIN Laboratory ON Patient.ID = Laboratory.ID\nWHERE Patient.SEX = 'F' AND Patient.Diagnosis = 'SLE' AND Laboratory.PLT > 400;",
+    "stats": {
+      "average_reward": 0.43766945814621144,
+      "total_visits": 10,
+      "elapsed_time": 341.98678493499756,
+      "timing": {
+        "total_s": 341.9863998889923,
+        "rollout_s": 1637.6446597576141,
+        "cte_gen_s": 839.9170172214508,
+        "sql_gen_s": 773.3985023498535,
+        "db_exec_s": 5.3253514766693115,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1201": {
+    "sql": "WITH c_rows AS (\n    SELECT `ID`, `SEX`\n    FROM Patient\n    WHERE SUBSTR(`Birthday`, 1, 4) = '1980' AND `Diagnosis` = 'RA'\n),\nc_agg AS (\n    SELECT COUNT(*) AS total, SUM(CASE WHEN `SEX` = 'F' THEN 1 ELSE 0 END) AS female_count\n    FROM c_rows\n)\nSELECT (female_count * 100.0 / total) AS percentage\nFROM c_agg;",
+    "stats": {
+      "average_reward": 0.45743201566421077,
+      "total_visits": 10,
+      "elapsed_time": 509.5325856208801,
+      "timing": {
+        "total_s": 509.53229093551636,
+        "rollout_s": 1751.4812853336334,
+        "cte_gen_s": 1334.1084673404694,
+        "sql_gen_s": 401.4813551902771,
+        "db_exec_s": 2.033674478530884,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1213": {
+    "sql": "SELECT p.`ID`, l.`ALP`\nFROM `Patient` p\nJOIN `Laboratory` l ON p.`ID` = l.`ID`\nWHERE p.`Birthday` = '1982-04-01'\nAND l.`ALP` < 300;",
+    "stats": {
+      "average_reward": 0.5057581454371023,
+      "total_visits": 10,
+      "elapsed_time": 488.2975571155548,
+      "timing": {
+        "total_s": 488.29728269577026,
+        "rollout_s": 2057.9496524333954,
+        "cte_gen_s": 1003.0536673069,
+        "sql_gen_s": 1033.1787741184235,
+        "db_exec_s": 1.4211184978485107,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1217": {
+    "sql": "WITH c_cols AS (\n    SELECT p.ID, p.Birthday, l.ALB\n    FROM Patient p\n    INNER JOIN Laboratory l ON p.ID = l.ID\n)\nSELECT ID, Birthday, ALB\nFROM c_cols\nWHERE STRFTIME('%Y', Birthday) = '1982' AND ALB IS NOT NULL AND ALB BETWEEN 3.5 AND 5.5;",
+    "stats": {
+      "average_reward": 0.3292855344746054,
+      "total_visits": 10,
+      "elapsed_time": 615.7075972557068,
+      "timing": {
+        "total_s": 615.7073957920074,
+        "rollout_s": 2719.050919532776,
+        "cte_gen_s": 1687.8348767757416,
+        "sql_gen_s": 997.4410781860352,
+        "db_exec_s": 4.516314744949341,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1224": {
+    "sql": "SELECT l.`ID`, p.`SEX`, p.`Birthday`\nFROM Laboratory l\nJOIN Patient p ON l.`ID` = p.`ID`\nWHERE l.`T-BIL` = (SELECT MAX(`T-BIL`) FROM Laboratory);",
+    "stats": {
+      "average_reward": 0.46239999575072294,
+      "total_visits": 10,
+      "elapsed_time": 709.2020452022552,
+      "timing": {
+        "total_s": 709.2017827033997,
+        "rollout_s": 2561.347293615341,
+        "cte_gen_s": 1528.464769601822,
+        "sql_gen_s": 1016.8285927772522,
+        "db_exec_s": 1.7695975303649902,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1247": {
+    "sql": "WITH t_join AS (\n    SELECT p.ID, p.SEX, l.WBC, l.FG\n    FROM Patient AS p\n    INNER JOIN Laboratory AS l ON p.ID = l.ID\n),\nt_rows AS (\n    SELECT ID\n    FROM t_join\n    WHERE SEX = 'M' AND WBC > 3.5 AND WBC < 9.0 AND (FG <= 150 OR FG >= 450)\n)\nSELECT COUNT(*) AS answer\nFROM t_rows;",
+    "stats": {
+      "average_reward": 0.2787233958295162,
+      "total_visits": 10,
+      "elapsed_time": 321.1243951320648,
+      "timing": {
+        "total_s": 321.1232371330261,
+        "rollout_s": 1386.3887784481049,
+        "cte_gen_s": 670.5855233669281,
+        "sql_gen_s": 703.6064209938049,
+        "db_exec_s": 1.4033639430999756,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1249": {
+    "sql": "SELECT DISTINCT e.`Diagnosis`\nFROM Laboratory l\nJOIN Examination e ON l.`ID` = e.`ID`\nWHERE l.`U-PRO` >= 30;",
+    "stats": {
+      "average_reward": 0.27451683165026447,
+      "total_visits": 10,
+      "elapsed_time": 410.9031927585602,
+      "timing": {
+        "total_s": 410.9029471874237,
+        "rollout_s": 1965.933450460434,
+        "cte_gen_s": 1093.7240114212036,
+        "sql_gen_s": 852.1942539215088,
+        "db_exec_s": 1.0710761547088623,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1266": {
+    "sql": "SELECT p.`Birthday`\nFROM Laboratory l\nJOIN Patient p ON l.`ID` = p.`ID`\nWHERE l.`RNP` NOT IN ('-', '+-')\nORDER BY p.`Birthday` DESC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.3247917968446213,
+      "total_visits": 10,
+      "elapsed_time": 461.3147258758545,
+      "timing": {
+        "total_s": 461.3143229484558,
+        "rollout_s": 2106.846367120743,
+        "cte_gen_s": 1448.165400505066,
+        "sql_gen_s": 632.1819043159485,
+        "db_exec_s": 2.9008901119232178,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1268": {
+    "sql": "WITH c_rows AS (\n    SELECT `ID`\n    FROM `Laboratory`\n    WHERE `SM` NOT IN ('negative', '0')\n),\nt_join AS (\n    SELECT p.`ID`, p.`Birthday`\n    FROM c_rows r\n    INNER JOIN Patient p ON r.ID = p.`ID`\n),\nranked_patients AS (\n    SELECT ID, Birthday, ROW_NUMBER() OVER (ORDER BY Birthday DESC) AS rn\n    FROM t_join\n)\nSELECT ID\nFROM ranked_patients\nWHERE rn <= 3;",
+    "stats": {
+      "average_reward": 0.5618320041898178,
+      "total_visits": 10,
+      "elapsed_time": 735.0181264877319,
+      "timing": {
+        "total_s": 735.0178413391113,
+        "rollout_s": 2850.4214136600494,
+        "cte_gen_s": 2131.9469196796417,
+        "sql_gen_s": 695.7126824855804,
+        "db_exec_s": 5.475823163986206,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1272": {
+    "sql": "WITH c_cols AS (\n    SELECT p.ID, p.`First Date`, l.`SSA`\n    FROM Patient AS p\n    INNER JOIN Laboratory AS l ON p.ID = l.ID\n),\nc_rows AS (\n    SELECT ID, `First Date`\n    FROM c_cols\n    WHERE `SSA` NOT IN ('negative', '0')\n)\nSELECT ID\nFROM c_rows\nORDER BY `First Date` ASC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.2967407323012795,
+      "total_visits": 10,
+      "elapsed_time": 601.6922881603241,
+      "timing": {
+        "total_s": 601.6919777393341,
+        "rollout_s": 2655.638109445572,
+        "cte_gen_s": 2078.3510308265686,
+        "sql_gen_s": 548.6153457164764,
+        "db_exec_s": 2.7645697593688965,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1278": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM Laboratory\nJOIN Patient ON Laboratory.`ID` = Patient.`ID`\nWHERE Laboratory.`IGG` > 900\n  AND Laboratory.`IGG` < 2000\n  AND Patient.`Admission` = '+';",
+    "stats": {
+      "average_reward": 0.1799999673333393,
+      "total_visits": 10,
+      "elapsed_time": 394.0999171733856,
+      "timing": {
+        "total_s": 394.09974908828735,
+        "rollout_s": 1784.164128780365,
+        "cte_gen_s": 638.5618512630463,
+        "sql_gen_s": 1119.9652864933014,
+        "db_exec_s": 1.962435245513916,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1291": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM Patient AS p\nINNER JOIN Laboratory AS l ON p.ID = l.ID\nWHERE p.SEX = 'M' AND l.ALB > 3.5 AND l.ALB < 5.5 AND l.TP > 6.0 AND l.TP < 8.5;",
+    "stats": {
+      "average_reward": 0.4839688151419158,
+      "total_visits": 10,
+      "elapsed_time": 413.59619402885437,
+      "timing": {
+        "total_s": 413.5959346294403,
+        "rollout_s": 1878.5110232830048,
+        "cte_gen_s": 974.5377600193024,
+        "sql_gen_s": 881.725430727005,
+        "db_exec_s": 1.568732500076294,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1293": {
+    "sql": "SELECT MAX(e.`ANA`) AS answer\nFROM Patient p\nJOIN Laboratory l ON p.`ID` = l.`ID`\nJOIN Examination e ON p.`ID` = e.`ID`\nWHERE l.`CRE` < 1.5;",
+    "stats": {
+      "average_reward": 0.38959533633455184,
+      "total_visits": 10,
+      "elapsed_time": 309.70028924942017,
+      "timing": {
+        "total_s": 309.7000331878662,
+        "rollout_s": 1451.8332121372223,
+        "cte_gen_s": 805.6539266109467,
+        "sql_gen_s": 622.6981453895569,
+        "db_exec_s": 1.5826430320739746,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1319": {
+    "sql": "SELECT maj.`college`\nFROM member m\nINNER JOIN major maj ON m.`link_to_major` = maj.`major_id`\nWHERE m.`position` = 'Vice President';",
+    "stats": {
+      "average_reward": 0.3034137909164331,
+      "total_visits": 10,
+      "elapsed_time": 305.9920253753662,
+      "timing": {
+        "total_s": 305.9917941093445,
+        "rollout_s": 1363.8839888572693,
+        "cte_gen_s": 1001.8290822505951,
+        "sql_gen_s": 341.95508646965027,
+        "db_exec_s": 0.9596924781799316,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1343": {
+    "sql": "SELECT remaining\nFROM budget\nWHERE category = 'Food'\nAND amount = (SELECT MAX(amount) FROM budget WHERE category = 'Food');",
+    "stats": {
+      "average_reward": 0.44454886314217923,
+      "total_visits": 10,
+      "elapsed_time": 550.701652765274,
+      "timing": {
+        "total_s": 550.7014007568359,
+        "rollout_s": 2552.58939576149,
+        "cte_gen_s": 2033.5606684684753,
+        "sql_gen_s": 492.9757344722748,
+        "db_exec_s": 1.0401875972747803,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1349": {
+    "sql": "SELECT SUM(b.amount) AS total_budget\nFROM event e\nINNER JOIN budget b ON e.event_id = b.link_to_event\nWHERE e.event_name = 'September Speaker';",
+    "stats": {
+      "average_reward": 0.21999995100001107,
+      "total_visits": 10,
+      "elapsed_time": 291.00312423706055,
+      "timing": {
+        "total_s": 291.00299072265625,
+        "rollout_s": 1392.346316576004,
+        "cte_gen_s": 575.6365551948547,
+        "sql_gen_s": 797.9519274234772,
+        "db_exec_s": 0.836676836013794,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1366": {
+    "sql": "SELECT m.first_name, m.last_name\nFROM event AS e\nINNER JOIN attendance AS a ON e.event_id = a.link_to_event\nINNER JOIN member AS m ON a.link_to_member = m.member_id\nWHERE e.event_name = 'October Meeting';",
+    "stats": {
+      "average_reward": 0.3249998852778206,
+      "total_visits": 10,
+      "elapsed_time": 354.9918632507324,
+      "timing": {
+        "total_s": 354.9915819168091,
+        "rollout_s": 1636.3432621955872,
+        "cte_gen_s": 1094.3415801525116,
+        "sql_gen_s": 517.5964434146881,
+        "db_exec_s": 2.213352680206299,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1368": {
+    "sql": "SELECT ma.`major_name`\nFROM member m\nINNER JOIN major ma ON m.`link_to_major` = ma.`major_id`\nWHERE m.`phone` = '809-555-3360';",
+    "stats": {
+      "average_reward": 0.3310259025670629,
+      "total_visits": 10,
+      "elapsed_time": 237.39599585533142,
+      "timing": {
+        "total_s": 237.39569878578186,
+        "rollout_s": 977.8660740852356,
+        "cte_gen_s": 599.4784336090088,
+        "sql_gen_s": 357.95311975479126,
+        "db_exec_s": 2.973017930984497,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1393": {
+    "sql": "SELECT `first_name`, `last_name`, `email` FROM member WHERE `position` = 'Secretary';",
+    "stats": {
+      "average_reward": 0.5257139452247532,
+      "total_visits": 10,
+      "elapsed_time": 267.8302216529846,
+      "timing": {
+        "total_s": 267.8299391269684,
+        "rollout_s": 1275.8972573280334,
+        "cte_gen_s": 830.9070148468018,
+        "sql_gen_s": 429.61716532707214,
+        "db_exec_s": 0.566913366317749,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1411": {
+    "sql": "SELECT e.expense_description\nFROM member m\nJOIN expense e ON m.member_id = e.link_to_member\nWHERE m.first_name = 'Sacha' AND m.last_name = 'Harrison';",
+    "stats": {
+      "average_reward": 0.299516803178059,
+      "total_visits": 10,
+      "elapsed_time": 408.99774265289307,
+      "timing": {
+        "total_s": 408.9974915981293,
+        "rollout_s": 1813.5824227333069,
+        "cte_gen_s": 1160.4142649173737,
+        "sql_gen_s": 627.9727230072021,
+        "db_exec_s": 0.9874210357666016,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1415": {
+    "sql": "SELECT `position` \nFROM `member` \nJOIN `major` ON `member`.`link_to_major` = `major`.`major_id` \nWHERE `major`.`major_name` = 'Business';",
+    "stats": {
+      "average_reward": 0.4450669348222994,
+      "total_visits": 10,
+      "elapsed_time": 324.3949568271637,
+      "timing": {
+        "total_s": 324.39465737342834,
+        "rollout_s": 1382.5121440887451,
+        "cte_gen_s": 966.0275938510895,
+        "sql_gen_s": 399.88879919052124,
+        "db_exec_s": 0.7496156692504883,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1430": {
+    "sql": "SELECT `last_name`, `position`\nFROM member\nJOIN expense ON member.member_id = expense.link_to_member\nWHERE expense.expense_description = 'Pizza'\n  AND expense.expense_date = '2019-09-10';",
+    "stats": {
+      "average_reward": 0.2871211181383276,
+      "total_visits": 10,
+      "elapsed_time": 271.18739557266235,
+      "timing": {
+        "total_s": 271.18712186813354,
+        "rollout_s": 1256.4892406463623,
+        "cte_gen_s": 784.331933259964,
+        "sql_gen_s": 452.3864657878876,
+        "db_exec_s": 0.8684020042419434,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1438": {
+    "sql": "SELECT major.college\nFROM member\nJOIN major ON member.link_to_major = major.major_id\nWHERE member.first_name = 'Katy' AND member.link_to_major = 'rec1N0upiVLy5esTO';",
+    "stats": {
+      "average_reward": 0.4856453279789581,
+      "total_visits": 10,
+      "elapsed_time": 453.2076735496521,
+      "timing": {
+        "total_s": 453.20737314224243,
+        "rollout_s": 1905.5479242801666,
+        "cte_gen_s": 1292.677932024002,
+        "sql_gen_s": 586.0638620853424,
+        "db_exec_s": 1.456010341644287,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1447": {
+    "sql": "WITH t_join AS (\n    SELECT e.`event_name`, e.`location`, b.`remaining`\n    FROM event e\n    INNER JOIN budget b ON e.`event_id` = b.`link_to_event`\n)\nSELECT `event_name`, `location`\nFROM t_join\nWHERE `remaining` > 0;",
+    "stats": {
+      "average_reward": 0.416971734019355,
+      "total_visits": 10,
+      "elapsed_time": 365.08712816238403,
+      "timing": {
+        "total_s": 365.0867187976837,
+        "rollout_s": 1587.4086332321167,
+        "cte_gen_s": 1147.7053244113922,
+        "sql_gen_s": 414.7854034900665,
+        "db_exec_s": 1.6504361629486084,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1453": {
+    "sql": "SELECT e.event_name\nFROM event e\nLEFT JOIN (\n    SELECT \n        b.link_to_event AS event_id,\n        SUM(e.cost) AS total_parking\n    FROM expense e\n    JOIN budget b ON e.link_to_budget = b.budget_id\n    WHERE e.expense_description = 'Parking'\n    GROUP BY b.link_to_event\n) AS event_parking ON e.event_id = event_parking.event_id\nWHERE COALESCE(event_parking.total_parking, 0) < (\n    SELECT (SUM(e.cost) / COUNT(DISTINCT b.link_to_event)) \n    FROM expense e\n    JOIN budget b ON e.link_to_budget = b.budget_id\n    WHERE e.expense_description = 'Parking'\n);",
+    "stats": {
+      "average_reward": 0.1999998000002,
+      "total_visits": 10,
+      "elapsed_time": 955.784449338913,
+      "timing": {
+        "total_s": 955.7842872142792,
+        "rollout_s": 4677.78481054306,
+        "cte_gen_s": 1521.486380815506,
+        "sql_gen_s": 3145.1675941944122,
+        "db_exec_s": 0.8331594467163086,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1454": {
+    "sql": "WITH c_cols AS (\n    SELECT event_id, type\n    FROM event\n),\nc_rows AS (\n    SELECT event_id, type\n    FROM c_cols\n    WHERE type = 'Meeting'\n),\nt_join AS (\n    SELECT b.link_to_event, ex.cost\n    FROM c_rows r\n    INNER JOIN budget b ON r.event_id = b.link_to_event\n    INNER JOIN expense ex ON b.budget_id = ex.link_to_budget\n),\nagg AS (\n    SELECT SUM(cost) AS total_cost, COUNT(DISTINCT link_to_event) AS event_count\n    FROM t_join\n)\nSELECT (total_cost / event_count) * 100 AS percentage\nFROM agg;",
+    "stats": {
+      "average_reward": 0.5340581792949044,
+      "total_visits": 10,
+      "elapsed_time": 602.9995355606079,
+      "timing": {
+        "total_s": 602.9990448951721,
+        "rollout_s": 2508.1878776550293,
+        "cte_gen_s": 1663.0815453529358,
+        "sql_gen_s": 826.1213793754578,
+        "db_exec_s": 1.6847727298736572,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1466": {
+    "sql": "WITH c_rows AS (\n    SELECT member_id, first_name, last_name, link_to_major\n    FROM member\n    WHERE position = 'Secretary'\n)\nSELECT first_name, last_name, major.college\nFROM c_rows\nJOIN major ON c_rows.link_to_major = major.major_id;",
+    "stats": {
+      "average_reward": 0.4006207016756065,
+      "total_visits": 10,
+      "elapsed_time": 507.00522208213806,
+      "timing": {
+        "total_s": 507.0045266151428,
+        "rollout_s": 1811.264800786972,
+        "cte_gen_s": 1291.2541604042053,
+        "sql_gen_s": 495.57556772232056,
+        "db_exec_s": 1.5600917339324951,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1467": {
+    "sql": "SELECT SUM(spent) AS total_amount, GROUP_CONCAT(event_name) AS event_names\nFROM budget\nJOIN event ON budget.link_to_event = event.event_id\nWHERE budget.category = 'Speaker Gifts';",
+    "stats": {
+      "average_reward": 0.27563413703462736,
+      "total_visits": 10,
+      "elapsed_time": 1449.2693903446198,
+      "timing": {
+        "total_s": 1449.2622497081757,
+        "rollout_s": 7041.169859647751,
+        "cte_gen_s": 3119.850663661957,
+        "sql_gen_s": 3888.5363252162933,
+        "db_exec_s": 3.6461901664733887,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1472": {
+    "sql": "WITH c_cols AS (\n    SELECT CustomerID, Consumption, Date\n    FROM yearmonth\n),\nc_rows AS (\n    SELECT CustomerID, Consumption\n    FROM c_cols\n    WHERE Date LIKE '2012%'\n),\nc_join AS (\n    SELECT y.CustomerID, y.Consumption, c.Segment\n    FROM c_rows y\n    INNER JOIN customers c ON y.CustomerID = c.CustomerID\n),\nc_lam AS (\n    SELECT CustomerID, Consumption\n    FROM c_join\n    WHERE Segment = 'LAM'\n),\nranked AS (\n    SELECT CustomerID, Consumption,\n           ROW_NUMBER() OVER (ORDER BY Consumption ASC) AS rn\n    FROM c_lam\n)\nSELECT CustomerID\nFROM ranked\nWHERE rn = 1;",
+    "stats": {
+      "average_reward": 0.20959258474498013,
+      "total_visits": 10,
+      "elapsed_time": 1036.2014734745026,
+      "timing": {
+        "total_s": 1036.2010905742645,
+        "rollout_s": 4405.146146059036,
+        "cte_gen_s": 3534.5872843265533,
+        "sql_gen_s": 822.2098319530487,
+        "db_exec_s": 21.23808741569519,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1479": {
+    "sql": "WITH c_cols AS (\n    SELECT `CustomerID`, `Date`, `Consumption`\n    FROM yearmonth\n),\nc_join AS (\n    SELECT ym.CustomerID, ym.Date, ym.Consumption, c.Currency\n    FROM c_cols ym\n    INNER JOIN customers c ON ym.CustomerID = c.CustomerID\n),\nc_czk AS (\n    SELECT CustomerID, Date, Consumption\n    FROM c_join\n    WHERE Currency = 'CZK'\n),\nc_year AS (\n    SELECT SUBSTR(`Date`, 1, 4) AS `Year`, `Consumption`\n    FROM c_czk\n),\nc_agg AS (\n    SELECT `Year`, SUM(`Consumption`) AS TotalConsumption\n    FROM c_year\n    GROUP BY `Year`\n),\nc_rank AS (\n    SELECT Year, TotalConsumption,\n           RANK() OVER (ORDER BY TotalConsumption DESC) AS rnk\n    FROM c_agg\n)\nSELECT `Year` FROM c_rank WHERE rnk = 1;",
+    "stats": {
+      "average_reward": 0.25477754341117265,
+      "total_visits": 10,
+      "elapsed_time": 652.3905370235443,
+      "timing": {
+        "total_s": 652.389986038208,
+        "rollout_s": 3012.32519865036,
+        "cte_gen_s": 2400.7748510837555,
+        "sql_gen_s": 526.1920847892761,
+        "db_exec_s": 50.32096028327942,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1485": {
+    "sql": "SELECT \n    SUM(CASE WHEN `CustomerID` = 7 THEN `Consumption` ELSE 0 END) - \n    SUM(CASE WHEN `CustomerID` = 5 THEN `Consumption` ELSE 0 END) AS `difference`\nFROM `yearmonth`\nWHERE `Date` = '201304';",
+    "stats": {
+      "average_reward": 0.34773707652788055,
+      "total_visits": 10,
+      "elapsed_time": 510.65897250175476,
+      "timing": {
+        "total_s": 510.6586377620697,
+        "rollout_s": 2439.237840652466,
+        "cte_gen_s": 1660.9699399471283,
+        "sql_gen_s": 750.2325940132141,
+        "db_exec_s": 1.305818796157837,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1511": {
+    "sql": "WITH c_cols AS (\n    SELECT `CustomerID`, `Currency`\n    FROM customers\n),\nc_rows AS (\n    SELECT `CustomerID`\n    FROM c_cols\n    WHERE `Currency` = 'EUR'\n),\nt_join AS (\n    SELECT t.`CustomerID`, t.`Price`\n    FROM c_rows r\n    INNER JOIN transactions_1k t ON r.`CustomerID` = t.`CustomerID`\n),\nc_agg AS (\n    SELECT `CustomerID`, SUM(`Price`) AS `TotalPrice`\n    FROM t_join\n    GROUP BY `CustomerID`\n),\nc_avg AS (\n    SELECT AVG(`TotalPrice`) AS `AverageTotalPrice`\n    FROM c_agg\n)\nSELECT * FROM c_avg;",
+    "stats": {
+      "average_reward": 0.24910061148974866,
+      "total_visits": 10,
+      "elapsed_time": 506.42470240592957,
+      "timing": {
+        "total_s": 506.424441576004,
+        "rollout_s": 2259.7739777565002,
+        "cte_gen_s": 1621.1919507980347,
+        "sql_gen_s": 612.4939665794373,
+        "db_exec_s": 1.7898073196411133,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1527": {
+    "sql": "WITH c_cols AS (\n    SELECT `GasStationID`, `Amount`, `Price`\n    FROM transactions_1k\n),\nc_rows AS (\n    SELECT `GasStationID`, `Amount`, `Price`\n    FROM c_cols\n    WHERE `Amount` > 0\n),\nagg_revenue AS (\n    SELECT `GasStationID`, SUM(`Amount` * `Price`) AS total_revenue\n    FROM c_rows\n    GROUP BY `GasStationID`\n),\nranked_revenue AS (\n    SELECT `GasStationID`, `total_revenue`,\n           RANK() OVER (ORDER BY `total_revenue` DESC) AS rnk\n    FROM agg_revenue\n),\ntop_station AS (\n    SELECT `GasStationID`\n    FROM ranked_revenue\n    WHERE rnk = 1\n)\nSELECT `GasStationID` FROM top_station;",
+    "stats": {
+      "average_reward": 0.32977821985382605,
+      "total_visits": 10,
+      "elapsed_time": 555.8047389984131,
+      "timing": {
+        "total_s": 555.8046157360077,
+        "rollout_s": 2615.1238560676575,
+        "cte_gen_s": 1778.5553677082062,
+        "sql_gen_s": 808.4836142063141,
+        "db_exec_s": 3.861992597579956,
+        "rollout_count": 10
+      }
+    }
+  },
+  "1533": {
+    "sql": "WITH t1 AS (\n    SELECT `ProductID`, `Price`, `Amount`, `CustomerID`\n    FROM transactions_1k\n),\nt2 AS (\n    SELECT `CustomerID`\n    FROM t1\n    WHERE `ProductID` = 5 AND `Price` / `Amount` > 29.00\n),\nt3 AS (\n    SELECT y.`CustomerID`, y.`Consumption`\n    FROM t2\n    INNER JOIN yearmonth y ON t2.CustomerID = y.`CustomerID`\n    WHERE y.`Date` = '201208'\n)\nSELECT * FROM t3;",
+    "stats": {
+      "average_reward": 0.25653587453011617,
+      "total_visits": 10,
+      "elapsed_time": 464.7892687320709,
+      "timing": {
+        "total_s": 464.7889964580536,
+        "rollout_s": 2026.1960453987122,
+        "cte_gen_s": 1269.8583331108093,
+        "sql_gen_s": 727.0511751174927,
+        "db_exec_s": 5.275783061981201,
+        "rollout_count": 10
+      }
+    }
+  }
+}

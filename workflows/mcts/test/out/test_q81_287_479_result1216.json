@@ -1,0 +1,1598 @@
+{
+  "40": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+    "stats": {
+      "average_reward": 0.7,
+      "total_visits": 2,
+      "timing": {
+        "total_s": 565.6008732318878,
+        "rollout_s": 547.9009778499603,
+        "cte_gen_s": 479.934650182724,
+        "sql_gen_s": 34.404507875442505,
+        "db_exec_s": 37.266082525253296,
+        "rollout_count": 2
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.District = 'Fresno Unified' AND T1.AvgScrRead IS NOT NULL ORDER BY T1.AvgScrRead ASC LIMIT 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "cte_buckets_per_node": [],
+        "leaf_depth": 0,
+        "leaf_visit_count": 0,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_206428481165dc2b517e9a0779cfe376",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_206428481165dc2b517e9a0779cfe376",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_206428481165dc2b517e9a0779cfe376",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_206428481165dc2b517e9a0779cfe376",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT `Phone`\nFROM schools\nWHERE `CDSCode` = (\n    SELECT `cds`\n    FROM satscores\n    WHERE `dname` = 'Fresno Unified'\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_206428481165dc2b517e9a0779cfe376",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_1_206428481165dc2b517e9a0779cfe376": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 0,
+        "is_quick_path": true
+      },
+      {
+        "reward": 0.4,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n)\nSELECT * FROM t_join;",
+          "WITH t_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n)\nSELECT * FROM t_min;",
+          "WITH t_final AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified' AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM t_final;",
+          "WITH fuzzy_district AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE \n        s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM fuzzy_district;",
+          "WITH final_result AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM final_result;",
+          "WITH final_answer AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          13,
+          1,
+          13,
+          6,
+          12,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_2eebe8db15ef6a12b60824892e3e7162"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_join AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n)\nSELECT * FROM t_join;",
+              "count": 13,
+              "result_signature": "5_2_719dde74092dba13a13e409e0a0912f7"
+            },
+            {
+              "cte": "WITH t_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n)\nSELECT * FROM t_agg;",
+              "count": 1,
+              "result_signature": "5_2_aca5ff5b2e5c5737baa7fd9eba9c7a44"
+            },
+            {
+              "cte": "WITH t_rows AS (\n    SELECT `cds`, `Phone`\n    FROM c_rows\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n)\nSELECT * FROM t_rows;",
+              "count": 1,
+              "result_signature": "1_2_0b60d865e24bec2c4a57dbe9d0d6b07f"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n)\nSELECT * FROM t_min;",
+              "count": 1,
+              "result_signature": "1_1_5774488da576db918c8515557e136e1b"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified' AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM t_final;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH fuzzy_district AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE \n        s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM fuzzy_district;",
+              "count": 6,
+              "result_signature": "5_2_719dde74092dba13a13e409e0a0912f7"
+            },
+            {
+              "cte": "WITH fuzzy_district AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE \n        (s.`District` LIKE '%Fresno Unified%' \n         OR s.`District` LIKE 'Fresno Unified%' \n         OR s.`District` LIKE '%Fresno Unified'\n         OR s.`District` = 'Fresno Unified'\n         OR s.`District` LIKE '%Fresno% Unified%'\n         OR s.`District` LIKE '%Fresno% Unified'\n         OR s.`District` LIKE '%Fresno% unified%'\n         OR s.`District` LIKE '%Fresno% unified')\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM fuzzy_district;",
+              "count": 1,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_result AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM final_result;",
+              "count": 12,
+              "result_signature": "5_1_f1bed7e455525bb138f79243a78ca4a1"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT `Phone`\n    FROM fuzzy_district\n    WHERE `cds` = (SELECT `cds` FROM c_rows WHERE `AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows))\n)\nSELECT * FROM final_answer;",
+              "count": 3,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)\n)\nSELECT * FROM final_answer;",
+              "count": 15,
+              "result_signature": "5_1_f1bed7e455525bb138f79243a78ca4a1"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 2,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n),\nfinal_answer AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT min_score FROM t_min)\n)\nSELECT * FROM final_answer;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT r.`Phone`\nFROM c_rows r\nINNER JOIN schools s ON r.cds = s.`CDSCode`\nWHERE s.`District` LIKE '%Fresno Unified%' \n    OR s.`District` LIKE 'Fresno Unified%' \n    OR s.`District` LIKE '%Fresno Unified' \n    OR s.`District` = 'Fresno Unified' \n    OR s.`District` LIKE '%Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified' \n    OR s.`District` LIKE 'Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified%'\n    AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)",
+            "valid": false,
+            "error": "查询执行错误: no such table: c_rows",
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT r.`Phone`\nFROM c_rows r\nINNER JOIN schools s ON r.cds = s.`CDSCode`\nWHERE s.`District` LIKE '%Fresno Unified%' \n    OR s.`District` LIKE 'Fresno Unified%' \n    OR s.`District` LIKE '%Fresno Unified' \n    OR s.`District` = 'Fresno Unified' \n    OR s.`District` LIKE '%Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified' \n    OR s.`District` LIKE 'Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified%'\n    AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows)",
+            "valid": false,
+            "error": "查询执行错误: no such table: c_rows",
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT r.`Phone`\nFROM c_rows r\nINNER JOIN schools s ON r.cds = s.`CDSCode`\nWHERE s.`District` LIKE '%Fresno Unified%' \n    OR s.`District` LIKE 'Fresno Unified%' \n    OR s.`District` LIKE '%Fresno Unified' \n    OR s.`District` = 'Fresno Unified' \n    OR s.`District` LIKE '%Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified' \n    OR s.`District` LIKE 'Fresno% Unified%' \n    OR s.`District` LIKE '%Fresno% Unified%'\n    AND r.`AvgScrRead` = (SELECT MIN(`AvgScrRead`) FROM c_rows);",
+            "valid": false,
+            "error": "查询执行错误: no such table: c_rows",
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n),\nfinal_answer AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT min_score FROM t_min)\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_f1bed7e455525bb138f79243a78ca4a1",
+            "result_row_count": 11
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n),\nfinal_answer AS (\n    SELECT r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` LIKE '%Fresno Unified%' \n        OR s.`District` LIKE 'Fresno Unified%' \n        OR s.`District` LIKE '%Fresno Unified' \n        OR s.`District` = 'Fresno Unified' \n        OR s.`District` LIKE '%Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified' \n        OR s.`District` LIKE 'Fresno% Unified%' \n        OR s.`District` LIKE '%Fresno% Unified%'\n        AND r.`AvgScrRead` = (SELECT min_score FROM t_min)\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_f1bed7e455525bb138f79243a78ca4a1",
+            "result_row_count": 11
+          }
+        ],
+        "result_buckets": {
+          "5_1_f1bed7e455525bb138f79243a78ca4a1": 2
+        },
+        "valid_count": 2,
+        "error_reason": null,
+        "rollout_id": 1,
+        "is_quick_path": false
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n)\nSELECT * FROM t_agg;",
+          "WITH t_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT * FROM t_final;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          1,
+          9
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_2eebe8db15ef6a12b60824892e3e7162"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_join AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n)\nSELECT * FROM t_join;",
+              "count": 13,
+              "result_signature": "5_2_719dde74092dba13a13e409e0a0912f7"
+            },
+            {
+              "cte": "WITH t_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n)\nSELECT * FROM t_agg;",
+              "count": 1,
+              "result_signature": "5_2_aca5ff5b2e5c5737baa7fd9eba9c7a44"
+            },
+            {
+              "cte": "WITH t_rows AS (\n    SELECT `cds`, `Phone`\n    FROM c_rows\n    ORDER BY `AvgScrRead` ASC\n    LIMIT 1\n)\nSELECT * FROM t_rows;",
+              "count": 1,
+              "result_signature": "1_2_0b60d865e24bec2c4a57dbe9d0d6b07f"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT r.`Phone`\n    FROM t_agg a\n    INNER JOIN c_rows r ON a.`cds` = r.`cds`\n    ORDER BY a.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 5,
+              "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 9,
+              "result_signature": "1_3_de8fdcdb9e4ebc1c2c3d75e97dd15755"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT r.`cds`, r.`Phone`\n    FROM c_rows r\n    JOIN t_agg a ON r.`cds` = a.`cds`\n    ORDER BY a.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 1,
+              "result_signature": "1_2_0b60d865e24bec2c4a57dbe9d0d6b07f"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrRead`, `Phone`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_agg AS (\n    SELECT `cds`, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM c_rows\n    GROUP BY `cds`\n),\nt_final AS (\n    SELECT t_agg.`cds`, t_agg.min_avg_scr_read, c_rows.`Phone`\n    FROM t_agg\n    INNER JOIN c_rows ON t_agg.`cds` = c_rows.`cds`\n    ORDER BY t_agg.min_avg_scr_read ASC\n    LIMIT 1\n)\nSELECT `Phone` FROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_7c48dc2cbd4779bdc8c7143e85518cbf",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_1_7c48dc2cbd4779bdc8c7143e85518cbf": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 2,
+        "is_quick_path": false
+      }
+    ]
+  },
+  "43": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+    "stats": {
+      "average_reward": 1.0,
+      "total_visits": 1,
+      "timing": {
+        "total_s": 104.63641309738159,
+        "rollout_s": 68.84188771247864,
+        "cte_gen_s": 41.865681648254395,
+        "sql_gen_s": 21.491645097732544,
+        "db_exec_s": 11.253380060195923,
+        "rollout_count": 1
+      },
+      "gold_match": true,
+      "gold_sql": "SELECT T1.AvgScrMath, T2.County FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrMath IS NOT NULL ORDER BY T1.AvgScrMath + T1.AvgScrRead + T1.AvgScrWrite ASC LIMIT 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.8,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "cte_buckets_per_node": [],
+        "leaf_depth": 0,
+        "leaf_visit_count": 0,
+        "sql_bucket_count": 4,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT \n    s.`County`, \n    sats.`AvgScrMath`\nFROM \n    satscores sats\nJOIN \n    schools s ON sats.cds = s.`CDSCode`\nORDER BY \n    (sats.`AvgScrMath` + sats.`AvgScrRead` + sats.`AvgScrWrite`) ASC\nLIMIT 1;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT \n    s.`County`, \n    sats.`AvgScrMath`\nFROM \n    satscores sats\nJOIN \n    schools s ON sats.cds = s.`CDSCode`\nORDER BY \n    (sats.`AvgScrMath` + sats.`AvgScrRead` + sats.`AvgScrWrite`) ASC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_c72b70fb076745b7321b277510485137",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    s.`AvgScrMath`, \n    f.`County Name`\nFROM \n    satscores s\nJOIN \n    frpm f ON s.cds = f.`CDSCode`\nORDER BY \n    (s.`AvgScrMath` + s.`AvgScrRead` + s.`AvgScrWrite`) ASC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_c72b70fb076745b7321b277510485137",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    s.`County`, \n    sats.`AvgScrMath`\nFROM \n    satscores sats\nJOIN \n    schools s ON sats.cds = s.`CDSCode`\nORDER BY \n    (sats.`AvgScrMath` + sats.`AvgScrRead` + sats.`AvgScrWrite`) ASC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_c72b70fb076745b7321b277510485137",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    s.`County`, \n    sats.`AvgScrMath`\nFROM \n    satscores sats\nJOIN \n    schools s ON sats.cds = s.`CDSCode`\nORDER BY \n    (sats.`AvgScrMath` + sats.`AvgScrRead` + sats.`AvgScrWrite`) ASC\nLIMIT 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_c72b70fb076745b7321b277510485137",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    satscores.AvgScrMath AS AvgMathScore, \n    frpm.County Name\nFROM \n    satscores\nJOIN \n    frpm ON satscores.cds = frpm.CDSCode\nORDER BY \n    (satscores.AvgScrMath + satscores.AvgScrRead + satscores.AvgScrWrite) ASC\nLIMIT 1;",
+            "valid": false,
+            "error": "查询执行错误: no such column: frpm.County",
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {
+          "1_2_c72b70fb076745b7321b277510485137": 4
+        },
+        "valid_count": 4,
+        "error_reason": null,
+        "rollout_id": 0,
+        "is_quick_path": true
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH c_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n)\nSELECT * FROM c_agg;",
+          "WITH c_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n)\nSELECT * FROM c_min;",
+          "WITH final_answer AS (\n    SELECT `avg_total_score`, `County`\n    FROM c_min\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          10,
+          15,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_5_bf1650a26509cb5f05fec86737966689"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n)\nSELECT * FROM c_agg;",
+              "count": 15,
+              "result_signature": "5_3_5ae8adbb672f9aeb08bb3eaf926184ea"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n)\nSELECT * FROM c_min;",
+              "count": 15,
+              "result_signature": "1_3_127eb4610e19dd37058462ec5e474de5"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT `avg_total_score`, `County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+              "count": 15,
+              "result_signature": "1_2_250bdfd5c22e3b5e3bbb7feb9fc4d09b"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.`cds`, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, s.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.`cds` = s.`CDSCode`\n),\nc_rows AS (\n    SELECT `cds`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\nc_agg AS (\n    SELECT `cds`, AVG(`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS `avg_total_score`, `County`\n    FROM c_rows\n    GROUP BY `cds`\n),\nc_min AS (\n    SELECT `cds`, `avg_total_score`, `County`\n    FROM c_agg\n    ORDER BY `avg_total_score` ASC\n    LIMIT 1\n),\nfinal_answer AS (\n    SELECT \n        (SELECT `AvgScrMath` FROM c_rows WHERE `cds` = c_min.`cds`) AS `avg_math_score`, \n        c_min.`County`\n    FROM c_min\n)\nSELECT * FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_cc0ef4a22e02c39fbce0c29b12c99b6e": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 1,
+        "is_quick_path": false
+      }
+    ]
+  },
+  "76": {
+    "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 359.4986391067505,
+        "rollout_s": 277.2963843345642,
+        "cte_gen_s": 150.51975464820862,
+        "sql_gen_s": 83.87964105606079,
+        "db_exec_s": 47.82519507408142,
+        "rollout_count": 8
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T2.City FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`NSLP Provision Status` = 'Lunch Provision 2' AND T2.County = 'Merced' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12 AND T2.EILCode = 'HS'"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "cte_buckets_per_node": [],
+        "leaf_depth": 0,
+        "leaf_visit_count": 0,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT `City`\nFROM schools\nWHERE `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n    AND `Low Grade` = 9\n    AND `High Grade` = 12\n    AND `County Name` = 'Merced'\n)\nAND `EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT `City`\nFROM schools\nWHERE `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n    AND `Low Grade` = 9\n    AND `High Grade` = 12\n    AND `County Name` = 'Merced'\n)\nAND `EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM schools\nWHERE `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n      AND `Low Grade` = 9\n      AND `High Grade` = 12\n      AND `County Name` = 'Merced'\n)\nAND `EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM schools\nWHERE `County` = 'Merced'\nAND `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n    AND `Low Grade` = 9\n    AND `High Grade` = 12\n    AND `CDSCode` IN (\n        SELECT `CDSCode`\n        FROM schools\n        WHERE `EILCode` = 'HS'\n    )\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM schools\nWHERE `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n    AND `Low Grade` = 9\n    AND `High Grade` = 12\n    AND `County Name` = 'Merced'\n)\nAND `EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM schools\nWHERE `CDSCode` IN (\n    SELECT `CDSCode`\n    FROM frpm\n    WHERE `NSLP Provision Status` = '2'\n    AND `Low Grade` = 9\n    AND `High Grade` = 12\n    AND `County Name` = 'Merced'\n)\nAND `EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 0,
+        "is_quick_path": true
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` = '9') \n        AND (f.`High Grade` = '12') \n        AND (f.`NSLP Provision Status` = 'Breakfast Provision 2') \n        AND s.`EILCode` = 'HS'\n) AS filtered_schools\nGROUP BY `City`\nHAVING COUNT(DISTINCT `CDSCode`) = 1;",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 1,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 2,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` = '9') \n        AND (f.`High Grade` = '12') \n        AND (f.`NSLP Provision Status` = 'Breakfast Provision 2') \n        AND s.`EILCode` = 'HS'\n) AS filtered_schools\nGROUP BY `City`\nHAVING COUNT(DISTINCT f.`CDSCode`) = 1;",
+            "valid": false,
+            "error": "查询执行错误: no such column: f.CDSCode",
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 4,
+        "error_reason": "所有SQL返回空结果：4个SQL执行成功但结果为空",
+        "rollout_id": 3,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `City`\nFROM (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` = '9') \n        AND (f.`High Grade` = '12') \n        AND (f.`NSLP Provision Status` = 'Breakfast Provision 2') \n        AND s.`EILCode` = 'HS'\n) AS filtered_schools",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 4,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 5,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 5,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 6,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2'\n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 6,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 7,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`, s.`EILCode`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT `City`\nFROM c_cols\nWHERE \n    `County Name` = 'Merced' \n    AND `Low Grade` = '9' \n    AND `High Grade` = '12' \n    AND `NSLP Provision Status` = 'Breakfast Provision 2' \n    AND `EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 7,
+        "is_quick_path": false
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+          "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+          "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+          "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          15,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "visit_counts": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `CDSCode`, `County Name`, `Low Grade`, `High Grade`, `NSLP Provision Status`, `City`\n    FROM c_cols\n    WHERE `County Name` = 'Merced' AND `Low Grade` = '9' AND `High Grade` = '12' AND `NSLP Provision Status` = 'Breakfast Provision 2'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy;",
+              "count": 10,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy2 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy2;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy3 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy3;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_fuzzy4 AS (\n    SELECT f.`CDSCode`, f.`County Name`, f.`Low Grade`, f.`High Grade`, f.`NSLP Provision Status`, s.`City`\n    FROM frpm AS f\n    INNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\n    WHERE \n        (f.`County Name` LIKE '%Merced%' OR f.`County Name` LIKE 'Merced%' OR f.`County Name` LIKE '%Merced%') \n        AND (f.`Low Grade` LIKE '%9%' OR f.`Low Grade` = '9' OR f.`Low Grade` LIKE '9%' OR f.`Low Grade` LIKE '% 9 %') \n        AND (f.`High Grade` LIKE '%12%' OR f.`High Grade` = '12' OR f.`High Grade` LIKE '12%' OR f.`High Grade` LIKE '% 12 %') \n        AND (f.`NSLP Provision Status` LIKE '%Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%' OR f.`NSLP Provision Status` LIKE '%Breakfast Provision 2' OR f.`NSLP Provision Status` LIKE 'Breakfast Provision 2%') \n        AND s.`EILCode` = 'HS'\n)\nSELECT * FROM c_fuzzy4;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 8,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT s.`City`\nFROM frpm AS f\nINNER JOIN schools AS s ON f.`CDSCode` = s.`CDSCode`\nWHERE \n    f.`County Name` = 'Merced' \n    AND f.`Low Grade` = '9' \n    AND f.`High Grade` = '12' \n    AND f.`NSLP Provision Status` = 'Breakfast Provision 2' \n    AND s.`EILCode` = 'HS';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 8,
+        "is_quick_path": false
+      }
+    ]
+  }
+}

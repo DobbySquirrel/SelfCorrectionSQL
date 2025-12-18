@@ -1,0 +1,147 @@
+SELECT COUNT(*) AS answer FROM satscores ss INNER JOIN frpm f ON ss.cds = f.`CDSCode` WHERE ss.`AvgScrMath` > 560 AND ss.`AvgScrMath` IS NOT NULL AND f.`Charter Funding Type` = 'Directly funded';
+SELECT COUNT(DISTINCT f.`CDSCode`) AS answer FROM frpm f JOIN schools s ON f.`CDSCode` = s.`CDSCode` WHERE s.`County` = 'Los Angeles' AND f.`Free Meal Count (K-12)` > 500 AND f.`FRPM Count (K-12)` < 700;
+SELECT sc.`School`, sc.`FundingType` FROM satscores ss INNER JOIN schools sc ON ss.cds = sc.`CDSCode` WHERE sc.`County` = 'Riverside' AND ss.`AvgScrMath` > 400;
+WITH chartered_schools AS ( SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`, s.`AdmEmail2`, s.`AdmEmail3` FROM frpm f INNER JOIN schools s ON f.CDSCode = s.CDSCode WHERE f.`Charter School (Y/N)` = 1 ), min_enrollment AS ( SELECT MIN(`Enrollment (K-12)`) AS min_enroll FROM chartered_schools ) SELECT `AdmEmail1` FROM chartered_schools WHERE `Enrollment (K-12)` = (SELECT min_enroll FROM min_enrollment);
+SELECT s.`Phone` FROM schools s JOIN satscores ss ON s.`CDSCode` = ss.`cds` JOIN frpm f ON ss.`cds` = f.`CDSCode` WHERE f.`District Name` = 'Fresno Unified' AND ss.`AvgScrRead` IS NOT NULL AND ss.`AvgScrRead` = ( SELECT MIN(ss2.`AvgScrRead`) FROM satscores ss2 JOIN frpm f2 ON ss2.`cds` = f2.`CDSCode` WHERE f2.`District Name` = 'Fresno Unified' AND ss2.`AvgScrRead` IS NOT NULL );
+WITH c_rows AS ( SELECT cds, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite` FROM satscores WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL ), t_join AS ( SELECT r.cds, r.`AvgScrMath`, r.`AvgScrRead`, r.`AvgScrWrite`, s.`County` FROM c_rows r INNER JOIN schools s ON r.cds = s.`CDSCode` ), total_scores AS ( SELECT cds, `AvgScrMath` + `AvgScrRead` + `AvgScrWrite` AS total_score FROM t_join ), min_total AS ( SELECT cds FROM total_scores ORDER BY total_score ASC LIMIT 1 ) SELECT t.`AvgScrMath`, t.`County` FROM min_total m INNER JOIN t_join t ON m.cds = t.cds;
+WITH c_rows AS ( SELECT `CDSCode`, `NSLP Provision Status`, `Low Grade`, `High Grade`, `County Name`, `School Code` FROM frpm WHERE `County Name` = 'Merced' AND `NSLP Provision Status` = 'Provision 2' AND `Low Grade` = 9 AND `High Grade` = 12 ), t_join AS ( SELECT s.`City` FROM c_rows r INNER JOIN schools s ON r.`CDSCode` = s.`CDSCode` WHERE s.`EILCode` = 'HS' ) SELECT `City` FROM t_join;
+WITH c_cols AS ( SELECT `CDSCode`, `City`, `State`, `Latitude`, `School` FROM schools ), c_rows AS ( SELECT CDSCode, City, State, Latitude, School FROM c_cols WHERE State = 'CA' AND Latitude IS NOT NULL ), t_join AS ( SELECT s.CDSCode, s.City, s.State, s.Latitude, s.School, f.`Low Grade` FROM c_rows s INNER JOIN frpm f ON s.CDSCode = f.`CDSCode` ), min_lat AS ( SELECT MIN(Latitude) AS min_lat FROM t_join ), min_lat_schools AS ( SELECT s.CDSCode, s.City, s.State, s.Latitude, s.School, s.`Low Grade` FROM t_join s WHERE s.Latitude = (SELECT min_lat FROM min_lat) ) SELECT `City`, `School`, `Low Grade` FROM min_lat_schools;
+SELECT COUNT(*) AS answer FROM client JOIN district ON client.district_id = district.district_id WHERE client.gender = 'M' AND district.A3 LIKE '%North Bohemia%' AND district.A11 > 8000;
+
+WITH c_cols AS ( SELECT loan.account_id, loan.amount FROM loan WHERE loan.date BETWEEN '1997-01-01' AND '1997-12-31' ), t_join AS ( SELECT c.account_id, c.amount, a.frequency FROM c_cols c INNER JOIN account a ON c.account_id = a.account_id ), t_freq AS ( SELECT account_id, amount FROM t_join WHERE frequency = 'POPLATEK TYDNE' ), min_amount AS ( SELECT MIN(amount) AS min_amt FROM t_freq ) SELECT t_freq.account_id, t_freq.amount FROM t_freq INNER JOIN min_amount ON t_freq.amount = min_amount.min_amt;
+SELECT COUNT(*) AS answer FROM account a INNER JOIN district d ON a.district_id = d.district_id WHERE d.`A2` = 'Litomerice' AND strftime('%Y', a.date) = '1996';
+SELECT COUNT(DISTINCT a.account_id) AS answer FROM account a JOIN district d ON a.district_id = d.district_id LEFT JOIN disp disp ON a.account_id = disp.account_id LEFT JOIN card c ON disp.disp_id = c.disp_id WHERE d.A3 = 'South Bohemia' AND c.card_id IS NULL;
+SELECT COUNT(*) AS answer FROM card JOIN disp ON card.disp_id = disp.disp_id WHERE card.type = 'gold' AND disp.type = 'OWNER';
+SELECT `account`.`district_id` FROM `account` INNER JOIN `order` ON `account`.`account_id` = `order`.`account_id` WHERE `order`.`order_id` = 33333;
+SELECT c.client_id, c.gender, c.birth_date FROM client c INNER JOIN disp d ON c.client_id = d.client_id INNER JOIN `order` o ON d.account_id = o.account_id WHERE o.order_id = 32423;
+SELECT l.amount, l.payments FROM client c INNER JOIN disp d ON c.client_id = d.client_id INNER JOIN loan l ON d.account_id = l.account_id WHERE c.client_id = 992;
+WITH c_cols AS ( SELECT client_id, gender, birth_date, district_id FROM client ), c_join AS ( SELECT c.client_id, c.gender, c.birth_date, d.A11 FROM c_cols c INNER JOIN district d ON c.district_id = d.district_id ), c_females AS ( SELECT client_id, gender, birth_date, A11 FROM c_join WHERE gender = 'F' ), c_age AS ( SELECT client_id, gender, birth_date, A11, (strftime('%Y', 'now') - strftime('%Y', birth_date)) AS age FROM c_females ), c_disp AS ( SELECT c.client_id, c.gender, c.birth_date, c.A11, c.age, d.account_id FROM c_age c INNER JOIN disp d ON c.client_id = d.client_id ), c_final AS ( SELECT account_id FROM c_disp ORDER BY age DESC, A11 ASC LIMIT 1 ) SELECT * FROM c_final;
+SELECT bond_type, label FROM bond JOIN molecule ON bond.molecule_id = molecule.molecule_id WHERE bond.molecule_id = 'TR010' GROUP BY bond_type ORDER BY COUNT(*) DESC LIMIT 1;
+SELECT `element` FROM atom WHERE `molecule_id` = 'TR004';
+SELECT `atom_id2` FROM connected INNER JOIN atom ON connected.atom_id = atom.atom_id WHERE atom.element = 's';
+WITH t_join AS ( SELECT b.bond_type, m.molecule_id FROM bond AS b INNER JOIN molecule AS m ON b.molecule_id = m.molecule_id ), t_rows AS ( SELECT bond_type FROM t_join WHERE molecule_id BETWEEN 'TR000' AND 'TR050' ), c_bond_types AS ( SELECT CASE WHEN bond_type = '-' THEN 'single bond' WHEN bond_type = ' = ' THEN 'double bond' WHEN bond_type = '#' THEN 'triple bond' ELSE 'unknown' END AS bond_type_name FROM t_rows ) SELECT bond_type_name FROM c_bond_types;
+SELECT (triple_count * 100.0 / total_count) AS percentage FROM (SELECT COUNT(DISTINCT `bond`.`molecule_id`) AS triple_count FROM `bond` WHERE `bond`.`bond_type` = '#') AS triple, (SELECT COUNT(*) AS total_count FROM `molecule`) AS total;
+WITH c_cols AS ( SELECT `bond_id`, `bond_type` FROM bond WHERE `molecule_id` = 'TR047' ), c_agg AS ( SELECT COUNT(CASE WHEN `bond_type` = '=' THEN 1 END) AS double_bonds, COUNT(*) AS total_bonds FROM c_cols ) SELECT (double_bonds * 100.0 / total_bonds) AS percent FROM c_agg;
+SELECT m.label FROM atom a JOIN molecule m ON a.molecule_id = m.molecule_id WHERE a.atom_id = 'TR001_1';
+SELECT COUNT(*) AS answer FROM molecule WHERE label = '+';
+SELECT m.label AS carcinogenic, COUNT(CASE WHEN b.bond_type = ' = ' THEN 1 END) AS double_bond_count FROM molecule m JOIN bond b ON m.molecule_id = b.molecule_id WHERE m.molecule_id = 'TR006' GROUP BY m.molecule_id, m.label;
+SELECT a1.element AS element1, a2.element AS element2 FROM bond JOIN connected ON bond.bond_id = connected.bond_id JOIN atom a1 ON connected.atom_id = a1.atom_id JOIN atom a2 ON connected.atom_id2 = a2.atom_id WHERE bond.bond_id = 'TR000_2_3';
+SELECT `atom_id`, ( SELECT COUNT(DISTINCT `bond_type`) FROM `bond` WHERE `molecule_id` = 'TR346' ) AS bond_count FROM `atom` WHERE `molecule_id` = 'TR346';
+SELECT m.molecule_id FROM molecule m WHERE m.molecule_id IN ( SELECT DISTINCT a.molecule_id FROM atom a INNER JOIN bond b ON a.molecule_id = b.molecule_id WHERE a.element = 's' AND b.bond_type = '=' );
+SELECT DISTINCT a.`element`, b.`bond_type` FROM atom a INNER JOIN connected c ON a.atom_id = c.atom_id INNER JOIN bond b ON c.bond_id = b.bond_id WHERE a.molecule_id = 'TR002';
+SELECT a.atom_id FROM atom a JOIN connected c ON a.atom_id = c.atom_id WHERE c.bond_id = 'TR012_2_3' AND a.element = 'c';
+WITH c_artist AS ( SELECT `id`, `uuid` FROM cards WHERE `artist` = 'Stephen Daniele' ), c_cards AS ( SELECT c.`id`, c.`uuid`, c.`hasContentWarning` FROM c_artist INNER JOIN cards c ON c_artist.uuid = c.uuid ), c_rulings AS ( SELECT c.id, c.uuid, c.hasContentWarning, r.text FROM c_cards c INNER JOIN rulings r ON c.uuid = r.uuid ) SELECT id, text, hasContentWarning FROM c_rulings;
+SELECT DISTINCT `language` FROM foreign_data WHERE uuid = (SELECT uuid FROM cards WHERE name = 'Annul' AND number = '29');
+SELECT s.`name`, s.`totalSetSize` FROM sets s INNER JOIN set_translations st ON s.`code` = st.`setCode` WHERE st.`language` = 'Italian';
+WITH c_cards AS ( SELECT id, uuid FROM cards WHERE name = 'Condemn' ) SELECT r.text FROM c_cards c INNER JOIN rulings r ON c.uuid = r.uuid;
+SELECT `name`, `colorIdentity` FROM cards WHERE `setCode` = 'OGW';
+WITH c_cols AS ( SELECT id, isStorySpotlight, isTextless FROM cards ), c_rows AS ( SELECT id FROM c_cols WHERE isStorySpotlight = 1 AND isTextless = 0 ), total_cards AS ( SELECT COUNT(*) AS total FROM cards ), count_story AS ( SELECT COUNT(*) AS story_count FROM c_rows ) SELECT (story_count * 100.0 / total) AS percentage FROM count_story, total_cards;
+SELECT COUNT(*) FROM cards WHERE `borderColor` = 'borderless' AND `edhrecRank` > 12000;
+SELECT `cardKingdomFoilId`, `cardKingdomId` FROM cards WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL ORDER BY `cardKingdomFoilId` ASC LIMIT 3;
+WITH c_rows AS ( SELECT `id` FROM cards WHERE `frameEffects` = 'extendedart' ) SELECT COUNT(*) AS answer FROM c_rows; SELECT `id` FROM c_rows;
+WITH c_watermark AS ( SELECT `uuid`, `watermark`, `name`, `type` FROM cards WHERE `watermark` LIKE '%Abzan%' ), c_foreign AS ( SELECT f.`name`, c.`type` FROM c_watermark c INNER JOIN foreign_data f ON c.uuid = f.uuid ) SELECT `name`, `type` FROM c_foreign;
+SELECT DISTINCT s.releaseDate FROM cards c INNER JOIN sets s ON c.setCode = s.code WHERE c.name = 'Ancestor''s Chosen';
+SELECT COUNT(*) AS answer FROM cards INNER JOIN sets ON cards.setCode = sets.code WHERE sets.name = 'Coldsnap' AND cards.convertedManaCost > 5 AND (cards.power IS NULL OR cards.power = '*');
+WITH c_coldsnap AS ( SELECT c.uuid FROM cards AS c JOIN sets AS s ON c.setCode = s.code WHERE s.name = 'Coldsnap' ) SELECT f.text FROM c_coldsnap AS c JOIN foreign_data AS f ON c.uuid = f.uuid WHERE f.language = 'Italian';
+SELECT fd.name FROM cards c JOIN sets s ON c.setCode = s.code JOIN foreign_data fd ON c.uuid = fd.uuid WHERE s.name = 'Coldsnap' AND c.convertedManaCost = ( SELECT MAX(convertedManaCost) FROM cards c2 JOIN sets s2 ON c2.setCode = s2.code WHERE s2.name = 'Coldsnap' ) AND fd.language = 'Italian';
+SELECT `keyruneCode` FROM sets WHERE `code` = 'PKHC';
+SELECT `artist` FROM cards WHERE `side` IS NULL AND `convertedManaCost` = ( SELECT MAX(`convertedManaCost`) FROM cards WHERE `side` IS NULL );
+SELECT DISTINCT c.originalReleaseDate, l.format FROM cards c JOIN legalities l ON c.uuid = l.uuid WHERE c.rarity = 'mythic' AND c.originalReleaseDate = ( SELECT MIN(originalReleaseDate) FROM cards WHERE rarity = 'mythic' ) AND l.status = 'Legal';
+WITH c_agg AS ( SELECT `artist`, COUNT(*) AS `card_count` FROM cards GROUP BY `artist` ), c_min AS ( SELECT artist FROM c_agg WHERE card_count = (SELECT MIN(card_count) FROM c_agg) ), c_format_artist AS ( SELECT m.artist, l.format FROM c_min m JOIN cards c ON m.artist = c.artist JOIN legalities l ON c.uuid = l.uuid ) SELECT artist, format FROM c_format_artist;
+
+WITH c_users AS ( SELECT Id, DisplayName FROM users ), c_user AS ( SELECT Id FROM c_users WHERE DisplayName = 'csgillespie' ) SELECT p.Title FROM c_user u JOIN posts p ON u.Id = p.OwnerUserId;
+SELECT u.DisplayName FROM users u JOIN posts p ON u.Id = p.OwnerUserId WHERE p.FavoriteCount = (SELECT MAX(FavoriteCount) FROM posts WHERE FavoriteCount IS NOT NULL);
+SELECT p.`Body` FROM tags t INNER JOIN posts p ON t.`ExcerptPostId` = p.`Id` WHERE t.`TagName` = 'bayesian';
+SELECT `Name` FROM badges WHERE `UserId` = (SELECT `Id` FROM users WHERE `DisplayName` = 'SilentGhost');
+SELECT u.DisplayName FROM users u JOIN votes v ON u.Id = v.UserId JOIN posts p ON v.PostId = p.Id WHERE p.Title LIKE '%variance%' AND v.BountyAmount = 50;
+SELECT COUNT(DISTINCT `UserId`) AS answer FROM badges WHERE `Name` = 'Supporter' AND STRFTIME('%Y', `Date`) = '2011';
+WITH c_cols AS ( SELECT u.Id, u.Location FROM users AS u ), c_rows AS ( SELECT Id FROM c_cols WHERE Location = 'New York' ), t_join AS ( SELECT b.UserId, b.Name FROM c_rows r INNER JOIN badges b ON r.Id = b.UserId ), t_filtered AS ( SELECT UserId FROM t_join WHERE Name IN ('Teacher', 'Supporter') GROUP BY UserId HAVING COUNT(DISTINCT Name) = 2 ) SELECT COUNT(*) AS answer FROM t_filtered;
+SELECT p.Id AS PostId, p.ViewCount FROM postLinks JOIN posts p ON postLinks.PostId = p.Id OR postLinks.RelatedPostId = p.Id WHERE postLinks.PostId = 61217 OR postLinks.RelatedPostId = 61217;
+WITH c_cols AS ( SELECT u.Id AS UserId, u.Location FROM users AS u ), c_rows AS ( SELECT UserId FROM c_cols WHERE Location = 'Rochester, NY' ) SELECT b.Date FROM c_rows INNER JOIN badges AS b ON c_rows.UserId = b.UserId;
+SELECT `Text` FROM comments WHERE CreationDate = '2010-07-19 19:37:33.0';
+SELECT COUNT(*) AS answer FROM badges INNER JOIN users ON badges.UserId = users.Id WHERE badges.Name = 'Supporter' AND users.Age BETWEEN 19 AND 65;
+SELECT COUNT(*) AS answer FROM users u INNER JOIN badges b ON u.Id = b.UserId WHERE u.Age > 65 AND b.Name = 'Supporter';
+SELECT COUNT(*) AS answer FROM users WHERE `Location` LIKE '%New York%';
+SELECT COUNT(*) AS answer FROM posts WHERE OwnerUserId = ( SELECT Id FROM users WHERE DisplayName = 'Daniel Vassallo' );
+WITH owner_display AS ( SELECT u.DisplayName FROM ( SELECT Id FROM ( SELECT Id, ViewCount FROM posts WHERE ViewCount IS NOT NULL ) WHERE ViewCount = ( SELECT MAX(ViewCount) FROM ( SELECT Id, ViewCount FROM posts WHERE ViewCount IS NOT NULL ) ) ) m JOIN posts p ON m.Id = p.Id JOIN users u ON p.OwnerUserId = u.Id ) SELECT DisplayName FROM owner_display;
+SELECT OwnerDisplayName FROM posts WHERE Id = ( SELECT ParentId FROM posts WHERE ParentId IS NOT NULL AND Score = ( SELECT MAX(Score) FROM posts WHERE ParentId IS NOT NULL ) );
+SELECT u.DisplayName, u.WebsiteUrl FROM votes v JOIN users u ON v.UserId = u.Id WHERE v.VoteTypeId = 8 AND v.BountyAmount = ( SELECT MAX(BountyAmount) FROM votes WHERE VoteTypeId = 8 );
+SELECT `Name` FROM users INNER JOIN badges ON users.`Id` = badges.`UserId` WHERE users.`DisplayName` = 'Emmett' ORDER BY badges.`Date` DESC LIMIT 1;
+SELECT ss.full_name FROM superhero ss JOIN hero_power hp ON ss.id = hp.hero_id GROUP BY ss.id HAVING COUNT(ss.full_name) > 15;
+SELECT superhero_name, height_cm FROM superhero INNER JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'Marvel Comics' ORDER BY height_cm DESC;
+SELECT AVG(superhero.height_cm) AS average_height FROM superhero INNER JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'Marvel Comics';
+SELECT p.publisher_name FROM publisher p JOIN superhero s ON p.id = s.publisher_id JOIN hero_attribute ha ON s.id = ha.hero_id JOIN attribute a ON ha.attribute_id = a.id WHERE a.attribute_name = 'Speed' AND ha.attribute_value = ( SELECT MIN(attribute_value) FROM hero_attribute ha2 JOIN attribute a2 ON ha2.attribute_id = a2.id WHERE a2.attribute_name = 'Speed' );
+SELECT p.publisher_name FROM superhero s JOIN publisher p ON s.publisher_id = p.id WHERE s.superhero_name = 'Blue Beetle II';
+SELECT c.colour FROM superhero s INNER JOIN race r ON s.race_id = r.id INNER JOIN colour c ON s.hair_colour_id = c.id WHERE s.height_cm = 185 AND r.race LIKE '%human%';
+SELECT (SUM(CASE WHEN p.publisher_name = 'Marvel Comics' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS percentage FROM superhero s JOIN publisher p ON s.publisher_id = p.id WHERE s.height_cm BETWEEN 150 AND 180;
+SELECT s.`full_name` FROM superhero s JOIN hero_attribute ha ON s.id = ha.hero_id JOIN attribute a ON ha.attribute_id = a.id WHERE a.attribute_name = 'Strength' AND ha.attribute_value = ( SELECT MAX(attribute_value) FROM hero_attribute ha2 JOIN attribute a2 ON ha2.attribute_id = a2.id WHERE a2.attribute_name = 'Strength' ) AND s.`full_name` != '-';
+WITH c_cols AS ( SELECT superhero.gender_id, superhero.eye_colour_id, superhero.hair_colour_id, superhero.skin_colour_id, superhero.publisher_id FROM superhero ), c_rows AS ( SELECT gender_id, eye_colour_id, hair_colour_id, skin_colour_id, publisher_id FROM c_cols WHERE gender_id = 2 ), t_publisher AS ( SELECT s.gender_id, s.eye_colour_id, s.hair_colour_id, s.skin_colour_id, p.publisher_name FROM c_rows s INNER JOIN publisher p ON s.publisher_id = p.id WHERE p.publisher_name = 'Dark Horse Comics' ), t_colours AS ( SELECT t.eye_colour_id, t.hair_colour_id, t.skin_colour_id, c1.colour AS eye_colour, c2.colour AS hair_colour, c3.colour AS skin_colour FROM t_publisher t LEFT JOIN colour c1 ON t.eye_colour_id = c1.id LEFT JOIN colour c2 ON t.hair_colour_id = c2.id LEFT JOIN colour c3 ON t.skin_colour_id = c3.id ) SELECT eye_colour, hair_colour, skin_colour FROM t_colours;
+SELECT s.superhero_name FROM superhero AS s INNER JOIN hero_power AS hp ON s.id = hp.hero_id INNER JOIN superpower AS sp ON hp.power_id = sp.id WHERE sp.power_name = 'Adaptation';
+WITH c_cols AS ( SELECT s.id, s.superhero_name, s.eye_colour_id, s.hair_colour_id FROM superhero AS s ), c_join AS ( SELECT s.id, s.superhero_name, e.colour AS eye_colour, h.colour AS hair_colour FROM c_cols s JOIN colour e ON s.eye_colour_id = e.id JOIN colour h ON s.hair_colour_id = h.id ), c_filter AS ( SELECT id, superhero_name FROM c_join WHERE eye_colour = 'Blue' AND hair_colour = 'Brown' ) SELECT superhero_name FROM c_filter;
+SELECT `full_name` FROM superhero JOIN colour ON superhero.eye_colour_id = colour.id WHERE colour.colour = 'Blue' AND superhero.full_name IS NOT NULL AND superhero.full_name != '-' ORDER BY `full_name` LIMIT 5;
+WITH c_cols AS ( SELECT q.raceId, q.driverId, q.q2 FROM qualifying AS q WHERE q.raceId = 19 ), t_join AS ( SELECT q.raceId, q.driverId, q.q2, d.surname FROM c_cols q INNER JOIN drivers d ON q.driverId = d.driverId ), filtered_drivers AS ( SELECT raceId, driverId, q2, surname FROM t_join WHERE q2 IS NOT NULL ), converted_times AS ( SELECT driverId, CAST(SUBSTR(q2, 1, INSTR(q2, ':') - 1) AS INTEGER) * 60 + CAST(SUBSTR(q2, INSTR(q2, ':') + 1) AS REAL) AS time_seconds, surname FROM filtered_drivers ) SELECT surname FROM converted_times ORDER BY time_seconds ASC LIMIT 1;
+WITH c_cols AS ( SELECT r.circuitId, r.name, c.lat, c.lng FROM races AS r INNER JOIN circuits AS c ON r.circuitId = c.circuitId ), c_rows AS ( SELECT circuitId, lat, lng FROM c_cols WHERE name = 'Abu Dhabi Grand Prix' ) SELECT lat, lng FROM c_rows;
+WITH fuzzy_q2_with_race AS ( SELECT q.driverId FROM qualifying AS q WHERE q.raceId = 355 AND (q.q2 LIKE '%01:40%' OR q.q2 LIKE '%1:40%' OR q.q2 LIKE '%00:01:40%') ), t_nationality AS ( SELECT d.driverId, d.nationality FROM fuzzy_q2_with_race f INNER JOIN drivers d ON f.driverId = d.driverId ) SELECT nationality FROM t_nationality;
+SELECT COUNT(*) AS answer FROM results WHERE raceId = 945 AND time IS NOT NULL;
+SELECT MIN(`year`) FROM races WHERE `name` = 'Singapore Grand Prix';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,2158 @@
+{
+  "423": {
+    "sql": "SELECT `id`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+    "stats": {
+      "average_reward": 1.0,
+      "total_visits": 1,
+      "timing": {
+        "total_s": 252.99342155456543,
+        "rollout_s": 252.9933431148529,
+        "cte_gen_s": 102.23642587661743,
+        "sql_gen_s": 81.80114817619324,
+        "db_exec_s": 56.18841624259949,
+        "rollout_count": 1
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT cardKingdomFoilId, cardKingdomId FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL ORDER BY cardKingdomFoilId LIMIT 3"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.`cardKingdomFoilId`, c.`cardKingdomId`, c.`id`\n    FROM cards AS c\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `cardKingdomFoilId`, `cardKingdomId`, `id`\n    FROM c_cols\n    WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT c.`id`, c.`cardKingdomFoilId`, c.`cardKingdomId`\n    FROM c_rows c\n    JOIN cards cc ON c.id = cc.id\n)\nSELECT * FROM t_join;",
+          "WITH t_ids AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM t_join\n)\nSELECT * FROM t_ids;",
+          "WITH t_final AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM t_ids\n    ORDER BY `cardKingdomFoilId` ASC\n    LIMIT 3\n)\nSELECT * FROM t_final;",
+          "WITH final_ids AS (\n    SELECT `id`\n    FROM t_final\n)\nSELECT * FROM final_ids;",
+          "WITH final_output AS (\n    SELECT `id`\n    FROM final_ids\n)\nSELECT * FROM final_output;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          15,
+          11,
+          4,
+          10,
+          13
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `cardKingdomFoilId`, `cardKingdomId`, `id`\n    FROM c_cols\n    WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_e24452c5befe0f93a1f0626406a846ad"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_join AS (\n    SELECT c.`id`, c.`cardKingdomFoilId`, c.`cardKingdomId`\n    FROM c_rows c\n    JOIN cards cc ON c.id = cc.id\n)\nSELECT * FROM t_join;",
+              "count": 15,
+              "result_signature": "5_3_e24452c5befe0f93a1f0626406a846ad"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_ids AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM t_join\n)\nSELECT * FROM t_ids;",
+              "count": 11,
+              "result_signature": "5_3_e24452c5befe0f93a1f0626406a846ad"
+            },
+            {
+              "cte": "WITH t_powerful_pairs AS (\n    SELECT c.`id` AS `Kingdom Foil id`, c.`cardKingdomId` AS `Kingdom Card id`\n    FROM t_join c\n    ORDER BY c.`id` ASC\n    LIMIT 3\n)\nSELECT * FROM t_powerful_pairs;",
+              "count": 3,
+              "result_signature": "3_2_5d601e17ecc598311197972e5f43ca92"
+            },
+            {
+              "cte": "WITH t_powers AS (\n    SELECT c.`id`, c.`cardKingdomFoilId`, c.`cardKingdomId`\n    FROM t_join c\n    ORDER BY c.`cardKingdomFoilId` ASC\n    LIMIT 3\n)\nSELECT * FROM t_powers;",
+              "count": 1,
+              "result_signature": "3_3_e64025ba4e21c9be6d9656519317a421"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_ids AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM t_ids\n)\nSELECT * FROM c_ids;",
+              "count": 1,
+              "result_signature": "5_3_e24452c5befe0f93a1f0626406a846ad"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM t_ids\n    ORDER BY `cardKingdomFoilId` ASC\n    LIMIT 3\n)\nSELECT * FROM t_final;",
+              "count": 4,
+              "result_signature": "3_3_e64025ba4e21c9be6d9656519317a421"
+            },
+            {
+              "cte": "WITH c_ids AS (\n    SELECT `id`, `cardKingdomFoilId`\n    FROM t_ids\n    ORDER BY `cardKingdomFoilId` ASC\n)\nSELECT * FROM c_ids;",
+              "count": 1,
+              "result_signature": "5_2_677eb1b9540c44c38912e9beeaf81faf"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_ids AS (\n    SELECT `id`\n    FROM t_final\n)\nSELECT * FROM final_ids;",
+              "count": 10,
+              "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 2,
+              "result_signature": "<END>"
+            },
+            {
+              "cte": "WITH final_output AS (\n    SELECT `id`\n    FROM final_ids\n)\nSELECT * FROM final_output;",
+              "count": 13,
+              "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT `id`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT `id`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+            "valid": true,
+            "error": null,
+            "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284",
+            "result_row_count": 3
+          },
+          {
+            "sql": "SELECT `id` \nFROM cards \nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL \nORDER BY `cardKingdomFoilId` ASC \nLIMIT 3;",
+            "valid": true,
+            "error": null,
+            "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284",
+            "result_row_count": 3
+          },
+          {
+            "sql": "WITH powerful_pairs AS (\n    SELECT `id`, `cardKingdomFoilId`, `cardKingdomId`\n    FROM cards\n    WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\n)\nSELECT `id`\nFROM powerful_pairs\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+            "valid": true,
+            "error": null,
+            "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284",
+            "result_row_count": 3
+          },
+          {
+            "sql": "SELECT `id`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+            "valid": true,
+            "error": null,
+            "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284",
+            "result_row_count": 3
+          },
+          {
+            "sql": "SELECT `id`\nFROM cards\nWHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL\nORDER BY `cardKingdomFoilId` ASC\nLIMIT 3;",
+            "valid": true,
+            "error": null,
+            "result_signature": "3_1_482df6a594d4181fbba9db9f46e70284",
+            "result_row_count": 3
+          }
+        ],
+        "result_buckets": {
+          "3_1_482df6a594d4181fbba9db9f46e70284": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 1
+      }
+    ]
+  },
+  "267": {
+    "sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+    "stats": {
+      "average_reward": 1.0,
+      "total_visits": 1,
+      "timing": {
+        "total_s": 370.59095335006714,
+        "rollout_s": 370.59090304374695,
+        "cte_gen_s": 152.0912380218506,
+        "sql_gen_s": 155.04200673103333,
+        "db_exec_s": 54.19788932800293,
+        "rollout_count": 1
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T2.molecule_id, T2.bond_type FROM molecule AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.molecule_id BETWEEN 'TR000' AND 'TR050'"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_id, b.molecule_id, b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM t_join;",
+          "WITH t_distinct AS (\n    SELECT DISTINCT bond_type\n    FROM t_join\n)\nSELECT * FROM t_distinct;",
+          "WITH final_answer AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM final_answer;",
+          "WITH t_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM t_join\n    GROUP BY bond_type\n)\nSELECT * FROM t_count;",
+          "WITH t_final AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM t_final;",
+          "WITH final_list AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n    ORDER BY bond_type\n)\nSELECT * FROM final_list;"
+        ],
+        "cte_bucket_counts": [
+          12,
+          13,
+          14,
+          15,
+          13,
+          12,
+          14,
+          7
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM c_rows;",
+              "count": 13,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            },
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_id, bond_type\n    FROM c_cols\n    WHERE molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM c_rows;",
+              "count": 2,
+              "result_signature": "5_2_4388721a4ef3fc72ac68ca46050573f9"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_join AS (\n    SELECT b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM t_join;",
+              "count": 14,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            },
+            {
+              "cte": "WITH t_join AS (\n    SELECT DISTINCT b.bond_type\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id BETWEEN 'TR000' AND 'TR050'\n)\nSELECT * FROM t_join;",
+              "count": 1,
+              "result_signature": "3_1_73650634515e20780ac8221da4c6dfbe"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_distinct AS (\n    SELECT DISTINCT bond_type\n    FROM t_join\n)\nSELECT * FROM t_distinct;",
+              "count": 15,
+              "result_signature": "3_1_73650634515e20780ac8221da4c6dfbe"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM final_answer;",
+              "count": 13,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_filtered AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM t_filtered;",
+              "count": 1,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            },
+            {
+              "cte": "WITH t_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM t_join\n    GROUP BY bond_type\n)\nSELECT * FROM t_count;",
+              "count": 12,
+              "result_signature": "3_2_2f50964a336b069a48ac3de6cc7d40df"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM t_final;",
+              "count": 14,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_list AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n    ORDER BY bond_type\n)\nSELECT * FROM final_list;",
+              "count": 7,
+              "result_signature": "5_1_e79f45665941cc1fb4076d7bf9f69d39"
+            },
+            {
+              "cte": "WITH final_result AS (\n    SELECT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM final_result;",
+              "count": 1,
+              "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe"
+            },
+            {
+              "cte": "WITH final_list AS (\n    SELECT DISTINCT bond_type\n    FROM t_join\n    WHERE bond_type IN ('-', '=', '#')\n)\nSELECT * FROM final_list;",
+              "count": 1,
+              "result_signature": "3_1_73650634515e20780ac8221da4c6dfbe"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe",
+            "result_row_count": 1153
+          },
+          {
+            "sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe",
+            "result_row_count": 1153
+          },
+          {
+            "sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe",
+            "result_row_count": 1153
+          },
+          {
+            "sql": "SELECT b.bond_type\nFROM bond AS b\nJOIN molecule AS m ON b.molecule_id = m.molecule_id\nWHERE m.molecule_id BETWEEN 'TR000' AND 'TR050';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe",
+            "result_row_count": 1153
+          },
+          {
+            "sql": "SELECT bond_type\nFROM bond\nWHERE molecule_id BETWEEN 'TR000' AND 'TR050';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_7c8cd3ff5a3768c45a330f6a130203fe",
+            "result_row_count": 1409
+          }
+        ],
+        "result_buckets": {
+          "5_1_7c8cd3ff5a3768c45a330f6a130203fe": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 1
+      }
+    ]
+  },
+  "231": {
+    "sql": "SELECT \n    (SELECT bond_type FROM (\n        SELECT bond_type, COUNT(*) AS cnt\n        FROM bond\n        WHERE molecule_id = 'TR010'\n        GROUP BY bond_type\n        ORDER BY cnt DESC\n        LIMIT 1\n    )) AS majority_bond_type,\n    (SELECT label FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic;",
+    "stats": {
+      "average_reward": 0.8,
+      "total_visits": 2,
+      "timing": {
+        "total_s": 457.10985016822815,
+        "rollout_s": 457.10965633392334,
+        "cte_gen_s": 182.26625061035156,
+        "sql_gen_s": 191.90256071090698,
+        "db_exec_s": 77.8309154510498,
+        "rollout_count": 2
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T.bond_type FROM ( SELECT T1.bond_type, COUNT(T1.molecule_id) FROM bond AS T1  WHERE T1.molecule_id = 'TR010' GROUP BY T1.bond_type ORDER BY COUNT(T1.molecule_id) DESC LIMIT 1 ) AS T"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.6,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type = '-'\n)\nSELECT * FROM c_rows;",
+          "WITH t_bond_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_cols\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_count;",
+          "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM c_cols\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+          "WITH t_carcinogenic_check AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic_status\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_carcinogenic_check;",
+          "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS bond_count, '-' AS carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM final_answer;",
+          "WITH t_final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS bond_count, '-' AS carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM t_final_answer;",
+          "WITH final_output AS (\n    SELECT t_final.bond_type, t_final.total AS bond_count, t_carcinogenic_check.carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM final_output;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          14,
+          7,
+          5,
+          15,
+          1,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type = '-'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_cols\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_count;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_bonds AS (\n    SELECT bond_type\n    FROM c_rows\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT * FROM t_bonds;",
+              "count": 1,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_charcarcin AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcarcin;",
+              "count": 5,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            },
+            {
+              "cte": "WITH t_charcino AS (\n    SELECT m.label AS molecule_label, m.molecule_id, CASE WHEN m.label LIKE '%carcinogenic%' THEN 'Yes' ELSE 'No' END AS is_carcinogenic\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_charcino;",
+              "count": 1,
+              "result_signature": "1_3_26f4cc7546a6aa38944623ab1cc5b876"
+            },
+            {
+              "cte": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM c_cols\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n)\nSELECT * FROM t_final;",
+              "count": 7,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_carcinogenic_check AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic_status\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_carcinogenic_check;",
+              "count": 5,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS bond_count, '-' AS carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM final_answer;",
+              "count": 15,
+              "result_signature": "1_3_e441794ef4584a27a814a304865ded31"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final_answer AS (\n    SELECT 'bond_type' AS bond_type, 16 AS bond_count, '-' AS carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM t_final_answer;",
+              "count": 1,
+              "result_signature": "1_3_e441794ef4584a27a814a304865ded31"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_output AS (\n    SELECT t_final.bond_type, t_final.total AS bond_count, t_carcinogenic_check.carcinogenic_status\n    FROM t_final\n    CROSS JOIN t_carcinogenic_check\n)\nSELECT * FROM final_output;",
+              "count": 15,
+              "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 3,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n),\nt_carcinogenic_check AS (\n    SELECT label AS carcinogenic_status\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_final.bond_type, t_carcinogenic_check.carcinogenic_status\nFROM t_final\nCROSS JOIN t_carcinogenic_check;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n),\nt_carcinogenic_check AS (\n    SELECT label AS carcinogenic_status\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_final.bond_type, t_final.total AS bond_count, t_carcinogenic_check.carcinogenic_status\nFROM t_final\nCROSS JOIN t_carcinogenic_check;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n),\nt_carcinogenic_check AS (\n    SELECT label AS carcinogenic_status\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_final.bond_type, t_carcinogenic_check.carcinogenic_status\nFROM t_final\nCROSS JOIN t_carcinogenic_check;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH t_final AS (\n    SELECT bond_type, COUNT(*) AS total\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n),\nt_carcinogenic_check AS (\n    SELECT label AS carcinogenic_status\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT t_final.bond_type, t_carcinogenic_check.carcinogenic_status\nFROM t_final\nCROSS JOIN t_carcinogenic_check;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH bond_counts AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nmax_bond AS (\n    SELECT bond_type\n    FROM bond_counts\n    ORDER BY count DESC\n    LIMIT 1\n),\nmolecule_info AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n)\nSELECT max_bond.bond_type, molecule_info.label\nFROM max_bond\nCROSS JOIN molecule_info;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT t_final.bond_type, t_final.total AS bond_count, t_carcinogenic_check.label AS carcinogenic_status\nFROM (\n    SELECT bond_type, COUNT(*) AS total\n    FROM bond\n    JOIN molecule ON bond.molecule_id = molecule.molecule_id\n    WHERE molecule.molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY total DESC\n    LIMIT 1\n) AS t_final\nCROSS JOIN (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR010'\n) AS t_carcinogenic_check;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_3_01a13818940522aa6c479a6e79b80ef6",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_3_01a13818940522aa6c479a6e79b80ef6": 2,
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 3
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 1
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT b.bond_type, m.label\n    FROM bond AS b\n    JOIN molecule AS m ON b.molecule_id = m.molecule_id\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type = '-'\n)\nSELECT * FROM c_rows;",
+          "WITH t_bonds AS (\n    SELECT bond_type\n    FROM c_rows\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT * FROM t_bonds;",
+          "WITH t_carcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_carcinogenic;",
+          "WITH final_answer AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM final_answer;",
+          "WITH t_final AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM t_final;",
+          "WITH t_bond_type_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n    ORDER BY count DESC\n    LIMIT 1\n)\nSELECT * FROM t_bond_type_count;",
+          "WITH t_answer AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM t_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          1,
+          9,
+          13,
+          15,
+          14,
+          14
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT bond_type\n    FROM c_cols\n    WHERE bond_type = '-'\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_1_a2f716a35e21e0d7bbb4f00916534488"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_cols\n    GROUP BY bond_type\n)\nSELECT * FROM t_bond_count;",
+              "count": 14,
+              "result_signature": "2_2_14a4e786b6797457dd615b21fed35802"
+            },
+            {
+              "cte": "WITH t_bonds AS (\n    SELECT bond_type\n    FROM c_rows\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT * FROM t_bonds;",
+              "count": 1,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_carcinogenic AS (\n    SELECT m.label\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_carcinogenic;",
+              "count": 9,
+              "result_signature": "1_1_e9061c48d767abf02fae9cca12b63ba4"
+            },
+            {
+              "cte": "WITH t_carcinogenic AS (\n    SELECT m.label AS molecule_label, m.label AS carcinogenic_status\n    FROM molecule AS m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT * FROM t_carcinogenic;",
+              "count": 5,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM final_answer;",
+              "count": 13,
+              "result_signature": "1_2_4452806897f9294b94fb544b26a0f406"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT 'bond_type' AS bond_type, 'label' AS carcinogenic_status\n    FROM t_bonds\n    CROSS JOIN t_carcinogenic\n)\nSELECT * FROM final_answer;",
+              "count": 2,
+              "result_signature": "1_2_99e9dda114de31aa1f77bf3c8ba12c71"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_final AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM t_final;",
+              "count": 15,
+              "result_signature": "1_2_4452806897f9294b94fb544b26a0f406"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_bond_type_count AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM c_rows\n    GROUP BY bond_type\n    ORDER BY count DESC\n    LIMIT 1\n)\nSELECT * FROM t_bond_type_count;",
+              "count": 14,
+              "result_signature": "1_2_931553c207fd605fb984070eb5235b69"
+            },
+            {
+              "cte": "WITH t_bond_type_carci AS (\n    SELECT t_bonds.bond_type, t_carcinogenic.label\n    FROM t_bonds\n    JOIN t_carcinogenic ON TRUE\n)\nSELECT * FROM t_bond_type_carci;",
+              "count": 1,
+              "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_answer AS (\n    SELECT 'bond_type' = '-', 'label' = '-'\n)\nSELECT * FROM t_answer;",
+              "count": 14,
+              "result_signature": "1_2_4452806897f9294b94fb544b26a0f406"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT \n    (SELECT bond_type FROM (\n        SELECT bond_type, COUNT(*) AS cnt\n        FROM bond\n        WHERE molecule_id = 'TR010'\n        GROUP BY bond_type\n        ORDER BY cnt DESC\n        LIMIT 1\n    )) AS majority_bond_type,\n    (SELECT label FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT \n    (SELECT bond_type FROM (\n        SELECT bond_type, COUNT(*) AS cnt\n        FROM bond\n        WHERE molecule_id = 'TR010'\n        GROUP BY bond_type\n        ORDER BY cnt DESC\n        LIMIT 1\n    )) AS majority_bond_type,\n    (SELECT label FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    (SELECT bond_type FROM (\n        SELECT bond_type, COUNT(*) AS cnt\n        FROM bond\n        WHERE molecule_id = 'TR010'\n        GROUP BY bond_type\n        ORDER BY cnt DESC\n        LIMIT 1\n    )) AS majority_bond_type,\n    (SELECT label FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH majority_bond AS (\n    SELECT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT mb.bond_type, m.label\nFROM majority_bond mb\nJOIN molecule m ON m.molecule_id = 'TR010';",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT \n    (SELECT bond_type\n     FROM bond\n     WHERE molecule_id = 'TR010'\n     GROUP BY bond_type\n     ORDER BY COUNT(*) DESC\n     LIMIT 1) AS majority_bond_type,\n    (SELECT label\n     FROM molecule\n     WHERE molecule_id = 'TR010') AS is_carcinogenic;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          },
+          {
+            "sql": "SELECT bc.bond_type, (SELECT m.label FROM molecule AS m WHERE m.molecule_id = 'TR010') AS label\nFROM (\n    SELECT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n) AS bc;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_2_5b79bddb9db3afa7d714e9867efe40e5",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_2_5b79bddb9db3afa7d714e9867efe40e5": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 2
+      }
+    ]
+  },
+  "347": {
+    "sql": "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT id, asciiName, hasContentWarning, text\nFROM c_artist_fuzzy\nORDER BY asciiName;",
+    "stats": {
+      "average_reward": 1.0,
+      "total_visits": 1,
+      "timing": {
+        "total_s": 648.1049337387085,
+        "rollout_s": 648.1048631668091,
+        "cte_gen_s": 152.71047616004944,
+        "sql_gen_s": 138.1034038066864,
+        "db_exec_s": 341.4841868877411,
+        "rollout_count": 1
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T1.id, T2.text, T1.hasContentWarning FROM cards AS T1 INNER JOIN rulings AS T2 ON T1.uuid = T2.uuid WHERE T1.artist = 'Stephen Daniele'"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.id, c.artist, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n)\nSELECT * FROM c_cols;",
+          "WITH c_artist AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE c.artist = 'Stephen Daniel'\n)\nSELECT * FROM c_artist;",
+          "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT * FROM c_artist_fuzzy;",
+          "WITH c_check AS (\n    SELECT id, asciiName, hasContentWarning, text\n    FROM c_artist_fuzzy\n    WHERE hasContentWarning = 1\n)\nSELECT * FROM c_check;"
+        ],
+        "cte_bucket_counts": [
+          11,
+          15,
+          3,
+          5
+        ],
+        "cte_depths": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_artist AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE c.artist = 'Stephen Daniel'\n)\nSELECT * FROM c_artist;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT * FROM c_artist_fuzzy;",
+              "count": 3,
+              "result_signature": "5_4_d3016c5322f910b8a21342031606034f"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT id, asciiName, hasContentWarning, text\n    FROM c_artist_fuzzy\n    WHERE hasContentWarning = 1\n)\nSELECT * FROM c_check;",
+              "count": 5,
+              "result_signature": "empty_result"
+            },
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT * FROM c_fuzzy;",
+              "count": 1,
+              "result_signature": "5_4_d3016c5322f910b8a21342031606034f"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT id, asciiName, hasContentWarning, text\nFROM c_artist_fuzzy\nORDER BY asciiName;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT id, asciiName, hasContentWarning, text\nFROM c_artist_fuzzy\nORDER BY asciiName;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_4_d3016c5322f910b8a21342031606034f",
+            "result_row_count": 76
+          },
+          {
+            "sql": "SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\nFROM cards AS c\nLEFT JOIN rulings AS r ON c.uuid = r.uuid\nWHERE c.artist = 'Stephen Daniele';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_4_d3016c5322f910b8a21342031606034f",
+            "result_row_count": 76
+          },
+          {
+            "sql": "SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\nFROM cards AS c\nLEFT JOIN rulings AS r ON c.uuid = r.uuid\nWHERE c.artist = 'Stephen Daniele';",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_4_d3016c5322f910b8a21342031606034f",
+            "result_row_count": 76
+          },
+          {
+            "sql": "WITH c_artist_fuzzy AS (\n    SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\n    FROM cards AS c\n    LEFT JOIN rulings AS r ON c.uuid = r.uuid\n    WHERE \n        (c.artist LIKE '%Stephen Daniel%' \n         OR c.artist LIKE 'Stephen Daniel%' \n         OR c.artist LIKE '%Stephen Daniel' \n         OR c.artist = 'Stephen Daniel' \n         OR c.artist LIKE 'Stephen% Daniel%' \n         OR c.artist LIKE 'Stephen% Daniel' \n         OR c.artist LIKE '%Stephen% Daniel%' \n         OR c.artist LIKE '%Stephen% Daniel')\n)\nSELECT id, asciiName, hasContentWarning, text\nFROM c_artist_fuzzy;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_4_d3016c5322f910b8a21342031606034f",
+            "result_row_count": 76
+          },
+          {
+            "sql": "SELECT c.id, c.`asciiName`, c.`hasContentWarning`, r.`text`\nFROM cards AS c\nLEFT JOIN rulings AS r ON c.uuid = r.uuid\nWHERE c.artist = 'Stephen Daniele'",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_4_d3016c5322f910b8a21342031606034f",
+            "result_row_count": 76
+          }
+        ],
+        "result_buckets": {
+          "5_4_d3016c5322f910b8a21342031606034f": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 1
+      }
+    ]
+  },
+  "402": {
+    "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT id FROM final_output;",
+    "stats": {
+      "average_reward": 0.7111111111111111,
+      "total_visits": 3,
+      "timing": {
+        "total_s": 1019.8059384822845,
+        "rollout_s": 1019.8057687282562,
+        "cte_gen_s": 140.84533286094666,
+        "sql_gen_s": 722.98601603508,
+        "db_exec_s": 135.60594749450684,
+        "rollout_count": 3
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT CAST(SUM(CASE WHEN isTextless = 0 THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(id) FROM cards WHERE isStorySpotlight = 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.8,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+          "WITH t_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n)\nSELECT * FROM t_count;",
+          "WITH t_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n)\nSELECT * FROM t_total;",
+          "WITH final_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n)\nSELECT * FROM final_percentage;",
+          "WITH final_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT * FROM final_output;",
+          "WITH final_answer AS (\n    SELECT percentage, `id`\n    FROM final_percentage, final_output\n)\nSELECT * FROM final_answer;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          12,
+          12,
+          14
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_46a6befff9f068b831759466d5ac9a69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n)\nSELECT * FROM c_count;",
+              "count": 5,
+              "result_signature": "1_1_8c7935e76e89255857d3c73ab15c72a1"
+            },
+            {
+              "cte": "WITH t_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n)\nSELECT * FROM t_count;",
+              "count": 10,
+              "result_signature": "1_1_ea0a259cedd7b06569878cbd157b04b4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n)\nSELECT * FROM t_total;",
+              "count": 15,
+              "result_signature": "1_1_8c7935e76e89255857d3c73ab15c72a1"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n)\nSELECT * FROM final_percentage;",
+              "count": 12,
+              "result_signature": "1_1_0861b4062a0bdf7b26cabfb019804e17"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT * FROM final_output;",
+              "count": 12,
+              "result_signature": "5_1_1b86462139923254da69db6accc314d0"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_result AS (\n    SELECT `id`\n    FROM final_output\n)\nSELECT * FROM final_result;",
+              "count": 1,
+              "result_signature": "5_1_1b86462139923254da69db6accc314d0"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT percentage, `id`\n    FROM final_percentage, final_output\n)\nSELECT * FROM final_answer;",
+              "count": 14,
+              "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 4,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output\nORDER BY final_output.id;",
+            "valid": false,
+            "error": "查询执行超时(40s)",
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e",
+            "result_row_count": 104
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e",
+            "result_row_count": 104
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e",
+            "result_row_count": 104
+          },
+          {
+            "sql": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT final_percentage.percentage, final_output.id\nFROM final_percentage, final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e",
+            "result_row_count": 104
+          }
+        ],
+        "result_buckets": {
+          "5_2_da6ae5eccd76df5ad9c0d992083f8f1e": 4
+        },
+        "valid_count": 4,
+        "error_reason": null,
+        "rollout_id": 1
+      },
+      {
+        "reward": 0.3333333333333333,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+          "WITH c_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n)\nSELECT * FROM c_count;",
+          "WITH c_percentage AS (\n    SELECT (COUNT(*) * 100.0 / 56822) AS percentage\n    FROM c_rows\n)\nSELECT * FROM c_percentage;",
+          "WITH c_final AS (\n    SELECT percentage AS answer\n    FROM c_percentage\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          5,
+          15,
+          13
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_46a6befff9f068b831759466d5ac9a69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n)\nSELECT * FROM c_count;",
+              "count": 5,
+              "result_signature": "1_1_8c7935e76e89255857d3c73ab15c72a1"
+            },
+            {
+              "cte": "WITH t_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n)\nSELECT * FROM t_count;",
+              "count": 10,
+              "result_signature": "1_1_ea0a259cedd7b06569878cbd157b04b4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_percentage AS (\n    SELECT (COUNT(*) * 100.0 / 56822) AS percentage\n    FROM c_rows\n)\nSELECT * FROM c_percentage;",
+              "count": 15,
+              "result_signature": "1_1_0861b4062a0bdf7b26cabfb019804e17"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_final AS (\n    SELECT percentage AS answer\n    FROM c_percentage\n)\nSELECT * FROM c_final;",
+              "count": 13,
+              "result_signature": "1_1_0861b4062a0bdf7b26cabfb019804e17"
+            },
+            {
+              "cte": "WITH c_final AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT * FROM c_final;",
+              "count": 1,
+              "result_signature": "5_1_1b86462139923254da69db6accc314d0"
+            },
+            {
+              "cte": "WITH c_final AS (\n    SELECT COUNT(*) AS count_without_text_box\n    FROM c_rows\n)\nSELECT * FROM c_final;",
+              "count": 1,
+              "result_signature": "1_1_ea0a259cedd7b06569878cbd157b04b4"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 15,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 6,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 1,
+        "sql_total_variants": 3,
+        "selected_sql": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nc_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n),\nc_percentage AS (\n    SELECT (COUNT(*) * 100.0 / (SELECT total_cards FROM c_count)) AS percentage\n    FROM c_rows\n)\nSELECT percentage AS answer\nFROM c_percentage;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH story_spotlight_no_text AS (\n    SELECT `id`\n    FROM cards\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\ntotal_cards AS (\n    SELECT COUNT(*) AS total\n    FROM cards\n)\nSELECT \n    (SELECT COUNT(*) * 100.0 / total_cards.total FROM story_spotlight_no_text) AS percentage,\n    `id`\nFROM story_spotlight_no_text, total_cards;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e",
+            "result_row_count": 104
+          },
+          {
+            "sql": "WITH c_rows AS (\n    SELECT `id`\n    FROM cards\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nc_count AS (\n    SELECT COUNT(*) AS total_story_spotlight_without_text\n    FROM c_rows\n),\ntotal_cards AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n),\npercentage AS (\n    SELECT (total_story_spotlight_without_text * 100.0 / total_cards) AS percentage\n    FROM c_count, total_cards\n)\nSELECT percentage AS answer FROM percentage\nUNION ALL\nSELECT id FROM c_rows;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          },
+          {
+            "sql": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nc_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n),\nc_percentage AS (\n    SELECT (COUNT(*) * 100.0 / (SELECT total_cards FROM c_count)) AS percentage\n    FROM c_rows\n)\nSELECT percentage AS answer\nFROM c_percentage;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_0861b4062a0bdf7b26cabfb019804e17",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "5_2_da6ae5eccd76df5ad9c0d992083f8f1e": 1,
+          "5_1_3edaabd686b08fcd785a25b56f95a779": 1,
+          "1_1_0861b4062a0bdf7b26cabfb019804e17": 1
+        },
+        "valid_count": 3,
+        "error_reason": null,
+        "rollout_id": 2
+      },
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+          "WITH t_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n)\nSELECT * FROM t_count;",
+          "WITH t_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n)\nSELECT * FROM t_total;",
+          "WITH final_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n)\nSELECT * FROM final_percentage;",
+          "WITH final_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT * FROM final_output;",
+          "WITH final_result AS (\n    SELECT `id`\n    FROM final_output\n)\nSELECT * FROM final_result;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          15,
+          10,
+          15,
+          12,
+          12,
+          1
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visit_counts": [
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n)\nSELECT * FROM c_rows;",
+              "count": 15,
+              "result_signature": "5_3_46a6befff9f068b831759466d5ac9a69"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_count AS (\n    SELECT COUNT(*) AS total_cards\n    FROM cards\n)\nSELECT * FROM c_count;",
+              "count": 5,
+              "result_signature": "1_1_8c7935e76e89255857d3c73ab15c72a1"
+            },
+            {
+              "cte": "WITH t_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n)\nSELECT * FROM t_count;",
+              "count": 10,
+              "result_signature": "1_1_ea0a259cedd7b06569878cbd157b04b4"
+            }
+          ],
+          [
+            {
+              "cte": "WITH t_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n)\nSELECT * FROM t_total;",
+              "count": 15,
+              "result_signature": "1_1_8c7935e76e89255857d3c73ab15c72a1"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n)\nSELECT * FROM final_percentage;",
+              "count": 12,
+              "result_signature": "1_1_0861b4062a0bdf7b26cabfb019804e17"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT * FROM final_output;",
+              "count": 12,
+              "result_signature": "5_1_1b86462139923254da69db6accc314d0"
+            }
+          ],
+          [
+            {
+              "cte": "WITH final_result AS (\n    SELECT `id`\n    FROM final_output\n)\nSELECT * FROM final_result;",
+              "count": 1,
+              "result_signature": "5_1_1b86462139923254da69db6accc314d0"
+            },
+            {
+              "cte": "WITH final_answer AS (\n    SELECT percentage, `id`\n    FROM final_percentage, final_output\n)\nSELECT * FROM final_answer;",
+              "count": 14,
+              "result_signature": "5_2_da6ae5eccd76df5ad9c0d992083f8f1e"
+            }
+          ],
+          [
+            {
+              "cte": "<END>",
+              "count": 14,
+              "result_signature": "<END>"
+            }
+          ]
+        ],
+        "leaf_depth": 8,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT id FROM final_output;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT id FROM final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT id FROM final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT `id` FROM final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT id FROM final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM cards\n),\nc_rows AS (\n    SELECT `isStorySpotlight`, `isTextless`, `id`\n    FROM c_cols\n    WHERE `isStorySpotlight` = 1 AND `isTextless` = 0\n),\nt_count AS (\n    SELECT COUNT(*) AS story_spotlight_count\n    FROM c_rows\n),\nt_total AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n),\nfinal_percentage AS (\n    SELECT (CAST(t_count.story_spotlight_count AS REAL) / t_total.total_count) * 100 AS percentage\n    FROM t_count, t_total\n),\nfinal_output AS (\n    SELECT `id`\n    FROM c_rows\n)\nSELECT percentage FROM final_percentage\nUNION ALL\nSELECT `id` FROM final_output;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_1_3edaabd686b08fcd785a25b56f95a779",
+            "result_row_count": 105
+          }
+        ],
+        "result_buckets": {
+          "5_1_3edaabd686b08fcd785a25b56f95a779": 5
+        },
+        "valid_count": 5,
+        "error_reason": null,
+        "rollout_id": 3
+      }
+    ]
+  },
+  "309": {
+    "sql": "",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 8,
+      "timing": {
+        "total_s": 2034.4986667633057,
+        "rollout_s": 2034.4984874725342,
+        "cte_gen_s": 1110.9795715808868,
+        "sql_gen_s": 899.1943306922913,
+        "db_exec_s": 22.023163318634033,
+        "rollout_count": 8
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT T1.atom_id, COUNT(DISTINCT T2.bond_type),T1.molecule_id FROM atom AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.molecule_id = 'TR000' GROUP BY T1.atom_id, T2.bond_type"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_type_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 1
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 2,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH tr346_molecule AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE label = 'TR346'\n),\natom_list AS (\n    SELECT atom_id\n    FROM atom\n    WHERE molecule_id = (SELECT molecule_id FROM tr346_molecule)\n),\nbond_count AS (\n    SELECT COUNT(DISTINCT bond_type) AS bond_type_count\n    FROM bond\n    WHERE molecule_id = (SELECT molecule_id FROM tr346_molecule)\n)\nSELECT a.atom_id, bc.bond_type_count\nFROM atom_list a\nCROSS JOIN bond_count bc;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH tr346_molecule AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE label = 'TR346'\n),\natom_list AS (\n    SELECT atom_id\n    FROM atom\n    WHERE molecule_id = (SELECT molecule_id FROM tr346_molecule)\n),\nbond_count AS (\n    SELECT COUNT(DISTINCT bond_type) AS bond_type_count\n    FROM bond\n    WHERE molecule_id = (SELECT molecule_id FROM tr346_molecule)\n)\nSELECT a.atom_id, bc.bond_type_count\nFROM atom_list a\nCROSS JOIN bond_count bc;",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = (\n        SELECT m.molecule_id\n        FROM molecule m\n        WHERE m.label = 'TR346'\n    )\n) AS bond_count\nFROM atom a\nWHERE a.molecule_id = (\n    SELECT m.molecule_id\n    FROM molecule m\n    WHERE m.label = 'TR346'\n);",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 2
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 3,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = (\n        SELECT m.molecule_id\n        FROM molecule m\n        WHERE m.label = 'TR346'\n    )\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = (\n        SELECT m.molecule_id\n        FROM molecule m\n        WHERE m.label = 'TR346'\n    )\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 3
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 4,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_type_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 4
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 5,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT `atom`.`atom_id`, (\n    SELECT COUNT(DISTINCT `bond`.`bond_type`)\n    FROM `bond`\n    WHERE `bond`.`molecule_id` = (\n        SELECT `molecule`.`molecule_id`\n        FROM `molecule`\n        WHERE `molecule`.`label` = 'TR346'\n    )\n) AS `bond_count`\nFROM `atom`\nJOIN `molecule` ON `atom`.`molecule_id` = `molecule`.`molecule_id`\nWHERE `molecule`.`label` = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 5
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 6,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT \n    a.atom_id,\n    (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT \n    a.atom_id,\n    (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_type_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT \n    a.atom_id,\n    (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_type_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 6
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 7,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, \n       (SELECT COUNT(DISTINCT b.bond_type) \n        FROM bond b \n        WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 7
+      },
+      {
+        "reward": 0.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label = 'TR346'\n)\nSELECT * FROM c_cols;",
+          "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+          "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+          "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;"
+        ],
+        "cte_bucket_counts": [
+          15,
+          14,
+          13,
+          14,
+          15
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "visit_counts": [
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "cte_buckets_per_node": [
+          [
+            {
+              "cte": "WITH c_fuzzy AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_fuzzy;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_check AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_check;",
+              "count": 13,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_new AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_new;",
+              "count": 14,
+              "result_signature": "empty_result"
+            }
+          ],
+          [
+            {
+              "cte": "WITH c_probe AS (\n    SELECT a.atom_id, m.label\n    FROM atom a\n    JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE m.label LIKE '%TR346%' \n       OR m.label LIKE 'TR346%' \n       OR m.label LIKE '%TR346'\n       OR m.label = 'TR346'\n       OR m.label LIKE '%TR%346%'\n       OR m.label LIKE '%TR346%'\n       OR m.label LIKE '%TR346%'\n    LIMIT 10\n)\nSELECT * FROM c_probe;",
+              "count": 15,
+              "result_signature": "empty_result"
+            }
+          ],
+          []
+        ],
+        "leaf_depth": 5,
+        "leaf_visit_count": 8,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (\n    SELECT COUNT(DISTINCT b.bond_type)\n    FROM bond b\n    WHERE b.molecule_id = m.molecule_id\n) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          },
+          {
+            "sql": "SELECT a.atom_id, (SELECT COUNT(DISTINCT b.bond_type) FROM bond b WHERE b.molecule_id = m.molecule_id) AS bond_count\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = 'TR346';",
+            "valid": true,
+            "error": null,
+            "result_signature": null,
+            "result_row_count": 0
+          }
+        ],
+        "result_buckets": {},
+        "valid_count": 5,
+        "error_reason": "所有SQL返回空结果：5个SQL执行成功但结果为空",
+        "rollout_id": 8
+      }
+    ]
+  }
+}

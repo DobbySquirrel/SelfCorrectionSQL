@@ -1,0 +1,590 @@
+{
+  "9": {
+    "baseline_sql": "WITH avg_math_scores AS (\n    SELECT cds, AVG(AvgScrMath) AS avg_math_score\n    FROM satscores\n    GROUP BY cds\n),\nhigh_avg_math AS (\n    SELECT cds\n    FROM avg_math_scores\n    WHERE avg_math_score > 560\n),\ncharter_funded AS (\n    SELECT f.`School Code`\n    FROM high_avg_math h\n    INNER JOIN frpm f ON h.cds = f.`CDSCode`\n    WHERE f.`Charter Funding Type` = 'Directly funded'\n),\ncount_charter_funded AS (\n    SELECT COUNT(*) AS answer\n    FROM charter_funded\n)\nSELECT answer FROM count_charter_funded;",
+    "entropy_sql": "WITH avg_math_scores AS (\n    SELECT cds, AVG(AvgScrMath) AS avg_math_score\n    FROM satscores\n    GROUP BY cds\n),\nhigh_avg_math AS (\n    SELECT cds\n    FROM avg_math_scores\n    WHERE avg_math_score > 560\n),\ncharter_funded AS (\n    SELECT f.`School Code`\n    FROM high_avg_math h\n    INNER JOIN frpm f ON h.cds = f.`CDSCode`\n    WHERE f.`Charter Funding Type` = 'Directly funded'\n),\nfinal_count AS (\n    SELECT COUNT(*) AS answer\n    FROM charter_funded\n)\nSELECT answer FROM final_count;"
+  },
+  "21": {
+    "baseline_sql": "WITH filtered_schools AS (\n    SELECT s.CDSCode, s.School, s.Charter\n    FROM frpm f\n    INNER JOIN schools s ON f.CDSCode = s.CDSCode\n    WHERE f.`Free Meal Count (K-12)` > 500 AND f.`Free Meal Count (K-12)` < 700 AND s.City = 'Los Angeles' AND s.Charter = 1\n),\nfinal_count AS (\n    SELECT COUNT(*) AS answer\n    FROM filtered_schools\n)\nSELECT * FROM final_count;",
+    "entropy_sql": "WITH f_cols AS (\n    SELECT `CDSCode`, `Free Meal Count (K-12)`\n    FROM frpm\n    WHERE `County Name` = 'Los Angeles'\n),\nf_rows AS (\n    SELECT `CDSCode`\n    FROM f_cols\n    WHERE `Free Meal Count (K-12)` > 500 AND `Free Meal Count (K-12)` < 700\n),\ns_join AS (\n    SELECT s.CDSCode, s.School\n    FROM schools s\n    INNER JOIN f_rows fr ON s.CDSCode = fr.CDSCode\n),\ncount_result AS (\n    SELECT COUNT(*) AS answer\n    FROM s_join\n)\nSELECT answer FROM count_result;"
+  },
+  "25": {
+    "baseline_sql": "WITH avg_math_scores AS (\n    SELECT cds, AVG(AvgScrMath) AS avg_math_avg\n    FROM satscores\n    GROUP BY cds\n),\nfiltered_avg_math_scores AS (\n    SELECT cds, avg_math_avg\n    FROM avg_math_scores\n    WHERE avg_math_avg > 400\n),\nschool_details AS (\n    SELECT s.CDSCode, s.School, f.`Charter Funding Type`\n    FROM schools s\n    INNER JOIN frpm f ON s.CDSCode = f.CDSCode\n    WHERE s.County = 'Riverside' AND s.CDSCode IN (SELECT cds FROM filtered_avg_math_scores)\n)\nSELECT s.School, s.`Charter Funding Type`\nFROM school_details s\nWHERE s.`Charter Funding Type` = 'Directly funded';",
+    "entropy_sql": "WITH avg_math_scores AS (\n    SELECT cds, AVG(AvgScrMath) AS avg_math_avg\n    FROM satscores\n    GROUP BY cds\n),\nfiltered_avg_math_scores AS (\n    SELECT cds, avg_math_avg\n    FROM avg_math_scores\n    WHERE avg_math_avg > 400\n),\ncharter_funding AS (\n    SELECT T1.cds, T2.`Charter Funding Type`\n    FROM filtered_avg_math_scores AS T1\n    INNER JOIN frpm AS T2 ON T1.cds = T2.`CDSCode`\n)\nSELECT T3.School, T3.FundingType\nFROM charter_funding AS T1\nINNER JOIN schools AS T3 ON T1.cds = T3.CDSCode;"
+  },
+  "35": {
+    "baseline_sql": "",
+    "entropy_sql": "SELECT AdmEmail1\nFROM schools AS s\nINNER JOIN frpm AS sc ON s.CDSCode = sc.CDSCode\nWHERE sc.`Charter School (Y/N)` = 1 AND s.Charter = 1\nORDER BY `Enrollment (K-12)` ASC\nLIMIT 1;"
+  },
+  "40": {
+    "baseline_sql": "WITH min_read_school AS (\n    SELECT Phone\n    FROM satscores AS ss\n    INNER JOIN schools AS sc ON ss.cds = sc.CDSCode\n    WHERE sc.District = 'Fresno Unified' AND ss.AvgScrRead IS NOT NULL\n    ORDER BY ss.AvgScrRead ASC\n    LIMIT 1\n)\nSELECT * FROM min_read_school;",
+    "entropy_sql": "SELECT sc.Phone\nFROM satscores AS ss\nINNER JOIN schools AS sc ON ss.cds = sc.CDSCode\nWHERE ss.dname = 'Fresno Unified' AND ss.AvgScrRead = (SELECT MIN(AvgScrRead) FROM satscores WHERE dname = 'Fresno Unified');"
+  },
+  "43": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "76": {
+    "baseline_sql": "SELECT DISTINCT t.City\nFROM (\n    SELECT f.City\n    FROM (\n        SELECT c.CDSCode, c.City\n        FROM (\n            SELECT s.CDSCode, s.City\n            FROM schools AS s\n            WHERE s.County = 'Merced' AND s.EILCode = 'HS'\n        ) c\n        INNER JOIN frpm fr ON c.CDSCode = fr.CDSCode\n        WHERE fr.`Low Grade` = 9 AND fr.`High Grade` = 12 AND fr.`NSLP Provision Status` = 'Lunch Provision 2'\n    ) f\n) t;",
+    "entropy_sql": "WITH filtered_schools AS (\n    SELECT s.CDSCode, s.City, s.County, s.EILCode\n    FROM schools AS s\n    INNER JOIN frpm fr ON s.CDSCode = fr.CDSCode\n    WHERE s.County = 'Merced' \n      AND s.EILCode = 'HS' \n      AND fr.`Low Grade` = 9 \n      AND fr.`High Grade` = 12 \n      AND fr.`NSLP Provision Status` = 'Lunch Provision 2'\n)\nSELECT City FROM filtered_schools;"
+  },
+  "81": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "93": {
+    "baseline_sql": "WITH filtered_clients AS (\n    SELECT client_id\n    FROM client\n    JOIN district ON client.district_id = district.district_id\n    WHERE gender = 'M' AND A3 = 'north Bohemia' AND A11 > 8000\n)\nSELECT COUNT(*) AS answer FROM filtered_clients;",
+    "entropy_sql": "WITH filtered_clients AS (\n    SELECT client_id\n    FROM client\n    JOIN district ON client.district_id = district.district_id\n    WHERE gender = 'M' AND A3 = 'north Bohemia' AND A11 > 8000\n)\nSELECT COUNT(*) AS answer FROM filtered_clients;"
+  },
+  "97": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "98": {
+    "baseline_sql": "WITH approved_loans AS (\n    SELECT l.account_id, l.amount\n    FROM loan l\n    WHERE STRFTIME('%Y', l.date) = '1997'\n),\nmin_amount AS (\n    SELECT MIN(amount) AS min_amount\n    FROM approved_loans\n)\nSELECT al.account_id, al.amount\nFROM approved_loans al\nJOIN min_amount ma ON al.amount = ma.min_amount;",
+    "entropy_sql": "WITH approved_loans AS (\n    SELECT l.account_id, l.amount\n    FROM loan l\n    WHERE STRFTIME('%Y', l.date) = '1997'\n),\nmin_amount AS (\n    SELECT MIN(amount) AS min_amount\n    FROM approved_loans\n)\nSELECT al.account_id, al.amount\nFROM approved_loans al\nJOIN min_amount ma ON al.amount = ma.min_amount;"
+  },
+  "111": {
+    "baseline_sql": "WITH d_cols AS (\n    SELECT district_id\n    FROM district\n    WHERE A2 = 'Litomerice'\n),\na_cols AS (\n    SELECT account_id\n    FROM account\n    WHERE district_id = (SELECT district_id FROM d_cols) AND STRFTIME('%Y', date) = '1996'\n)\nSELECT COUNT(*) AS answer FROM a_cols;",
+    "entropy_sql": "WITH d_cols AS (\n    SELECT district_id\n    FROM district\n    WHERE A2 = 'Litomerice'\n),\na_cols AS (\n    SELECT account_id\n    FROM account\n    WHERE district_id IN (SELECT district_id FROM d_cols) AND STRFTIME('%Y', date) = '1996'\n)\nSELECT COUNT(*) AS answer FROM a_cols;"
+  },
+  "130": {
+    "baseline_sql": "WITH district_info AS (\n    SELECT district_id\n    FROM district\n    WHERE A3 = 'South Bohemia'\n),\naccount_holders AS (\n    SELECT DISTINCT client_id\n    FROM client\n    WHERE district_id IN (SELECT district_id FROM district_info)\n),\ncredit_card_owners AS (\n    SELECT DISTINCT disp.client_id\n    FROM disp\n    JOIN card ON disp.disp_id = card.disp_id\n)\nSELECT COUNT(*) AS count_of_account_holders_without_credit_cards\nFROM account_holders\nLEFT JOIN credit_card_owners ON account_holders.client_id = credit_card_owners.client_id\nWHERE credit_card_owners.client_id IS NULL;",
+    "entropy_sql": ""
+  },
+  "139": {
+    "baseline_sql": "SELECT COUNT(DISTINCT client_id) AS high_level_credit_cards_count\nFROM disp\nJOIN card ON disp.disp_id = card.disp_id\nWHERE card.type = 'gold' AND disp.type = 'OWNER';",
+    "entropy_sql": "SELECT COUNT(*) \nFROM card \nWHERE type = 'gold' AND disp_id IN (\n    SELECT disp_id \n    FROM disp \n    WHERE type = 'OWNER'\n);"
+  },
+  "158": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "164": {
+    "baseline_sql": "",
+    "entropy_sql": "SELECT c.`client_id`, c.`gender`, c.`birth_date`, c.`district_id`\nFROM `order` o\nINNER JOIN disp d ON o.`account_id` = d.`account_id`\nINNER JOIN client c ON d.`client_id` = c.`client_id`\nWHERE o.`order_id` = 32423;"
+  },
+  "176": {
+    "baseline_sql": "",
+    "entropy_sql": "WITH client_accounts AS (\n    SELECT account_id\n    FROM disp\n    WHERE client_id = 992\n),\nclient_loans AS (\n    SELECT l.amount, l.status, l.payments\n    FROM loan l\n    JOIN client_accounts ca ON l.account_id = ca.account_id\n)\nSELECT \n    SUM(l.amount) AS total_debt,\n    AVG(l.payments) AS avg_payments,\n    l.status\nFROM \n    client_loans l\nGROUP BY \n    l.status;"
+  },
+  "189": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "231": {
+    "baseline_sql": "WITH b_types AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\nmax_bond_type AS (\n    SELECT bond_type\n    FROM b_types\n    WHERE count = (SELECT MAX(count) FROM b_types)\n),\nis_carcinogenic AS (\n    SELECT CASE WHEN EXISTS (\n        SELECT 1\n        FROM molecule m\n        JOIN bond b ON m.molecule_id = b.molecule_id\n        WHERE m.label = 'TR010' AND b.bond_type = '-'\n    ) THEN 'Yes' ELSE 'No' END AS result\n)\nSELECT max_bond_type.bond_type, is_carcinogenic.result\nFROM max_bond_type, is_carcinogenic;",
+    "entropy_sql": "WITH bond_details AS (\n    SELECT bond_type, COUNT(*) AS count\n    FROM bond\n    WHERE molecule_id = 'TR010'\n    GROUP BY bond_type\n),\ndominant_bond AS (\n    SELECT bond_type\n    FROM bond_details\n    WHERE count = (SELECT MAX(count) FROM bond_details)\n),\nis_carcinogenic AS (\n    SELECT CASE WHEN EXISTS (\n        SELECT 1\n        FROM molecule m\n        JOIN bond b ON m.molecule_id = b.molecule_id\n        WHERE m.label = 'TR010' AND b.bond_type = '-'\n    ) THEN 'Yes' ELSE 'No' END AS result\n)\nSELECT dominant_bond.bond_type, is_carcinogenic.result\nFROM dominant_bond, is_carcinogenic;"
+  },
+  "240": {
+    "baseline_sql": "WITH m_info AS (\n    SELECT label\n    FROM molecule\n    WHERE molecule_id = 'TR004'\n),\ntoxic_elements AS (\n    SELECT DISTINCT element\n    FROM atom\n    WHERE molecule_id = 'TR004' AND element IN ('o', 's', 'h')\n),\ntoxic_bonds AS (\n    SELECT DISTINCT bond_type\n    FROM bond\n    WHERE molecule_id = 'TR004' AND bond_type IN ('=', '-')\n),\nconnected_atoms AS (\n    SELECT a1.element, a2.element\n    FROM atom a1\n    INNER JOIN connected c ON a1.atom_id = c.atom_id\n    INNER JOIN atom a2 ON c.atom_id2 = a2.atom_id\n    WHERE a1.molecule_id = 'TR004' AND a2.molecule_id = 'TR004'\n)\nSELECT \n    t.label,\n    te.element AS toxic_element,\n    tb.bond_type AS toxic_bond,\n    ca.element AS connected_element\nFROM \n    m_info t\nCROSS JOIN \n    toxic_elements te\nCROSS JOIN \n    toxic_bonds tb\nCROSS JOIN \n    connected_atoms ca\nWHERE \n    ca.element IN ('o', 's', 'h') AND tb.bond_type IN ('=', '-');",
+    "entropy_sql": "SELECT DISTINCT T1.element, T2.bond_type, T3.label\nFROM atom AS T1\nINNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id\nINNER JOIN molecule AS T3 ON T1.molecule_id = T3.molecule_id\nWHERE T1.molecule_id = 'TR004';"
+  },
+  "257": {
+    "baseline_sql": "WITH sulfur_atom_ids AS (\n    SELECT atom_id\n    FROM atom\n    WHERE element = 's'\n),\nsulfur_direct_connections AS (\n    SELECT DISTINCT atom_id2\n    FROM connected\n    WHERE atom_id IN (SELECT atom_id FROM sulfur_atom_ids)\n)\nSELECT * FROM sulfur_direct_connections;",
+    "entropy_sql": "WITH sulfur_atom_ids AS (\n    SELECT atom_id\n    FROM atom\n    WHERE element = 's'\n)\nSELECT DISTINCT atom_id2\nFROM connected\nWHERE atom_id IN (SELECT atom_id FROM sulfur_atom_ids);"
+  },
+  "267": {
+    "baseline_sql": "SELECT DISTINCT bond_type\nFROM bond\nWHERE molecule_id BETWEEN 'TR000' AND 'TR050';",
+    "entropy_sql": "SELECT DISTINCT bond_type\nFROM bond\nWHERE molecule_id BETWEEN 'TR000' AND 'TR050';"
+  },
+  "286": {
+    "baseline_sql": "WITH count_triple_bonds AS (\n    SELECT COUNT(*) AS num_triple_bonds\n    FROM bond\n    WHERE bond_type = '#'\n),\ntotal_compounds AS (\n    SELECT COUNT(*) AS total_molecules\n    FROM molecule\n)\nSELECT CAST(num_triple_bonds AS REAL) * 100 / total_molecules AS percent\nFROM count_triple_bonds, total_compounds;",
+    "entropy_sql": "WITH compound_counts AS (\n    SELECT COUNT(*) AS total_compounds\n    FROM molecule\n),\ntriple_bond_counts AS (\n    SELECT COUNT(*) AS triple_bonds\n    FROM bond\n    WHERE bond_type = '#'\n),\npercentage_triple_bonds AS (\n    SELECT CAST(triple_bonds AS REAL) * 100 / total_compounds AS percent\n    FROM triple_bond_counts, compound_counts\n)\nSELECT * FROM percentage_triple_bonds;"
+  },
+  "287": {
+    "baseline_sql": "WITH molecule_bonds AS (\n    SELECT b.bond_id, b.bond_type\n    FROM bond b\n    WHERE b.molecule_id = 'TR047'\n),\ndouble_bonds AS (\n    SELECT COUNT(*) AS count_double_bonds\n    FROM molecule_bonds mb\n    WHERE mb.bond_type = '='\n),\ntotal_bonds AS (\n    SELECT COUNT(*) AS count_total_bonds\n    FROM molecule_bonds mb\n)\nSELECT CAST(double_bonds.count_double_bonds AS REAL) * 100 / total_bonds.count_total_bonds AS percent FROM double_bonds, total_bonds;",
+    "entropy_sql": "WITH mol_bonds AS (\n    SELECT b.bond_id, b.bond_type\n    FROM bond AS b\n    WHERE b.molecule_id = 'TR047'\n),\ndouble_bonds AS (\n    SELECT COUNT(*) AS count_double_bonds\n    FROM mol_bonds\n    WHERE bond_type = '='\n),\ntotal_bonds AS (\n    SELECT COUNT(*) AS count_total_bonds\n    FROM mol_bonds\n),\npercent_double_bonds AS (\n    SELECT CAST(double_bonds.count_double_bonds AS REAL) * 100 / total_bonds.count_total_bonds AS percent\n    FROM double_bonds, total_bonds\n)\nSELECT percent FROM percent_double_bonds;"
+  },
+  "288": {
+    "baseline_sql": "WITH atom_info AS (\n    SELECT molecule_id\n    FROM atom\n    WHERE atom_id = 'TR001_1'\n),\nmolecule_info AS (\n    SELECT m.label\n    FROM molecule m\n    JOIN atom_info ai ON m.molecule_id = ai.molecule_id\n),\ncarcinogenic_check AS (\n    SELECT CASE WHEN label = '+' THEN 1 ELSE 0 END AS is_carcinogenic\n    FROM molecule_info\n),\nfinal_result AS (\n    SELECT CASE WHEN is_carcinogenic = 1 THEN 'Yes' ELSE 'No' END AS result\n    FROM carcinogenic_check\n)\nSELECT * FROM final_result;",
+    "entropy_sql": "WITH atom_info AS (\n    SELECT molecule_id\n    FROM atom\n    WHERE atom_id = 'TR001_1'\n),\nmolecule_info AS (\n    SELECT m.label\n    FROM molecule m\n    JOIN atom_info ai ON m.molecule_id = ai.molecule_id\n),\ncarcinogenic_check AS (\n    SELECT CASE WHEN label = '+' THEN 1 ELSE 0 END AS is_carcinogenic\n    FROM molecule_info\n),\nfinal_result AS (\n    SELECT CASE WHEN is_carcinogenic = 1 THEN 'Yes' ELSE 'No' END AS result\n    FROM carcinogenic_check\n)\nSELECT * FROM final_result;"
+  },
+  "291": {
+    "baseline_sql": "SELECT COUNT(*) AS number_of_carcinogenic_compounds FROM molecule WHERE label = '+';",
+    "entropy_sql": "SELECT COUNT(*) AS number_of_carcinogenic_compounds FROM molecule WHERE label = '+';"
+  },
+  "303": {
+    "baseline_sql": "WITH mols AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE label = '+'\n),\ndouble_bonds AS (\n    SELECT COUNT(*) AS num_double_bonds\n    FROM bond\n    WHERE molecule_id IN (SELECT molecule_id FROM mols) AND bond_type = ' = '\n)\nSELECT num_double_bonds, EXISTS (SELECT 1 FROM mols WHERE molecule_id = 'TR006') AS is_carcinogenic\nFROM double_bonds;",
+    "entropy_sql": "WITH mols AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE label = '+'\n),\ndouble_bonds AS (\n    SELECT COUNT(*) AS double_bond_count\n    FROM bond\n    WHERE molecule_id IN (SELECT molecule_id FROM mols) AND bond_type = ' = '\n)\nSELECT double_bond_count, EXISTS (SELECT 1 FROM mols WHERE molecule_id = 'TR006') AS is_carcinogenic\nFROM double_bonds;"
+  },
+  "307": {
+    "baseline_sql": "WITH bond_info AS (\n    SELECT b.bond_id, b.molecule_id, b.bond_type\n    FROM bond AS b\n    WHERE b.bond_id = 'TR000_2_3'\n),\natom_info AS (\n    SELECT a.element\n    FROM atom AS a\n    JOIN connected AS c ON a.atom_id = c.atom_id\n    JOIN bond AS b ON c.bond_id = b.bond_id\n    WHERE b.bond_id = 'TR000_2_3'\n),\nelement_names AS (\n    SELECT CASE \n        WHEN element = 'c' THEN 'Carbon'\n        WHEN element = 'cl' THEN 'Chlorine'\n        WHEN element = 'h' THEN 'Hydrogen'\n        WHEN element = 'o' THEN 'Oxygen'\n        WHEN element = 's' THEN 'Sulfur'\n        WHEN element = 'n' THEN 'Nitrogen'\n        WHEN element = 'p' THEN 'Phosphorus'\n        WHEN element = 'na' THEN 'Sodium'\n        WHEN element = 'br' THEN 'Bromine'\n        WHEN element = 'f' THEN 'Fluorine'\n        WHEN element = 'i' THEN 'Iodine'\n        WHEN element = 'sn' THEN 'Tin'\n        WHEN element = 'pb' THEN 'Lead'\n        WHEN element = 'te' THEN 'Tellurium'\n        WHEN element = 'ca' THEN 'Calcium'\n        ELSE 'Unknown'\n    END AS element_name\n    FROM atom_info\n)\nSELECT element_name FROM element_names;",
+    "entropy_sql": "SELECT GROUP_CONCAT(DISTINCT element) AS elements\nFROM atom\nJOIN connected ON atom.atom_id = connected.atom_id\nWHERE connected.bond_id = 'TR000_2_3';"
+  },
+  "309": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "326": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "337": {
+    "baseline_sql": "SELECT DISTINCT a.element, b.bond_type\nFROM atom a\nINNER JOIN bond b ON a.molecule_id = b.molecule_id\nWHERE a.molecule_id = 'TR002';",
+    "entropy_sql": "WITH ab_filtered AS (\n    SELECT a.element, b.bond_type\n    FROM atom a\n    INNER JOIN bond b ON a.molecule_id = b.molecule_id\n    WHERE a.molecule_id = 'TR002' AND a.element IN ('c', 'cl') AND b.bond_type IN ('=', '-')\n)\nSELECT DISTINCT element, bond_type FROM ab_filtered;"
+  },
+  "338": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "347": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "350": {
+    "baseline_sql": "SELECT DISTINCT language\nFROM foreign_data fd\nJOIN cards c ON fd.uuid = c.uuid\nWHERE c.name = 'Annul' AND c.number = '29';",
+    "entropy_sql": "WITH c_cols AS (\n    SELECT cd.id, cd.name, cd.number\n    FROM cards cd\n    WHERE cd.name = 'Annul' AND cd.number = '29'\n),\nalt_langs AS (\n    SELECT fd.language\n    FROM foreign_data fd\n    INNER JOIN cards cd ON fd.uuid = cd.uuid\n    WHERE cd.id = 35098\n)\nSELECT DISTINCT alt_langs.language\nFROM alt_langs;"
+  },
+  "353": {
+    "baseline_sql": "WITH it_sets AS (\n    SELECT st.setCode, s.totalSetSize\n    FROM set_translations st\n    INNER JOIN sets s ON st.setCode = s.code\n    WHERE st.language = 'Italian'\n),\nit_cards AS (\n    SELECT cd.setCode, COUNT(*) AS cardCount\n    FROM cards cd\n    INNER JOIN it_sets its ON cd.setCode = its.setCode\n    GROUP BY cd.setCode\n)\nSELECT it_sets.setCode, it_sets.totalSetSize, it_cards.cardCount\nFROM it_sets\nINNER JOIN it_cards ON it_sets.setCode = it_cards.setCode\nORDER BY it_sets.totalSetSize DESC;",
+    "entropy_sql": "WITH it_sets AS (\n    SELECT st.setCode, s.totalSetSize\n    FROM set_translations st\n    JOIN sets s ON st.setCode = s.code\n    WHERE st.language = 'Italian'\n),\nit_card_counts AS (\n    SELECT setCode, COUNT(*) AS cardCount\n    FROM cards\n    JOIN it_sets USING (setCode)\n    GROUP BY setCode\n)\nSELECT it.setCode, it.totalSetSize, itcc.cardCount\nFROM it_sets it\nJOIN it_card_counts itcc ON it.setCode = itcc.setCode;"
+  },
+  "362": {
+    "baseline_sql": "SELECT text FROM rulings WHERE uuid IN (SELECT uuid FROM cards WHERE name = 'Condemn');",
+    "entropy_sql": "SELECT text \nFROM rulings \nWHERE uuid IN (SELECT uuid FROM cards WHERE name = 'Condemn');"
+  },
+  "387": {
+    "baseline_sql": "SELECT id, name, colors, colorIdentity \nFROM cards \nWHERE setCode = 'OGW' AND colors LIKE '%W%';",
+    "entropy_sql": "SELECT name, colors \nFROM cards \nWHERE setCode = 'OGW';"
+  },
+  "402": {
+    "baseline_sql": "WITH story_spotlight_cards AS (\n    SELECT id\n    FROM cards\n    WHERE isStorySpotlight = 1 AND isTextless = 0\n),\ntotal_story_spotlight_cards AS (\n    SELECT COUNT(*) AS total_count\n    FROM cards\n    WHERE isStorySpotlight = 1\n)\nSELECT \n    CAST(COUNT(story_spotlight_cards.id) AS REAL) * 100 / total_story_spotlight_cards.total_count AS percentage,\n    story_spotlight_cards.id\nFROM \n    story_spotlight_cards, total_story_spotlight_cards\nORDER BY \n    story_spotlight_cards.id;",
+    "entropy_sql": "WITH story_spotlight_cards AS (\n    SELECT id\n    FROM cards\n    WHERE isStorySpotlight = 1 AND isTextless = 0\n),\nall_cards AS (\n    SELECT id\n    FROM cards\n)\nSELECT \n    CAST(COUNT(story_spotlight_cards.id) AS REAL) * 100 / COUNT(all_cards.id) AS percentage,\n    story_spotlight_cards.id\nFROM \n    story_spotlight_cards\nCROSS JOIN \n    all_cards\nORDER BY \n    story_spotlight_cards.id;"
+  },
+  "419": {
+    "baseline_sql": "WITH filtered_cards AS (\n    SELECT id\n    FROM cards\n    WHERE borderColor = 'borderless' AND edhrecRank > 12000\n)\nSELECT COUNT(*) AS answer FROM filtered_cards;",
+    "entropy_sql": "WITH card_filter AS (\n    SELECT id\n    FROM cards\n    WHERE borderColor = 'borderless' AND edhrecRank > 12000\n)\nSELECT COUNT(*) AS answer FROM card_filter;"
+  },
+  "423": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "436": {
+    "baseline_sql": "WITH card_ids AS (\n    SELECT id\n    FROM cards\n    WHERE frameEffects = 'extendedart'\n)\nSELECT id FROM card_ids;",
+    "entropy_sql": "SELECT id FROM cards WHERE frameEffects = 'extendedart';"
+  },
+  "448": {
+    "baseline_sql": "SELECT name, type \nFROM cards \nWHERE watermark = 'abzan';",
+    "entropy_sql": "WITH c_cols AS (\n    SELECT cd.name, cd.type\n    FROM cards cd\n    WHERE cd.watermark = 'abzan'\n)\nSELECT name, type FROM c_cols;"
+  },
+  "470": {
+    "baseline_sql": "SELECT T2.releaseDate\nFROM cards AS T1\nINNER JOIN sets AS T2 ON T1.setCode = T2.code\nWHERE T1.name = 'Ancestor''s Chosen';",
+    "entropy_sql": "WITH ancestor_set_releases AS (\n    SELECT T1.id, T1.originalReleaseDate, T2.releaseDate, T2.name AS setName\n    FROM cards AS T1\n    INNER JOIN sets AS T2 ON T1.setCode = T2.code\n    WHERE T1.name = 'Ancestor''s Chosen'\n)\nSELECT releaseDate FROM ancestor_set_releases;"
+  },
+  "479": {
+    "baseline_sql": "WITH c_cols AS (\n    SELECT id, convertedManaCost, power\n    FROM cards\n    WHERE name = 'Coldsnap' AND convertedManaCost > 5\n)\nSELECT COUNT(*) FROM c_cols WHERE power = '*' OR power IS NULL;",
+    "entropy_sql": "WITH c_cols AS (\n    SELECT id, convertedManaCost, power\n    FROM cards\n    WHERE name = 'Coldsnap' AND convertedManaCost > 5\n)\nSELECT COUNT(*) FROM c_cols WHERE power = '*' OR power IS NULL;"
+  },
+  "483": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "484": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "489": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "510": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "515": {
+    "baseline_sql": "WITH mythic_cards AS (\n    SELECT cd.*\n    FROM cards cd\n    WHERE cd.rarity = 'mythic'\n),\noldest_mythic_card AS (\n    SELECT cd.*, l.format, l.status\n    FROM mythic_cards cd\n    JOIN legalities l ON cd.uuid = l.uuid\n    WHERE l.status = 'legal'\n    ORDER BY cd.originalReleaseDate ASC\n    LIMIT 1\n)\nSELECT \n    omc.name AS card_name,\n    omc.originalReleaseDate AS release_date,\n    GROUP_CONCAT(DISTINCT omc.format) AS legal_formats\nFROM oldest_mythic_card omc;",
+    "entropy_sql": "WITH mythic_cards AS (\n    SELECT cd.*\n    FROM cards cd\n    WHERE cd.rarity = 'mythic'\n),\noldest_mythic_card AS (\n    SELECT *\n    FROM mythic_cards\n    ORDER BY originalReleaseDate ASC\n    LIMIT 1\n),\nlegal_formats AS (\n    SELECT l.format\n    FROM legalities l\n    WHERE l.status = 'legal'\n)\nSELECT \n    omc.originalReleaseDate,\n    GROUP_CONCAT(DISTINCT lf.format) AS legal_play_formats\nFROM \n    oldest_mythic_card omc\nCROSS JOIN \n    legal_formats lf;"
+  },
+  "520": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "529": {
+    "baseline_sql": "WITH sets_with_korean_translation AS (\n    SELECT st.setCode\n    FROM set_translations st\n    WHERE st.language = 'Korean'\n),\nsets_without_japanese_translation AS (\n    SELECT st.setCode\n    FROM set_translations st\n    WHERE st.language NOT LIKE '%Japanese%'\n)\nSELECT s.name\nFROM sets s\nJOIN sets_with_korean_translation swkt ON s.code = swkt.setCode\nJOIN sets_without_japanese_translation swjtt ON s.code = swjtt.setCode;",
+    "entropy_sql": "WITH sets_with_korean_translation AS (\n    SELECT st.setCode\n    FROM set_translations st\n    WHERE st.language = 'Korean'\n),\nsets_without_japanese_translation AS (\n    SELECT st.setCode\n    FROM set_translations st\n    WHERE st.language NOT LIKE '%Japanese%'\n)\nSELECT s.name\nFROM sets s\nJOIN sets_with_korean_translation swkt ON s.code = swkt.setCode\nJOIN sets_without_japanese_translation swjtt ON s.code = swjtt.setCode;"
+  },
+  "538": {
+    "baseline_sql": "SELECT Title FROM posts WHERE OwnerUserId IN (SELECT Id FROM users WHERE DisplayName = 'csgillespie');",
+    "entropy_sql": ""
+  },
+  "541": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "549": {
+    "baseline_sql": "WITH t_tags AS (\n    SELECT Id, ExcerptPostId\n    FROM tags\n    WHERE TagName = 'bayesian'\n),\nt_post_body AS (\n    SELECT Body\n    FROM posts\n    WHERE Id = (SELECT ExcerptPostId FROM t_tags)\n)\nSELECT Body FROM t_post_body;",
+    "entropy_sql": "WITH t_tags AS (\n    SELECT ExcerptPostId\n    FROM tags\n    WHERE TagName = 'bayesian'\n)\nSELECT Body FROM posts WHERE Id = (SELECT ExcerptPostId FROM t_tags);"
+  },
+  "575": {
+    "baseline_sql": "SELECT Name FROM badges WHERE UserId = (SELECT Id FROM users WHERE DisplayName = 'SilentGhost');",
+    "entropy_sql": "SELECT Name FROM badges WHERE UserId = (SELECT Id FROM users WHERE DisplayName = 'SilentGhost');"
+  },
+  "586": {
+    "baseline_sql": "WITH filtered_posts AS (\n    SELECT p.Id, p.Title, v.BountyAmount, u.DisplayName\n    FROM posts p\n    INNER JOIN votes v ON p.Id = v.PostId\n    INNER JOIN users u ON v.UserId = u.Id\n    WHERE v.BountyAmount = 50 AND p.Title LIKE '%variance%'\n)\nSELECT DISTINCT DisplayName FROM filtered_posts;",
+    "entropy_sql": "WITH filtered_posts AS (\n    SELECT p.Id, p.Title, v.BountyAmount, u.DisplayName\n    FROM posts p\n    INNER JOIN votes v ON p.Id = v.PostId\n    INNER JOIN users u ON v.UserId = u.Id\n    WHERE v.BountyAmount = 50 AND p.Title LIKE '%variance%'\n)\nSELECT DISTINCT DisplayName FROM filtered_posts;"
+  },
+  "591": {
+    "baseline_sql": "WITH badge_years AS (\n    SELECT UserId\n    FROM badges\n    WHERE Name = 'Supporter' AND STRFTIME('%Y', Date) = '2011'\n),\nuser_counts AS (\n    SELECT COUNT(DISTINCT UserId) AS answer\n    FROM badge_years\n)\nSELECT answer FROM user_counts;",
+    "entropy_sql": "WITH badge_years AS (\n    SELECT UserId\n    FROM badges\n    WHERE Name = 'Supporter' AND STRFTIME('%Y', Date) = '2011'\n),\nuser_counts AS (\n    SELECT COUNT(DISTINCT UserId) AS answer\n    FROM badge_years\n)\nSELECT answer FROM user_counts;"
+  },
+  "593": {
+    "baseline_sql": "WITH ny_users AS (\n    SELECT Id\n    FROM users\n    WHERE Location = 'New York'\n),\nny_badges AS (\n    SELECT b.UserId\n    FROM badges b\n    INNER JOIN ny_users u ON b.UserId = u.Id\n    WHERE b.Name IN ('Teacher', 'Supporter')\n)\nSELECT COUNT(DISTINCT ny_badges.UserId) AS NumberOfUsers\nFROM ny_badges;",
+    "entropy_sql": "WITH ny_users AS (\n    SELECT Id\n    FROM users\n    WHERE Location = 'New York'\n),\nbadge_ids AS (\n    SELECT Id\n    FROM badges\n    WHERE Name IN ('Teacher', 'Supporter')\n),\nuser_badges AS (\n    SELECT u.Id, b.Name\n    FROM users u\n    JOIN badges b ON u.Id = b.UserId\n    WHERE u.Location = 'New York' AND b.Name IN ('Teacher', 'Supporter')\n),\nteacher_supporter_ids AS (\n    SELECT b1.Id AS teacher_id, b2.Id AS supporter_id\n    FROM badges b1\n    JOIN badges b2 ON b1.UserId = b2.UserId\n    WHERE b1.Name = 'Teacher' AND b2.Name = 'Supporter'\n)\nSELECT COUNT(DISTINCT teacher_id) AS teacher_supporter_count\nFROM teacher_supporter_ids;"
+  },
+  "600": {
+    "baseline_sql": "WITH related_posts AS (\n    SELECT pl.RelatedPostId, p.ViewCount\n    FROM postLinks pl\n    INNER JOIN posts p ON pl.RelatedPostId = p.Id\n    WHERE pl.PostId = 61217\n),\nrelated_popularity AS (\n    SELECT rp.RelatedPostId, rp.ViewCount\n    FROM related_posts rp\n    WHERE rp.ViewCount > 1000\n)\nSELECT rp.RelatedPostId, rp.ViewCount\nFROM related_popularity rp\nORDER BY rp.ViewCount DESC;",
+    "entropy_sql": "WITH p_links AS (\n    SELECT PostId, RelatedPostId\n    FROM postLinks\n    WHERE RelatedPostId = 61217\n),\np_posts AS (\n    SELECT Id, Title, Body, ViewCount\n    FROM posts\n    WHERE Id IN (SELECT PostId FROM p_links)\n),\np_popularity AS (\n    SELECT SUM(ViewCount) AS TotalViewCount\n    FROM p_posts\n)\nSELECT p_posts.Id, p_posts.Title, p_posts.Body, p_posts.ViewCount, p_popularity.TotalViewCount\nFROM p_posts\nCROSS JOIN p_popularity;"
+  },
+  "613": {
+    "baseline_sql": "WITH u_locations AS (\n    SELECT Id\n    FROM users\n    WHERE Location = 'Rochester, NY'\n),\nb_dates AS (\n    SELECT b.Date\n    FROM badges b\n    INNER JOIN u_locations ul ON b.UserId = ul.Id\n),\nfiltered_bdates AS (\n    SELECT Date\n    FROM b_dates\n    WHERE Date IS NOT NULL\n),\ndistinct_dates AS (\n    SELECT DISTINCT Date\n    FROM filtered_bdates\n),\nfinal_dates AS (\n    SELECT Date\n    FROM distinct_dates\n    ORDER BY Date ASC\n)\nSELECT * FROM final_dates;",
+    "entropy_sql": "WITH user_ids AS (\n    SELECT Id\n    FROM users\n    WHERE Location = 'Rochester, NY'\n),\nbadge_dates AS (\n    SELECT b.Date\n    FROM badges b\n    INNER JOIN user_ids u ON b.UserId = u.Id\n)\nSELECT DISTINCT Date FROM badge_dates;"
+  },
+  "617": {
+    "baseline_sql": "SELECT Text \nFROM comments \nWHERE CreationDate = '2010-07-19 19:37:33.0';",
+    "entropy_sql": "SELECT Text FROM comments WHERE CreationDate = '2010-07-19 19:37:33.0';"
+  },
+  "619": {
+    "baseline_sql": "WITH b_u_ids AS (\n    SELECT UserId\n    FROM badges\n    WHERE Name = 'Supporter'\n),\nu_age AS (\n    SELECT Id\n    FROM users\n    WHERE Age BETWEEN 19 AND 65\n)\nSELECT COUNT(DISTINCT b_u_ids.UserId) AS AdultSupporters\nFROM b_u_ids\nJOIN u_age ON b_u_ids.UserId = u_age.Id;",
+    "entropy_sql": "WITH su_adult_badges AS (\n    SELECT u.Id\n    FROM users u\n    JOIN badges b ON u.Id = b.UserId\n    WHERE u.Age BETWEEN 19 AND 65 AND b.Name = 'Supporter'\n)\nSELECT COUNT(*) AS answer FROM su_adult_badges;"
+  },
+  "623": {
+    "baseline_sql": "WITH age_filter AS (\n    SELECT Id\n    FROM users\n    WHERE Age > 65\n),\nbadge_filter AS (\n    SELECT UserId\n    FROM badges\n    WHERE Name = 'Supporter'\n),\nelder_badge_intersection AS (\n    SELECT bf.UserId\n    FROM badge_filter bf\n    INNER JOIN age_filter af ON bf.UserId = af.Id\n)\nSELECT COUNT(*) AS answer FROM elder_badge_intersection;",
+    "entropy_sql": "WITH age_filter AS (\n    SELECT Id\n    FROM users\n    WHERE Age > 65\n),\nbadge_filter AS (\n    SELECT UserId\n    FROM badges\n    WHERE Name = 'Supporter'\n),\nelder_badge AS (\n    SELECT b.UserId\n    FROM badge_filter b\n    JOIN age_filter a ON b.UserId = a.Id\n)\nSELECT COUNT(DISTINCT e.UserId) AS NumberOfEldersWithSupporterBadge\nFROM elder_badge e;"
+  },
+  "625": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "631": {
+    "baseline_sql": "SELECT COUNT(*) \nFROM posts \nWHERE OwnerUserId = 66;",
+    "entropy_sql": "SELECT COUNT(*) \nFROM posts \nWHERE OwnerUserId = 66;"
+  },
+  "653": {
+    "baseline_sql": "SELECT OwnerDisplayName \nFROM posts \nORDER BY ViewCount DESC \nLIMIT 1;",
+    "entropy_sql": "WITH p_popular AS (\n    SELECT Id, Title, ViewCount, OwnerDisplayName\n    FROM posts\n    ORDER BY ViewCount DESC\n    LIMIT 1\n)\nSELECT OwnerDisplayName FROM p_popular;"
+  },
+  "656": {
+    "baseline_sql": "SELECT p.ParentId, u.DisplayName AS ParentDisplayName\nFROM posts p\nINNER JOIN users u ON p.OwnerUserId = u.Id\nWHERE p.ParentId = (SELECT ParentId FROM posts WHERE ParentId IS NOT NULL ORDER BY Score DESC LIMIT 1);",
+    "entropy_sql": "WITH c_parent_info AS (\n    SELECT p.ParentId, u.DisplayName\n    FROM posts p\n    JOIN users u ON p.OwnerUserId = u.Id\n    WHERE p.Score = (SELECT MAX(Score) FROM posts)\n)\nSELECT DisplayName FROM c_parent_info;"
+  },
+  "657": {
+    "baseline_sql": "SELECT u.DisplayName, u.WebsiteUrl\nFROM users u\nJOIN votes v ON u.Id = v.UserId\nWHERE v.PostId = (SELECT PostId FROM votes WHERE VoteTypeId = 8 ORDER BY BountyAmount DESC LIMIT 1);",
+    "entropy_sql": "SELECT u.DisplayName, u.WebsiteUrl\nFROM votes v\nINNER JOIN users u ON v.UserId = u.Id\nWHERE v.VoteTypeId = 8\nORDER BY v.BountyAmount DESC\nLIMIT 1;"
+  },
+  "690": {
+    "baseline_sql": "WITH latest_emmett_badge AS (\n    SELECT Id, Name, Date\n    FROM badges\n    WHERE UserId = (SELECT Id FROM users WHERE DisplayName = 'Emmett') AND Date = (SELECT MAX(Date) FROM badges WHERE UserId = (SELECT Id FROM users WHERE DisplayName = 'Emmett'))\n)\nSELECT * FROM latest_emmett_badge;",
+    "entropy_sql": "WITH user_quorum_badge_date AS (\n    SELECT b.Id, b.Name, b.Date\n    FROM badges b\n    JOIN users u ON b.UserId = u.Id\n    WHERE u.DisplayName = 'Emmett' AND b.Name = 'Quorum'\n    ORDER BY b.Date DESC\n    LIMIT 1\n)\nSELECT * FROM user_quorum_badge_date;"
+  },
+  "720": {
+    "baseline_sql": "WITH superhero_details AS (\n    SELECT full_name\n    FROM superhero\n    WHERE id IN (\n        SELECT hero_id\n        FROM hero_power\n        GROUP BY hero_id\n        HAVING COUNT(power_id) > 15\n    )\n)\nSELECT full_name FROM superhero_details;",
+    "entropy_sql": "SELECT full_name\nFROM superhero\nWHERE id IN (\n    SELECT hero_id\n    FROM hero_power\n    GROUP BY hero_id\n    HAVING COUNT(power_id) > 15\n) AND full_name IS NOT NULL;"
+  },
+  "726": {
+    "baseline_sql": "WITH final_ranked_marvel_heroes AS (\n    SELECT superhero_name, height_cm,\n           ROW_NUMBER() OVER (ORDER BY height_cm DESC) AS rank\n    FROM superhero s\n    INNER JOIN publisher p ON s.publisher_id = p.id\n    WHERE p.publisher_name = 'Marvel Comics' AND height_cm > 0 AND height_cm IS NOT NULL\n)\nSELECT * FROM final_ranked_marvel_heroes;",
+    "entropy_sql": "WITH marvel_heroes AS (\n    SELECT s.id, s.superhero_name, s.height_cm\n    FROM superhero s\n    INNER JOIN publisher p ON s.publisher_id = p.id\n    WHERE p.publisher_name = 'Marvel Comics'\n),\nsorted_marvel_heroes AS (\n    SELECT superhero_name, height_cm\n    FROM marvel_heroes\n    ORDER BY height_cm DESC\n),\nfinal_ranked_marvel_heroes AS (\n    SELECT superhero_name, height_cm,\n           ROW_NUMBER() OVER (ORDER BY height_cm DESC) AS rank\n    FROM sorted_marvel_heroes\n)\nSELECT * FROM final_ranked_marvel_heroes;"
+  },
+  "729": {
+    "baseline_sql": "WITH marvel_superheroes AS (\n    SELECT id, height_cm\n    FROM superhero\n    WHERE publisher_id IN (SELECT id FROM publisher WHERE publisher_name = 'Marvel Comics')\n),\navg_height AS (\n    SELECT AVG(height_cm) AS average_height\n    FROM marvel_superheroes\n)\nSELECT average_height FROM avg_height;",
+    "entropy_sql": "WITH avg_height_marvel AS (\n    SELECT AVG(height_cm) AS average_height\n    FROM superhero\n    WHERE publisher_id = (SELECT id FROM publisher WHERE publisher_name = 'Marvel Comics')\n)\nSELECT * FROM avg_height_marvel;"
+  },
+  "732": {
+    "baseline_sql": "SELECT p.publisher_name\nFROM superhero s\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nJOIN publisher p ON s.publisher_id = p.id\nWHERE a.attribute_name = 'Speed' AND ha.attribute_value = (SELECT MIN(attribute_value) FROM hero_attribute WHERE attribute_id = (SELECT id FROM attribute WHERE attribute_name = 'Speed'));",
+    "entropy_sql": "SELECT p.publisher_name, s.superhero_name, ha.attribute_value\nFROM superhero s\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nJOIN publisher p ON s.publisher_id = p.id\nWHERE a.attribute_name = 'Speed'\nORDER BY ha.attribute_value ASC\nLIMIT 1;"
+  },
+  "734": {
+    "baseline_sql": "SELECT publisher_name FROM publisher WHERE id = (SELECT publisher_id FROM superhero WHERE superhero_name = 'Blue Beetle II');",
+    "entropy_sql": "SELECT publisher_name FROM publisher WHERE id IN (SELECT publisher_id FROM superhero WHERE superhero_name = 'Blue Beetle II');"
+  },
+  "758": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "760": {
+    "baseline_sql": "SELECT \n    CAST(COUNT(CASE WHEN publisher_id = (SELECT id FROM publisher WHERE publisher_name = 'Marvel Comics') THEN 1 ELSE NULL END) AS REAL) * 100 / COUNT(*) AS percentage\nFROM \n    superhero\nWHERE \n    height_cm BETWEEN 150 AND 180;",
+    "entropy_sql": "WITH filtered_heroes AS (\n    SELECT *\n    FROM superhero\n    WHERE height_cm BETWEEN 150 AND 180\n),\nmarvel_heroes AS (\n    SELECT COUNT(*) AS count_marvel\n    FROM filtered_heroes\n    INNER JOIN publisher ON filtered_heroes.publisher_id = publisher.id\n    WHERE publisher.publisher_name = 'Marvel Comics'\n),\ntotal_filtered_heroes AS (\n    SELECT COUNT(*) AS total_count\n    FROM filtered_heroes\n)\nSELECT CAST(marvel_heroes.count_marvel AS REAL) * 100 / total_filtered_heroes.total_count AS percentage\nFROM marvel_heroes, total_filtered_heroes;"
+  },
+  "766": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "772": {
+    "baseline_sql": "WITH c_rows AS (\n    SELECT s.id\n    FROM superhero AS s\n    INNER JOIN gender AS g ON s.gender_id = g.id\n    INNER JOIN publisher AS p ON s.publisher_id = p.id\n    WHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics'\n),\nt_final AS (\n    SELECT cc.eye_colour_id, cc.hair_colour_id, cc.skin_colour_id\n    FROM c_rows cr\n    INNER JOIN superhero cc ON cr.id = cc.id\n)\nSELECT cc.eye_colour_id, cc.hair_colour_id, cc.skin_colour_id\nFROM t_final cc;",
+    "entropy_sql": "WITH c_cols AS (\n    SELECT s.id, s.eye_colour_id, s.hair_colour_id, s.skin_colour_id\n    FROM superhero s\n    JOIN gender g ON s.gender_id = g.id\n    JOIN publisher p ON s.publisher_id = p.id\n    WHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics'\n),\nfinal_colours AS (\n    SELECT eye_colour_id, hair_colour_id, skin_colour_id\n    FROM c_cols\n)\nSELECT eye_colour_id, hair_colour_id, skin_colour_id FROM final_colours;"
+  },
+  "778": {
+    "baseline_sql": "SELECT s.superhero_name \nFROM superhero AS s\nJOIN hero_power AS hp ON s.id = hp.hero_id\nJOIN superpower AS sp ON hp.power_id = sp.id\nWHERE sp.power_name = 'Adaptation';",
+    "entropy_sql": "SELECT DISTINCT superhero_name \nFROM superhero \nJOIN hero_power AS hp ON superhero.id = hp.hero_id \nJOIN superpower AS sp ON hp.power_id = sp.id \nWHERE sp.power_name = 'Adaptation';"
+  },
+  "797": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "812": {
+    "baseline_sql": "WITH blue_eyed_heroes AS (\n    SELECT superhero_name, full_name\n    FROM superhero\n    JOIN colour ON superhero.eye_colour_id = colour.id\n    WHERE colour.colour = 'Blue'\n)\nSELECT * FROM blue_eyed_heroes\nLIMIT 5;",
+    "entropy_sql": "SELECT full_name \nFROM superhero \nJOIN colour ON superhero.eye_colour_id = colour.id \nWHERE colour.colour = 'Blue' \nLIMIT 5;"
+  },
+  "847": {
+    "baseline_sql": "SELECT d.surname\nFROM drivers d\nJOIN qualifying q ON d.driverId = q.driverId\nWHERE q.raceId = 19 AND q.q2 IS NOT NULL\nORDER BY q.q2 ASC\nLIMIT 1;",
+    "entropy_sql": "WITH q_times AS (\n    SELECT driverId, MIN(q2) AS min_q2\n    FROM qualifying\n    WHERE raceId = 19 AND q2 IS NOT NULL\n    GROUP BY driverId\n),\nbest_lap_driver AS (\n    SELECT driverId\n    FROM q_times\n    ORDER BY min_q2 ASC\n    LIMIT 1\n),\ndriver_surname AS (\n    SELECT d.surname\n    FROM drivers d\n    JOIN best_lap_driver bld ON d.driverId = bld.driverId\n)\nSELECT * FROM driver_surname;"
+  },
+  "857": {
+    "baseline_sql": "SELECT lat, lng \nFROM circuits \nWHERE circuitId = (\n    SELECT circuitId \n    FROM races \n    WHERE name = 'Abu Dhabi Grand Prix'\n);",
+    "entropy_sql": "SELECT lat, lng \nFROM circuits \nWHERE circuitId = (\n    SELECT circuitId \n    FROM races \n    WHERE name = 'Abu Dhabi Grand Prix'\n);"
+  },
+  "860": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "864": {
+    "baseline_sql": "WITH race_info AS (\n    SELECT raceId\n    FROM races\n    WHERE date = '2015-11-29'\n)\nSELECT COUNT(DISTINCT driverId) AS num_drivers_finished\nFROM results\nWHERE raceId IN (SELECT raceId FROM race_info);",
+    "entropy_sql": "WITH race_info AS (\n    SELECT raceId\n    FROM races\n    WHERE date = '2015-11-29'\n)\nSELECT COUNT(DISTINCT driverId) AS num_drivers_finished\nFROM results\nWHERE raceId IN (SELECT raceId FROM race_info);"
+  },
+  "882": {
+    "baseline_sql": "WITH sgp_first_year AS (\n    SELECT MIN(YEAR) AS year\n    FROM races\n    WHERE name = 'Singapore Grand Prix'\n)\nSELECT * FROM sgp_first_year;",
+    "entropy_sql": "SELECT year\nFROM races\nWHERE name = 'Singapore Grand Prix'\nORDER BY year ASC\nLIMIT 1;"
+  },
+  "896": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "929": {
+    "baseline_sql": "SELECT DISTINCT r.raceId, r.name\nFROM races r\nINNER JOIN results res ON r.raceId = res.raceId\nWHERE res.driverId = 1;",
+    "entropy_sql": "SELECT DISTINCT r.name\nFROM races r\nINNER JOIN results res ON r.raceId = res.raceId\nINNER JOIN drivers d ON res.driverId = d.driverId\nWHERE d.forename = 'Lewis' AND d.surname = 'Hamilton';"
+  },
+  "937": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "939": {
+    "baseline_sql": "WITH drivers_un AS (\n    SELECT driverId\n    FROM drivers\n    WHERE nationality = 'British'\n)\nSELECT COUNT(*) AS num_drivers\nFROM drivers_un\nJOIN results ON drivers_un.driverId = results.driverId\nJOIN races ON results.raceId = races.raceId\nWHERE races.year = 2008 AND races.name = 'Australian Grand Prix';",
+    "entropy_sql": "WITH drivers_un AS (\n    SELECT driverId\n    FROM drivers\n    WHERE nationality = 'British'\n)\nSELECT COUNT(*) AS num_drivers\nFROM drivers_un\nJOIN results ON drivers_un.driverId = results.driverId\nJOIN races ON results.raceId = races.raceId\nWHERE races.year = 2008 AND races.name = 'Australian Grand Prix';"
+  },
+  "944": {
+    "baseline_sql": "WITH champion_time AS (\n    SELECT TIME AS champion_time\n    FROM results\n    WHERE position = 1 AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n),\nlast_driver_time AS (\n    SELECT TIME AS last_driver_time\n    FROM results\n    WHERE position = (SELECT MAX(position) FROM results WHERE raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    ))\n    AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n),\nincremental_time AS (\n    SELECT TIME AS incremental_time\n    FROM results\n    WHERE position = 2 AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n),\nchampion_time_seconds AS (\n    SELECT strftime('%M', champion_time) * 60 + strftime('%S', champion_time) AS seconds\n    FROM champion_time\n),\nlast_driver_time_seconds AS (\n    SELECT strftime('%M', last_driver_time) * 60 + strftime('%S', last_driver_time) AS seconds\n    FROM last_driver_time\n),\nincremental_time_seconds AS (\n    SELECT strftime('%M', incremental_time) * 60 + strftime('%S', incremental_time) AS seconds\n    FROM incremental_time\n),\ntime_difference AS (\n    SELECT (incremental_time_seconds.seconds - champion_time_seconds.seconds) AS difference_in_seconds\n    FROM incremental_time_seconds, champion_time_seconds\n),\npercentage_increase AS (\n    SELECT (time_difference.difference_in_seconds / last_driver_time_seconds.seconds) * 100 AS percentage_increase\n    FROM time_difference, last_driver_time_seconds\n)\nSELECT percentage_increase FROM percentage_increase;",
+    "entropy_sql": "WITH champion_time AS (\n    SELECT TIME, milliseconds\n    FROM results\n    WHERE position = 1 AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n),\nlast_driver_time AS (\n    SELECT TIME, milliseconds\n    FROM results\n    WHERE position = (SELECT MAX(position) FROM results WHERE raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    ))\n    AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n),\nincremental_time AS (\n    SELECT TIME, milliseconds\n    FROM results\n    WHERE position = 2 AND raceid IN (\n        SELECT raceid\n        FROM races\n        WHERE YEAR = 2008 AND name = 'Australian Grand Prix'\n    )\n)\nSELECT \n    ((strftime('%M', incremental_time.TIME) * 60 + strftime('%S', incremental_time.TIME) - strftime('%M', champion_time.TIME) * 60 - strftime('%S', champion_time.TIME)) / strftime('%M', champion_time.TIME) * 60 - strftime('%S', champion_time.TIME)) * 100 AS percentage_faster\nFROM \n    incremental_time,\n    champion_time;"
+  },
+  "956": {
+    "baseline_sql": "WITH d_cols AS (\n    SELECT driverId, forename, surname, dob\n    FROM drivers\n),\nd_rows AS (\n    SELECT driverId, forename, surname\n    FROM d_cols\n    WHERE STRFTIME('%Y', dob) > '1975'\n),\nr_rank AS (\n    SELECT driverId, rank\n    FROM results\n    WHERE rank = 2\n),\ndr_filtered AS (\n    SELECT driverId, forename, surname\n    FROM d_rows\n    WHERE driverId IN (SELECT driverId FROM r_rank)\n)\nSELECT driverId, forename, surname FROM dr_filtered;",
+    "entropy_sql": "SELECT forename, surname \nFROM drivers \nWHERE STRFTIME('%Y', dob) > '1975' AND driverId IN (\n    SELECT driverId \n    FROM results \n    WHERE rank = 2\n);"
+  },
+  "971": {
+    "baseline_sql": "WITH d_oldest AS (\n    SELECT driverRef, dob\n    FROM drivers\n    WHERE nationality = 'German'\n    ORDER BY dob ASC\n    LIMIT 1\n)\nSELECT driverRef FROM d_oldest;",
+    "entropy_sql": "SELECT driverRef \nFROM drivers \nWHERE nationality = 'German' \nORDER BY dob ASC \nLIMIT 1;"
+  },
+  "972": {
+    "baseline_sql": "",
+    "entropy_sql": "WITH fast_laps AS (\n    SELECT driverId, MIN(fastestLapTime) AS min_fastestLapTime\n    FROM results\n    WHERE fastestLapTime IS NOT NULL\n    GROUP BY driverId\n),\nd_filtered AS (\n    SELECT driverId, dob, code\n    FROM drivers\n    WHERE STRFTIME('%Y', dob) = '1971' AND driverId IN (SELECT driverId FROM fast_laps)\n)\nSELECT d.driverId, d.code\nFROM d_filtered d\nJOIN fast_laps fl ON d.driverId = fl.driverId\nORDER BY fl.min_fastestLapTime;"
+  },
+  "996": {
+    "baseline_sql": "SELECT COUNT(*) / 10 AS annual_avg_races\nFROM races\nWHERE date BETWEEN '2000-01-01' AND '2010-12-31';",
+    "entropy_sql": "WITH race_counts AS (\n    SELECT COUNT(*) AS num_races\n    FROM races\n    WHERE date BETWEEN '2000-01-01' AND '2010-12-31'\n)\nSELECT AVG(num_races) AS annual_average FROM race_counts;"
+  },
+  "997": {
+    "baseline_sql": "WITH nationalities AS (\n    SELECT nationality, COUNT(*) AS count\n    FROM drivers\n    GROUP BY nationality\n)\nSELECT nationality FROM nationalities\nWHERE count = (SELECT MAX(count) FROM nationalities);",
+    "entropy_sql": "WITH nationalities AS (\n    SELECT nationality, COUNT(*) AS count\n    FROM drivers\n    GROUP BY nationality\n)\nSELECT nationality FROM nationalities WHERE count = (SELECT MAX(count) FROM nationalities);"
+  },
+  "1003": {
+    "baseline_sql": "WITH race_id AS (\n    SELECT raceId\n    FROM races\n    WHERE name = 'Canadian Grand Prix'\n),\ntop_driver AS (\n    SELECT driverId\n    FROM results\n    WHERE raceId IN (SELECT raceId FROM race_id) AND statusId = 3\n    GROUP BY driverId\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT COUNT(*) AS num_accidents\nFROM results\nWHERE raceId IN (SELECT raceId FROM race_id) AND driverId = (SELECT driverId FROM top_driver) AND statusId = 3;",
+    "entropy_sql": "WITH race_id AS (\n    SELECT raceId\n    FROM races\n    WHERE name = 'Canadian Grand Prix'\n),\ntop_accident_driver AS (\n    SELECT driverId, COUNT(*) AS accident_count\n    FROM results\n    WHERE raceId IN (SELECT raceId FROM race_id) AND statusId = 3\n    GROUP BY driverId\n    ORDER BY accident_count DESC\n    LIMIT 1\n)\nSELECT accident_count FROM top_accident_driver;"
+  },
+  "1013": {
+    "baseline_sql": "WITH circuit_info AS (\n    SELECT circuitId\n    FROM circuits\n    WHERE name = 'Austrian Grand Prix Circuit'\n),\nlap_times_filtered AS (\n    SELECT l.lap, l.time\n    FROM lapTimes l\n    INNER JOIN races r ON l.raceId = r.raceId\n    INNER JOIN circuit_info c ON r.circuitId = c.circuitId\n)\nSELECT MIN(time) AS lap_record\nFROM lap_times_filtered;",
+    "entropy_sql": "WITH circuit_info AS (\n    SELECT circuitId\n    FROM circuits\n    WHERE name = 'Austrian Grand Prix Circuit'\n),\nfastest_lap_time AS (\n    SELECT MIN(time) AS min_time\n    FROM lapTimes\n    WHERE raceId IN (SELECT raceId FROM races WHERE circuitId = (SELECT circuitId FROM circuit_info))\n)\nSELECT min_time FROM fastest_lap_time;"
+  },
+  "1032": {
+    "baseline_sql": "WITH match_counts AS (\n    SELECT league_id, COUNT(*) AS match_count\n    FROM Match\n    GROUP BY league_id\n),\ntop_league_details AS (\n    SELECT l.id, l.name, mc.match_count\n    FROM League l\n    JOIN match_counts mc ON l.id = mc.league_id\n    WHERE mc.match_count = (SELECT MAX(match_count) FROM match_counts)\n)\nSELECT name, match_count FROM top_league_details;",
+    "entropy_sql": "WITH league_with_max_matches AS (\n    SELECT league_id, COUNT(*) AS match_count\n    FROM Match\n    GROUP BY league_id\n    ORDER BY match_count DESC\n    LIMIT 1\n),\nleague_name_and_match_count AS (\n    SELECT l.name AS league_name, lm.match_count\n    FROM League l\n    JOIN league_with_max_matches lm ON l.id = lm.league_id\n)\nSELECT league_name, match_count FROM league_name_and_match_count;"
+  },
+  "1035": {
+    "baseline_sql": "SELECT team_fifa_api_id \nFROM Team \nWHERE team_api_id IN (\n    SELECT team_api_id \n    FROM Team_Attributes \n    WHERE buildUpPlaySpeed > 50 AND buildUpPlaySpeed < 60\n);",
+    "entropy_sql": "SELECT T.team_fifa_api_id\nFROM Team AS T\nJOIN Team_Attributes AS TA ON T.team_api_id = TA.team_api_id\nWHERE TA.buildUpPlaySpeed BETWEEN 50 AND 60;"
+  },
+  "1036": {
+    "baseline_sql": "",
+    "entropy_sql": "WITH avg_build_up_play AS (\n    SELECT AVG(buildUpPlayPassing) AS avg_passing\n    FROM Team_Attributes\n    WHERE strftime('%Y', date) = '2012' AND buildUpPlayPassing IS NOT NULL\n),\nhigh_passing_teams AS (\n    SELECT team_long_name\n    FROM Team_Attributes ta\n    JOIN Team t ON ta.team_api_id = t.team_api_id\n    WHERE strftime('%Y', ta.date) = '2012' AND ta.buildUpPlayPassing > (SELECT avg_passing FROM avg_build_up_play)\n)\nSELECT team_long_name FROM high_passing_teams;"
+  },
+  "1040": {
+    "baseline_sql": "WITH player_heights AS (\n    SELECT p.player_name, p.height, AVG(pa.heading_accuracy) AS avg_heading_accuracy\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.height > 180\n    GROUP BY p.player_name, p.height\n),\nplayer_rankings AS (\n    SELECT player_name, avg_heading_accuracy,\n           ROW_NUMBER() OVER (ORDER BY avg_heading_accuracy DESC) AS rank\n    FROM player_heights\n)\nSELECT player_name, avg_heading_accuracy\nFROM player_rankings\nWHERE rank <= 10\nORDER BY avg_heading_accuracy DESC;",
+    "entropy_sql": ""
+  },
+  "1047": {
+    "baseline_sql": "SELECT heading_accuracy \nFROM Player_Attributes \nWHERE player_api_id IN (\n    SELECT player_api_id \n    FROM Player \n    WHERE player_name = 'Francois Affolter'\n) \nAND date = '2014-09-18 00:00:00';",
+    "entropy_sql": ""
+  },
+  "1063": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1082": {
+    "baseline_sql": "WITH league_info AS (\n    SELECT l.id AS league_id, l.name AS league_name\n    FROM League l\n    INNER JOIN Country c ON l.country_id = c.id\n    WHERE c.name = 'Germany'\n)\nSELECT league_name FROM league_info;",
+    "entropy_sql": "SELECT l.id, l.name\nFROM League l\nJOIN Country c ON l.country_id = c.id\nWHERE c.name = 'Germany';"
+  },
+  "1085": {
+    "baseline_sql": "WITH player_crossings AS (\n    SELECT p.player_name, pa.crossing\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n),\nranked_crossers AS (\n    SELECT player_name, crossing,\n           RANK() OVER (ORDER BY crossing DESC) AS rank\n    FROM player_crossings\n)\nSELECT player_name, crossing\nFROM ranked_crossers\nWHERE rank <= 3 AND player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone');",
+    "entropy_sql": "WITH crossing_stats AS (\n    SELECT p.player_name, pa.crossing\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n),\nbest_crosser AS (\n    SELECT player_name, crossing\n    FROM crossing_stats\n    WHERE crossing = (SELECT MAX(crossing) FROM crossing_stats)\n)\nSELECT * FROM best_crosser;"
+  },
+  "1087": {
+    "baseline_sql": "WITH filtered_players AS (\n    SELECT p.id\n    FROM Player AS p\n    JOIN Player_Attributes AS pa ON p.player_api_id = pa.player_api_id\n    WHERE p.height > 180 AND pa.volleys > 70\n)\nSELECT COUNT(*) AS answer FROM filtered_players;",
+    "entropy_sql": "SELECT COUNT(DISTINCT p.id) AS player_count\nFROM Player p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.height > 180 AND pa.volleys > 70;"
+  },
+  "1098": {
+    "baseline_sql": "WITH ajax_data AS (\n    SELECT ta.chanceCreationPassing, ta.chanceCreationPassingClass\n    FROM Team_Attributes ta\n    JOIN Team t ON ta.team_api_id = t.team_api_id\n    WHERE t.team_long_name = 'Ajax'\n),\nmax_chance_creation AS (\n    SELECT MAX(chanceCreationPassing) AS max_score, chanceCreationPassingClass\n    FROM ajax_data\n)\nSELECT max_score, chanceCreationPassingClass FROM max_chance_creation;",
+    "entropy_sql": "WITH ajax_teams AS (\n    SELECT team_api_id\n    FROM Team\n    WHERE team_long_name = 'Ajax'\n),\najax_chance_creation AS (\n    SELECT MAX(T2.chanceCreationPassing) AS max_chance_creation,\n           T2.chanceCreationPassingClass AS classification\n    FROM ajax_teams AS T1\n    JOIN Team_Attributes AS T2 ON T1.team_api_id = T2.team_api_id\n)\nSELECT max_chance_creation, classification FROM ajax_chance_creation;"
+  },
+  "1104": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1124": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1158": {
+    "baseline_sql": "WITH patient_birth AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1937'\n),\ncholesterol_data AS (\n    SELECT L.ID, L.`T-CHO`\n    FROM Laboratory L\n    INNER JOIN patient_birth pb ON L.ID = pb.ID\n)\nSELECT p.ID, p.Description\nFROM Patient p\nINNER JOIN cholesterol_data cd ON p.ID = cd.ID\nWHERE cd.`T-CHO` >= 250;",
+    "entropy_sql": "WITH patient_birth AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1937'\n),\nhigh_cholesterol_patients AS (\n    SELECT L.ID\n    FROM Laboratory L\n    JOIN patient_birth PB ON L.ID = PB.ID\n    WHERE L.`T-CHO` >= 250\n),\nfiltered_patients AS (\n    SELECT P.ID\n    FROM Patient P\n    JOIN high_cholesterol_patients HCP ON P.ID = HCP.ID\n    WHERE STRFTIME('%Y', P.Birthday) = '1937'\n)\nSELECT * FROM filtered_patients;"
+  },
+  "1161": {
+    "baseline_sql": "WITH patient_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE Admission = '+' AND strftime('%Y', 'now') - strftime('%Y', Birthday) >= '50'\n)\nSELECT AVG(T2.`aCL IgG`) AS Average_aCL_IgG\nFROM patient_info AS T1\nINNER JOIN Examination AS T2 ON T1.ID = T2.ID;",
+    "entropy_sql": "WITH patient_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE Admission = '+' AND strftime('%Y', 'now') - strftime('%Y', Birthday) >= '50'\n)\nSELECT AVG(T2.`aCL IgG`) AS Average_aCL_IgG\nFROM patient_info AS T1\nINNER JOIN Examination AS T2 ON T1.ID = T2.ID;"
+  },
+  "1182": {
+    "baseline_sql": "WITH p_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE `First Date` = '1991-06-13' AND Diagnosis = 'SJS'\n),\nl_tests AS (\n    SELECT COUNT(*) AS test_count\n    FROM Laboratory\n    WHERE ID IN (SELECT ID FROM p_info) AND STRFTIME('%Y', `Date`) = '1995'\n)\nSELECT test_count FROM l_tests;",
+    "entropy_sql": "WITH p_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE `First Date` = '1991-06-13' AND Diagnosis = 'SJS'\n)\nSELECT COUNT(*) AS lab_test_count\nFROM Laboratory\nWHERE ID IN (SELECT ID FROM p_info) AND STRFTIME('%Y', `Date`) = '1995';"
+  },
+  "1195": {
+    "baseline_sql": "WITH patient_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE SEX = 'F' AND Diagnosis = 'SLE'\n),\nlab_data AS (\n    SELECT ALB\n    FROM Laboratory\n    WHERE ID IN (SELECT ID FROM patient_info) AND PLT > 400\n)\nSELECT AVG(ALB) AS average_albumin_level FROM lab_data;",
+    "entropy_sql": "WITH patient_info AS (\n    SELECT ID\n    FROM Patient\n    WHERE SEX = 'F' AND Diagnosis = 'SLE'\n),\nlab_info AS (\n    SELECT ALB\n    FROM Laboratory\n    WHERE ID IN (SELECT ID FROM patient_info) AND PLT > 400\n)\nSELECT AVG(ALB) AS average_albumin_level FROM lab_info;"
+  },
+  "1201": {
+    "baseline_sql": "WITH patient_info AS (\n    SELECT ID, SEX\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1980' AND Diagnosis = 'RA'\n),\nfemale_patients AS (\n    SELECT COUNT(*) AS female_count\n    FROM patient_info\n    WHERE SEX = 'F'\n)\nSELECT CAST(female_count AS REAL) * 100 / COUNT(*) AS percentage_women\nFROM patient_info, female_patients;",
+    "entropy_sql": "WITH patient_info AS (\n    SELECT ID, SEX\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1980' AND Diagnosis = 'RA'\n),\nfemale_patients AS (\n    SELECT COUNT(*) AS female_count\n    FROM patient_info\n    WHERE SEX = 'F'\n),\ntotal_patients AS (\n    SELECT COUNT(*) AS total_count\n    FROM patient_info\n)\nSELECT CAST(female_count AS REAL) * 100 / total_count AS female_percentage\nFROM female_patients, total_patients;"
+  },
+  "1213": {
+    "baseline_sql": "WITH p_birthday AS (\n    SELECT ID\n    FROM Patient\n    WHERE Birthday = '1982-04-01'\n),\nlab_data AS (\n    SELECT ALP\n    FROM Laboratory\n    WHERE ID IN (SELECT ID FROM p_birthday)\n),\nalp_status AS (\n    SELECT CASE WHEN ALP < 300 THEN 'Yes' ELSE 'No' END AS ALP_Within_Normal_Range\n    FROM lab_data\n)\nSELECT p_birthday.ID, alp_status.ALP_Within_Normal_Range\nFROM p_birthday\nJOIN alp_status ON 1=1;",
+    "entropy_sql": "WITH p_birthday AS (\n    SELECT ID\n    FROM Patient\n    WHERE Birthday = '1982-04-01'\n),\nl_alp AS (\n    SELECT ID, ALP\n    FROM Laboratory\n    WHERE ID IN (SELECT ID FROM p_birthday)\n),\nalp_range AS (\n    SELECT ID, ALP\n    FROM l_alp\n    WHERE ALP < 300\n)\nSELECT p.ID, p.Description, al.ALP\nFROM Patient p\nJOIN alp_range al ON p.ID = al.ID;"
+  },
+  "1217": {
+    "baseline_sql": "WITH birth_year AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1982'\n),\nalbumin_status AS (\n    SELECT L.ID, L.ALB,\n           CASE WHEN L.ALB BETWEEN 3.5 AND 5.5 THEN 'Within Normal Range' ELSE 'Outside Normal Range' END AS Status\n    FROM Laboratory AS L\n    INNER JOIN birth_year b ON L.ID = b.ID\n)\nSELECT ID, Status\nFROM albumin_status\nWHERE Status = 'Within Normal Range';",
+    "entropy_sql": "WITH birth_year AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y', Birthday) = '1982'\n),\nalbumin_status AS (\n    SELECT L.ID, L.ALB,\n           CASE WHEN L.ALB BETWEEN 3.5 AND 5.5 THEN 'Normal' ELSE 'Abnormal' END AS Albumin_Status\n    FROM Laboratory AS L\n    INNER JOIN birth_year b ON L.ID = b.ID\n)\nSELECT p.ID, p.Description, a.Albumin_Status\nFROM Patient p\nINNER JOIN albumin_status a ON p.ID = a.ID\nORDER BY p.ID;"
+  },
+  "1224": {
+    "baseline_sql": "SELECT p.ID, p.SEX, p.Birthday, l.`T-BIL`\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.`T-BIL` = (SELECT MAX(`T-BIL`) FROM Laboratory);",
+    "entropy_sql": "WITH max_bilirubin AS (\n    SELECT MAX(`T-BIL`) AS max_value\n    FROM Laboratory\n),\ntop_bilirubin_patient AS (\n    SELECT p.ID, p.SEX, p.Birthday, l.`T-BIL`\n    FROM Patient p\n    JOIN Laboratory l ON p.ID = l.ID\n    WHERE l.`T-BIL` = (SELECT max_value FROM max_bilirubin)\n)\nSELECT * FROM top_bilirubin_patient;"
+  },
+  "1247": {
+    "baseline_sql": "WITH male_patients AS (\n    SELECT p.ID\n    FROM Patient p\n    WHERE p.SEX = 'M'\n),\nwbc_normal AS (\n    SELECT l.ID\n    FROM Laboratory l\n    WHERE l.WBC BETWEEN 3.5 AND 9.0\n),\nfg_abnormal AS (\n    SELECT l.ID\n    FROM Laboratory l\n    WHERE l.FG <= 150 OR l.FG >= 450\n),\nmale_wbc_normal AS (\n    SELECT m.ID\n    FROM male_patients m\n    INNER JOIN wbc_normal w ON m.ID = w.ID\n),\nmale_fg_abnormal AS (\n    SELECT m.ID\n    FROM male_wbc_normal m\n    INNER JOIN fg_abnormal f ON m.ID = f.ID\n),\ncount_male_fg_abnormal AS (\n    SELECT COUNT(*) AS answer\n    FROM male_fg_abnormal\n)\nSELECT answer FROM count_male_fg_abnormal;",
+    "entropy_sql": "WITH male_patients AS (\n    SELECT p.ID\n    FROM Patient p\n    WHERE p.SEX = 'M'\n),\nwbc_normal AS (\n    SELECT l.ID\n    FROM Laboratory l\n    WHERE l.WBC BETWEEN 3.5 AND 9.0\n),\nfg_abnormal AS (\n    SELECT l.ID\n    FROM Laboratory l\n    WHERE l.FG <= 150 OR l.FG >= 450\n),\nmale_wbc_normal AS (\n    SELECT m.ID\n    FROM male_patients m\n    INNER JOIN wbc_normal w ON m.ID = w.ID\n),\nmale_fg_abnormal AS (\n    SELECT m.ID\n    FROM male_wbc_normal m\n    INNER JOIN fg_abnormal f ON m.ID = f.ID\n),\ncount_male_fg_abnormal AS (\n    SELECT COUNT(*) AS answer\n    FROM male_fg_abnormal\n)\nSELECT answer FROM count_male_fg_abnormal;"
+  },
+  "1249": {
+    "baseline_sql": "SELECT DISTINCT Diagnosis \nFROM Laboratory AS T1\nINNER JOIN Patient AS T2 ON T1.ID = T2.ID\nWHERE T1.`U-PRO` >= 30;",
+    "entropy_sql": "SELECT DISTINCT Diagnosis\nFROM Laboratory L\nJOIN Patient P ON L.ID = P.ID\nWHERE L.`U-PRO` >= 30;"
+  },
+  "1266": {
+    "baseline_sql": "SELECT p.Birthday\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.RNP NOT IN ('-', '+-')\nORDER BY p.Birthday DESC\nLIMIT 1;",
+    "entropy_sql": "SELECT p.Birthday\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.RNP NOT IN ('-', '+-')\nORDER BY p.Birthday DESC\nLIMIT 1;"
+  },
+  "1268": {
+    "baseline_sql": "WITH sm_patients AS (\n    SELECT ID\n    FROM Laboratory\n    WHERE SM NOT IN ('negative', '0')\n),\nage_calc AS (\n    SELECT ID, Birthday\n    FROM Patient\n    WHERE ID IN (SELECT ID FROM sm_patients)\n),\nsorted_patients AS (\n    SELECT ID\n    FROM age_calc\n    ORDER BY Birthday ASC\n    LIMIT 3\n)\nSELECT ID FROM sorted_patients;",
+    "entropy_sql": "WITH sm_patients AS (\n    SELECT ID\n    FROM Laboratory\n    WHERE SM NOT IN ('negative', '0')\n),\nage_calc AS (\n    SELECT ID, Birthday\n    FROM Patient\n    WHERE ID IN (SELECT ID FROM sm_patients)\n),\nsorted_patients AS (\n    SELECT ID\n    FROM age_calc\n    ORDER BY Birthday ASC\n    LIMIT 3\n)\nSELECT ID FROM sorted_patients;"
+  },
+  "1272": {
+    "baseline_sql": "SELECT p.ID\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.SSA NOT IN ('negative', '0')\nORDER BY p.`First Date` ASC\nLIMIT 1;",
+    "entropy_sql": "SELECT p.ID\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.SSA NOT IN ('negative', '0')\nORDER BY p.`First Date` ASC\nLIMIT 1;"
+  },
+  "1278": {
+    "baseline_sql": "WITH l_cols AS (\n    SELECT ID, IGG\n    FROM Laboratory\n),\nl_rows AS (\n    SELECT ID\n    FROM l_cols\n    WHERE IGG BETWEEN 900 AND 2000\n),\np_join AS (\n    SELECT e.ID\n    FROM Examination e\n    INNER JOIN Patient p ON e.ID = p.ID\n    WHERE e.ID IN (SELECT ID FROM l_rows) AND p.Admission = '+'\n),\np_count AS (\n    SELECT COUNT(*) AS answer\n    FROM p_join\n)\nSELECT answer FROM p_count;",
+    "entropy_sql": "WITH l_cols AS (\n    SELECT ID, IGG\n    FROM Laboratory\n),\nl_rows AS (\n    SELECT ID\n    FROM l_cols\n    WHERE IGG BETWEEN 900 AND 2000\n),\np_join AS (\n    SELECT e.ID\n    FROM Examination e\n    INNER JOIN Patient p ON e.ID = p.ID\n    WHERE e.ID IN (SELECT ID FROM l_rows) AND p.Admission = '+'\n),\np_count AS (\n    SELECT COUNT(*) AS answer\n    FROM p_join\n)\nSELECT * FROM p_count;"
+  },
+  "1291": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1293": {
+    "baseline_sql": "WITH high_ana_patients AS (\n    SELECT e.ID, e.ANA\n    FROM Examination e\n    JOIN Laboratory l ON e.ID = l.ID\n    WHERE l.CRE < 1.5\n),\nmax_ana AS (\n    SELECT MAX(ANA) AS max_value\n    FROM high_ana_patients\n)\nSELECT max_value FROM max_ana;",
+    "entropy_sql": "WITH high_ana_patients AS (\n    SELECT e.ID, e.ANA\n    FROM Examination e\n    JOIN Laboratory l ON e.ID = l.ID\n    WHERE l.CRE < 1.5\n),\nmax_ana AS (\n    SELECT MAX(ANA) AS max_value\n    FROM high_ana_patients\n)\nSELECT max_value FROM max_ana;"
+  },
+  "1319": {
+    "baseline_sql": "SELECT major.college\nFROM member\nINNER JOIN major ON member.link_to_major = major.major_id\nWHERE member.position = 'Vice President';",
+    "entropy_sql": "WITH m_positions AS (\n    SELECT member_id, first_name, last_name, position\n    FROM member\n    WHERE position = 'Vice President'\n),\nm_full_details AS (\n    SELECT member_id, first_name, last_name, position, email, phone, zip, college\n    FROM member AS T1\n    JOIN major AS T2 ON T1.link_to_major = T2.major_id\n    WHERE T1.position = 'Vice President'\n)\nSELECT college FROM m_full_details;"
+  },
+  "1343": {
+    "baseline_sql": "SELECT remaining\nFROM budget\nWHERE category = 'Food'\nORDER BY amount DESC\nLIMIT 1;",
+    "entropy_sql": "WITH food_budget AS (\n    SELECT amount, remaining\n    FROM budget\n    WHERE category = 'Food'\n    ORDER BY amount DESC\n    LIMIT 1\n)\nSELECT remaining FROM food_budget;"
+  },
+  "1349": {
+    "baseline_sql": "WITH event_info AS (\n    SELECT event_id\n    FROM event\n    WHERE event_name = 'September Speaker'\n),\nfiltered_budget AS (\n    SELECT SUM(amount) AS total_amount\n    FROM budget\n    WHERE link_to_event = (SELECT event_id FROM event_info) AND event_status = 'Approved'\n)\nSELECT total_amount FROM filtered_budget;",
+    "entropy_sql": "WITH event_budget AS (\n    SELECT amount\n    FROM budget\n    WHERE link_to_event IN (\n        SELECT event_id\n        FROM event\n        WHERE event_name = 'September Speaker'\n    )\n),\ntotal_budget AS (\n    SELECT SUM(amount) AS total_amount\n    FROM event_budget\n)\nSELECT total_amount FROM total_budget;"
+  },
+  "1366": {
+    "baseline_sql": "SELECT first_name, last_name\nFROM member\nWHERE member_id IN (\n    SELECT link_to_member\n    FROM attendance\n    WHERE link_to_event = 'recggMW2eyCYceNcy'\n);",
+    "entropy_sql": "SELECT first_name, last_name\nFROM member\nWHERE member_id IN (\n    SELECT link_to_member\n    FROM attendance\n    WHERE link_to_event = 'recggMW2eyCYceNcy'\n);"
+  },
+  "1368": {
+    "baseline_sql": "",
+    "entropy_sql": "SELECT major_name FROM member m\nINNER JOIN major ma ON m.link_to_major = ma.major_id\nWHERE m.phone = '809-555-3360';"
+  },
+  "1393": {
+    "baseline_sql": "SELECT CONCAT(first_name, ' ', last_name) AS full_name, email\nFROM member\nWHERE position = 'Secretary';",
+    "entropy_sql": "SELECT first_name, last_name, email\nFROM member\nWHERE position = 'Secretary';"
+  },
+  "1411": {
+    "baseline_sql": "SELECT DISTINCT expense_description\nFROM expense\nWHERE link_to_member = (SELECT member_id FROM member WHERE first_name = 'Sacha' AND last_name = 'Harrison')\n  AND expense_description IS NOT NULL;",
+    "entropy_sql": "SELECT expense_description \nFROM expense \nWHERE link_to_member = (SELECT member_id FROM member WHERE first_name = 'Sacha' AND last_name = 'Harrison');"
+  },
+  "1415": {
+    "baseline_sql": "WITH m_cols AS (\n    SELECT m.position\n    FROM member m\n    INNER JOIN major mj ON m.link_to_major = mj.major_id\n    WHERE mj.major_name = 'Business'\n)\nSELECT * FROM m_cols;",
+    "entropy_sql": "WITH m_cols AS (\n    SELECT m.position\n    FROM member m\n    INNER JOIN major mj ON m.link_to_major = mj.major_id\n    WHERE mj.major_name = 'Business'\n)\nSELECT * FROM m_cols;"
+  },
+  "1430": {
+    "baseline_sql": "WITH pizza_expenses AS (\n    SELECT e.link_to_member\n    FROM expense e\n    WHERE e.expense_description = 'Pizza' AND e.expense_date = '2019-09-10'\n),\nmember_info AS (\n    SELECT m.last_name, m.position\n    FROM member m\n    JOIN pizza_expenses pe ON m.member_id = pe.link_to_member\n)\nSELECT last_name, position FROM member_info;",
+    "entropy_sql": "WITH pizza_expenses AS (\n    SELECT e.link_to_member\n    FROM expense e\n    WHERE e.expense_date = '2019-09-10' AND e.expense_description = 'Pizza'\n)\nSELECT m.last_name, m.position\nFROM member m\nJOIN pizza_expenses pe ON m.member_id = pe.link_to_member;"
+  },
+  "1438": {
+    "baseline_sql": "SELECT college\nFROM major\nWHERE major_id = 'rec1N0upiVLy5esTO';",
+    "entropy_sql": "SELECT college\nFROM major\nWHERE major_id = 'rec1N0upiVLy5esTO';"
+  },
+  "1447": {
+    "baseline_sql": "SELECT event_name, location \nFROM event \nJOIN budget ON event.event_id = budget.link_to_event \nWHERE budget.remaining > 0;",
+    "entropy_sql": "WITH budget_info AS (\n    SELECT e.event_name, e.location, b.remaining\n    FROM event e\n    JOIN budget b ON e.event_id = b.link_to_event\n)\nSELECT event_name, location FROM budget_info WHERE remaining > 0;"
+  },
+  "1453": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1454": {
+    "baseline_sql": "WITH meeting_expenses AS (\n    SELECT SUM(expense.cost) AS total_cost, COUNT(event.event_id) AS total_events\n    FROM expense\n    JOIN budget ON expense.link_to_budget = budget.budget_id\n    JOIN event ON budget.link_to_event = event.event_id\n    WHERE event.type = 'Meeting'\n),\nmeeting_percentage AS (\n    SELECT CAST(total_cost AS REAL) / total_events * 100 AS percentage\n    FROM meeting_expenses\n)\nSELECT * FROM meeting_percentage;",
+    "entropy_sql": "WITH meeting_expenses AS (\n    SELECT SUM(expense.cost) AS total_cost, COUNT(event.event_id) AS total_meetings\n    FROM expense\n    JOIN budget ON expense.link_to_budget = budget.budget_id\n    JOIN event ON budget.link_to_event = event.event_id\n    WHERE event.type = 'Meeting'\n),\nmeeting_percentage AS (\n    SELECT CAST(total_cost AS REAL) / total_meetings * 100 AS percentage\n    FROM meeting_expenses\n)\nSELECT percentage FROM meeting_percentage;"
+  },
+  "1466": {
+    "baseline_sql": "WITH secretary_college AS (\n    SELECT m.first_name, m.last_name, m.position, m.link_to_major, ma.college\n    FROM member m\n    INNER JOIN major ma ON m.link_to_major = ma.major_id\n    WHERE m.position = 'Secretary'\n)\nSELECT CONCAT(first_name, ' ', last_name) AS full_name, college FROM secretary_college;",
+    "entropy_sql": "WITH secretary_complete AS (\n    SELECT CONCAT(m.first_name, ' ', m.last_name) AS full_name, ma.college\n    FROM member m\n    INNER JOIN major ma ON m.link_to_major = ma.major_id\n    WHERE m.position = 'Secretary'\n)\nSELECT * FROM secretary_complete;"
+  },
+  "1467": {
+    "baseline_sql": "SELECT SUM(spent) AS total_amount_spent, event_name\nFROM budget b\nJOIN event e ON b.link_to_event = e.event_id\nWHERE b.category = 'Speaker Gifts'\nGROUP BY event_name\nORDER BY total_amount_spent DESC;",
+    "entropy_sql": "SELECT SUM(spent) AS total_amount_spent, event_name \nFROM budget \nINNER JOIN event ON budget.link_to_event = event.event_id \nWHERE category = 'Speaker Gifts' \nGROUP BY event_name \nORDER BY total_amount_spent DESC;"
+  },
+  "1472": {
+    "baseline_sql": "WITH ym_data AS (\n    SELECT CustomerID, Consumption\n    FROM yearmonth\n    WHERE Date BETWEEN '201201' AND '201212'\n)\nSELECT t.CustomerID, t.Consumption\nFROM ym_data t\nORDER BY t.Consumption ASC\nLIMIT 1;",
+    "entropy_sql": "WITH ym_data AS (\n    SELECT CustomerID, SUM(Consumption) AS TotalConsumption\n    FROM yearmonth\n    WHERE Date BETWEEN '201201' AND '201212'\n    GROUP BY CustomerID\n)\nSELECT c.CustomerID, c.Segment, c.Currency, y.TotalConsumption\nFROM ym_data y\nJOIN customers c ON y.CustomerID = c.CustomerID\nORDER BY y.TotalConsumption ASC\nLIMIT 1;"
+  },
+  "1479": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1485": {
+    "baseline_sql": "",
+    "entropy_sql": ""
+  },
+  "1511": {
+    "baseline_sql": "WITH c_cols AS (\n    SELECT c.CustomerID, c.Currency, t.Price\n    FROM customers AS c\n    JOIN transactions_1k AS t ON c.CustomerID = t.CustomerID\n),\nc_rows AS (\n    SELECT CustomerID, AVG(Price) AS avg_price\n    FROM c_cols\n    WHERE Currency = 'EUR'\n    GROUP BY CustomerID\n),\nfinal_avg AS (\n    SELECT AVG(avg_price) AS answer\n    FROM c_rows\n)\nSELECT * FROM final_avg;",
+    "entropy_sql": "WITH c_currency AS (\n    SELECT CustomerID\n    FROM customers\n    WHERE Currency = 'Euro'\n)\nSELECT AVG(transactions_1k.Price) AS AverageTotalPrice\nFROM transactions_1k\nJOIN c_currency ON transactions_1k.CustomerID = c_currency.CustomerID;"
+  },
+  "1527": {
+    "baseline_sql": "WITH tr_sum AS (\n    SELECT GasStationID, SUM(Amount) AS TotalRevenue\n    FROM transactions_1k\n    GROUP BY GasStationID\n),\nmax_revenue AS (\n    SELECT MAX(TotalRevenue) AS MaxRev\n    FROM tr_sum\n),\nmax_gas_station AS (\n    SELECT GasStationID\n    FROM tr_sum\n    WHERE TotalRevenue = (SELECT MaxRev FROM max_revenue)\n),\ngs_details AS (\n    SELECT gs.GasStationID, gs.ChainID, gs.Country, gs.Segment\n    FROM gasstations AS gs\n    WHERE gs.GasStationID = (SELECT GasStationID FROM max_gas_station)\n)\nSELECT * FROM gs_details;",
+    "entropy_sql": "WITH g_station_revenue AS (\n    SELECT gs.GasStationID, SUM(t.Amount) AS TotalRevenue\n    FROM gasstations gs\n    JOIN transactions_1k t ON gs.GasStationID = t.GasStationID\n    GROUP BY gs.GasStationID\n),\ng_station_ranked AS (\n    SELECT GasStationID, TotalRevenue,\n           ROW_NUMBER() OVER (ORDER BY TotalRevenue DESC) AS rank\n    FROM g_station_revenue\n),\ntop_gas_station AS (\n    SELECT GasStationID\n    FROM g_station_ranked\n    WHERE rank = 1\n),\ntop_gas_station_details AS (\n    SELECT gs.*\n    FROM gasstations gs\n    JOIN top_gas_station tg ON gs.GasStationID = tg.GasStationID\n)\nSELECT * FROM top_gas_station_details;"
+  },
+  "1533": {
+    "baseline_sql": "WITH filtered_transactions AS (\n    SELECT CustomerID, Date, Time, ProductID, Price / Amount AS price_per_unit\n    FROM transactions_1k\n    WHERE ProductID = 5 AND Price / Amount > 29.00\n),\nconsumption_status AS (\n    SELECT ym.CustomerID, ym.Date, ym.Consumption\n    FROM yearmonth ym\n    JOIN filtered_transactions ft ON ym.CustomerID = ft.CustomerID\n    WHERE ym.Date LIKE '201208%'\n),\nfinal_result AS (\n    SELECT COUNT(*) AS total_customers\n    FROM consumption_status\n)\nSELECT * FROM final_result;",
+    "entropy_sql": "WITH filtered_transactions AS (\n    SELECT CustomerID, Date, Time, ProductID, Price / Amount AS price_per_unit\n    FROM transactions_1k\n    WHERE ProductID = 5 AND Price / Amount > 29.00\n),\ncustomer_consumption AS (\n    SELECT ym.CustomerID, ym.Date, ym.Consumption\n    FROM yearmonth ym\n    INNER JOIN filtered_transactions ft ON ym.CustomerID = ft.CustomerID\n    WHERE ym.Date LIKE '201208%'\n),\nfinal_status AS (\n    SELECT CustomerID, CASE WHEN MAX(Consumption) > 0 THEN 'Active' ELSE 'Inactive' END AS Consumption_Status\n    FROM customer_consumption\n    GROUP BY CustomerID\n)\nSELECT * FROM final_status;"
+  }
+}

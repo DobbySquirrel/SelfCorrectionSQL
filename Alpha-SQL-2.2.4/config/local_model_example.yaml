@@ -1,0 +1,39 @@
+# 使用本地 vLLM 服务的配置示例
+# 
+# 使用方法：
+# 1. 设置环境变量（在运行脚本前或 .env 文件中）：
+#    export OPENAI_API_BASE="http://localhost:8008/v1"
+#    export OPENAI_API_KEY="dummy-key"
+#    或者
+#    export VLLM_API_URL="http://localhost:8008/v1"
+#    export VLLM_API_KEY="dummy-key"
+#
+# 2. 运行：
+#    python -m alphasql.runner.mcts_runner config/local_model_example.yaml
+
+tasks_file_path: "data/preprocessed/dev/tasks.pkl"
+subset_file_path: null
+db_root_dir: "/ssd/shenshuyu/work/bird/dev_20240627/dev_databases"
+n_processes: 32
+max_rollout_steps: 24
+max_depth: 16
+exploration_constant: 1.414
+save_root_dir: "results/Qwen3-8B/dev"
+
+# LLM 模型配置
+# 注意：base_url 和 api_key 会从环境变量 OPENAI_API_BASE 和 OPENAI_API_KEY 自动读取
+# 如果环境变量未设置，也可以在这里直接指定（取消下面的注释）
+mcts_model_kwargs:
+    model: "Qwen/Qwen3-8B"  # 使用您本地 vLLM 服务中的实际模型名称
+    n: 3
+    top_p: 0.8
+    max_tokens: 4096
+    temperature: 0.8
+    n_strategy: "single"
+    # 如果环境变量未设置，可以取消下面的注释：
+    # base_url: "http://localhost:8008/v1"
+    # api_key: "dummy-key"
+
+reward_model_kwargs: null
+random_seed: 42
+

@@ -1,0 +1,178 @@
+{
+  "9": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM satscores\nJOIN frpm ON satscores.cds = frpm.`CDSCode`\nWHERE satscores.`AvgScrMath` > 560\nAND satscores.`AvgScrMath` IS NOT NULL\nAND frpm.`Charter Funding Type` = 'Directly funded';",
+    "stats": {
+      "average_reward": 0.17967368905167244,
+      "total_visits": 6,
+      "elapsed_time": 740.5867085456848,
+      "timing": {
+        "total_s": 740.5865573883057,
+        "rollout_s": 3301.8750653266907,
+        "cte_gen_s": 1776.5933637619019,
+        "sql_gen_s": 1498.4014916419983,
+        "db_exec_s": 2.2749674320220947,
+        "rollout_count": 6
+      }
+    }
+  },
+  "21": {
+    "sql": "WITH c_cols AS (\n    SELECT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM frpm\n),\nc_rows AS (\n    SELECT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM c_cols\n    WHERE `County Name` = 'Los Angeles' \n      AND `Free Meal Count (K-12)` > 500 \n      AND `FRPM Count (K-12)` < 700\n)\nSELECT COUNT(*) AS answer\nFROM c_rows;",
+    "stats": {
+      "average_reward": 0.3025081939099472,
+      "total_visits": 6,
+      "elapsed_time": 545.096177816391,
+      "timing": {
+        "total_s": 545.0953874588013,
+        "rollout_s": 2367.253173828125,
+        "cte_gen_s": 1662.7625694274902,
+        "sql_gen_s": 686.161098241806,
+        "db_exec_s": 1.9116947650909424,
+        "rollout_count": 6
+      }
+    }
+  },
+  "25": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`\n    FROM satscores AS ss\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT s.`School`, s.`FundingType`, f.`County Name`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.CDSCode\n    INNER JOIN frpm f ON s.CDSCode = f.`CDSCode`\n)\nSELECT `School`, `FundingType`\nFROM t_join\nWHERE `County Name` = 'Riverside';",
+    "stats": {
+      "average_reward": 0.29629620626524994,
+      "total_visits": 6,
+      "elapsed_time": 722.7780125141144,
+      "timing": {
+        "total_s": 722.7776789665222,
+        "rollout_s": 2792.6576602458954,
+        "cte_gen_s": 2094.3067531585693,
+        "sql_gen_s": 666.4372673034668,
+        "db_exec_s": 2.936984062194824,
+        "rollout_count": 6
+      }
+    }
+  },
+  "35": {
+    "sql": "WITH c_rows AS (\n    SELECT `CDSCode`, `Enrollment (K-12)`\n    FROM frpm\n    WHERE `Charter School (Y/N)` = 1\n),\nt_join AS (\n    SELECT f.`CDSCode`, f.`Enrollment (K-12)`, s.`AdmEmail1`, s.`AdmEmail2`, s.`AdmEmail3`\n    FROM c_rows f\n    INNER JOIN schools s ON f.`CDSCode` = s.`CDSCode`\n),\nmin_enrollment AS (\n    SELECT MIN(`Enrollment (K-12)`) AS min_enroll\n    FROM t_join\n)\nSELECT `AdmEmail1`, `AdmEmail2`, `AdmEmail3`\nFROM t_join\nWHERE `Enrollment (K-12)` = (SELECT `min_enroll` FROM min_enrollment);",
+    "stats": {
+      "average_reward": 0.08902075566396041,
+      "total_visits": 6,
+      "elapsed_time": 1122.4374442100525,
+      "timing": {
+        "total_s": 1122.4372355937958,
+        "rollout_s": 4160.209481954575,
+        "cte_gen_s": 3567.0743131637573,
+        "sql_gen_s": 557.521692276001,
+        "db_exec_s": 6.1098620891571045,
+        "rollout_count": 6
+      }
+    }
+  },
+  "40": {
+    "sql": "WITH c_join AS (\n    SELECT s.`CDSCode`, s.`Phone`, ss.`AvgScrRead`\n    FROM schools s\n    INNER JOIN satscores ss ON s.`CDSCode` = ss.`cds`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT `CDSCode`, `Phone`, `AvgScrRead`\n    FROM c_join\n    WHERE `Phone` IS NOT NULL AND `AvgScrRead` IS NOT NULL\n),\nc_min AS (\n    SELECT MIN(`AvgScrRead`) AS min_score\n    FROM c_rows\n)\nSELECT `Phone`\nFROM c_rows\nWHERE `AvgScrRead` = (SELECT min_score FROM c_min);",
+    "stats": {
+      "average_reward": 0.13545111243723706,
+      "total_visits": 6,
+      "elapsed_time": 1069.4779448509216,
+      "timing": {
+        "total_s": 1069.4775731563568,
+        "rollout_s": 4117.145186662674,
+        "cte_gen_s": 3772.4346837997437,
+        "sql_gen_s": 322.3714985847473,
+        "db_exec_s": 5.393869638442993,
+        "rollout_count": 6
+      }
+    }
+  },
+  "43": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, ss.`AvgScrRead`, ss.`AvgScrWrite`, sc.`County`\n    FROM satscores AS ss\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL\n),\ntotal_scores AS (\n    SELECT cds, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, `County`, \n           (`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS total_score\n    FROM c_rows\n)\nSELECT `AvgScrMath`, `County`\nFROM total_scores\nWHERE total_score = (\n    SELECT MIN(total_score)\n    FROM total_scores\n);",
+    "stats": {
+      "average_reward": 0.04629628343621756,
+      "total_visits": 6,
+      "elapsed_time": 1164.307816028595,
+      "timing": {
+        "total_s": 1164.3076605796814,
+        "rollout_s": 4239.3702437877655,
+        "cte_gen_s": 4056.9333398342133,
+        "sql_gen_s": 156.74626088142395,
+        "db_exec_s": 3.5159993171691895,
+        "rollout_count": 6
+      }
+    }
+  },
+  "76": {
+    "sql": "SELECT s.`City`\nFROM frpm f\nINNER JOIN schools s ON f.`CDSCode` = s.`CDSCode`\nWHERE f.`County Name` = 'Merced'\n  AND f.`NSLP Provision Status` = 'Lunch Provision 2'\n  AND f.`Low Grade` = '9'\n  AND f.`High Grade` = '12'\n  AND s.`EILCode` = 'HS';",
+    "stats": {
+      "average_reward": 0.19106969925980552,
+      "total_visits": 6,
+      "elapsed_time": 792.4851748943329,
+      "timing": {
+        "total_s": 792.4848732948303,
+        "rollout_s": 3708.9821679592133,
+        "cte_gen_s": 2968.89094209671,
+        "sql_gen_s": 708.331930398941,
+        "db_exec_s": 3.8063645362854004,
+        "rollout_count": 6
+      }
+    }
+  },
+  "81": {
+    "sql": "SELECT s.School, s.City, f.`Low Grade`\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nWHERE s.State = 'CA' AND s.Latitude IS NOT NULL\nORDER BY s.Latitude ASC\nLIMIT 1;",
+    "stats": {
+      "average_reward": 0.33333300000033333,
+      "total_visits": 6,
+      "elapsed_time": 398.0276005268097,
+      "timing": {
+        "total_s": 398.0274078845978,
+        "rollout_s": 1875.0440878868103,
+        "cte_gen_s": 1789.683275938034,
+        "sql_gen_s": 66.96643590927124,
+        "db_exec_s": 0.4864654541015625,
+        "rollout_count": 6
+      }
+    }
+  },
+  "93": {
+    "sql": "SELECT COUNT(*) AS answer\nFROM client\nINNER JOIN district ON client.district_id = district.district_id\nWHERE client.gender = 'M'\n  AND district.A3 LIKE '%North Bohemia%'\n  AND district.A11 > 8000;",
+    "stats": {
+      "average_reward": 0.23000001861211036,
+      "total_visits": 6,
+      "elapsed_time": 575.5925171375275,
+      "timing": {
+        "total_s": 575.5922548770905,
+        "rollout_s": 2631.9029500484467,
+        "cte_gen_s": 1818.9650294780731,
+        "sql_gen_s": 790.4396510124207,
+        "db_exec_s": 2.1836798191070557,
+        "rollout_count": 6
+      }
+    }
+  },
+  "97": {
+    "sql": "SELECT DISTINCT d.client_id\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nWHERE a.frequency = 'POPLATEK PO OBRATU'\n  AND d.type = 'DISPONENT';",
+    "stats": {
+      "average_reward": 0.295583956628829,
+      "total_visits": 6,
+      "elapsed_time": 825.7142207622528,
+      "timing": {
+        "total_s": 825.7140173912048,
+        "rollout_s": 3126.5329382419586,
+        "cte_gen_s": 2684.714409351349,
+        "sql_gen_s": 418.4525864124298,
+        "db_exec_s": 3.1700022220611572,
+        "rollout_count": 6
+      }
+    }
+  },
+  "98": {
+    "sql": "WITH c_cols AS (\n    SELECT l.account_id, l.amount, l.date\n    FROM loan AS l\n),\nc_rows AS (\n    SELECT account_id, amount\n    FROM c_cols\n    WHERE date LIKE '1997%'\n),\nt_join AS (\n    SELECT l.account_id, l.amount, a.frequency\n    FROM c_rows l\n    INNER JOIN account a ON l.account_id = a.account_id\n),\nt_rows AS (\n    SELECT account_id, amount\n    FROM t_join\n    WHERE frequency = 'POPLATEK TYDNE'\n),\nmin_amount AS (\n    SELECT MIN(amount) AS min_amt\n    FROM t_rows\n),\nmin_accounts AS (\n    SELECT account_id\n    FROM t_rows\n    WHERE amount = (SELECT min_amt FROM min_amount)\n)\nSELECT * FROM min_accounts;",
+    "stats": {
+      "average_reward": 0.17434985110365553,
+      "total_visits": 6,
+      "elapsed_time": 1531.4744536876678,
+      "timing": {
+        "total_s": 1531.4741990566254,
+        "rollout_s": 5261.16725063324,
+        "cte_gen_s": 4229.181627511978,
+        "sql_gen_s": 1004.8930628299713,
+        "db_exec_s": 3.2113969326019287,
+        "rollout_count": 6
+      }
+    }
+  }
+}

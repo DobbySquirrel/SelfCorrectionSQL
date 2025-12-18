@@ -1,0 +1,147 @@
+SELECT COUNT(*) AS answer FROM satscores JOIN frpm ON satscores.cds = frpm.`CDSCode` WHERE satscores.`AvgScrMath` > 560 AND frpm.`Charter Funding Type` = 'Directly funded';
+WITH c_rows AS ( SELECT `County Name`, `Free Meal Count (K-12)`, `FRPM Count (K-12)` FROM frpm WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `FRPM Count (K-12)` < 700 ), final_count AS ( SELECT COUNT(*) AS answer FROM c_rows ) SELECT * FROM final_count;
+SELECT s.`School`, s.`FundingType` FROM schools s JOIN satscores ss ON s.`CDSCode` = ss.`cds` WHERE s.`County` = 'Riverside' AND ss.`AvgScrMath` > 400;
+SELECT `AdmEmail1`, `AdmEmail2`, `AdmEmail3` FROM ( SELECT s.`AdmEmail1`, s.`AdmEmail2`, s.`AdmEmail3`, fr.`Enrollment (K-12)` FROM ( SELECT `CDSCode`, `Enrollment (K-12)` FROM frpm WHERE `Charter School (Y/N)` = 1 ) AS fr INNER JOIN schools s ON fr.`CDSCode` = s.`CDSCode` ) AS t WHERE `Enrollment (K-12)` = ( SELECT MIN(`Enrollment (K-12)`) FROM frpm WHERE `Charter School (Y/N)` = 1 );
+SELECT `Phone` FROM schools JOIN satscores ON schools.CDSCode = satscores.cds WHERE schools.District = 'Fresno Unified' AND satscores.AvgScrRead IS NOT NULL ORDER BY satscores.AvgScrRead ASC LIMIT 1;
+WITH c_cols AS ( SELECT cds, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite` FROM satscores ), c_agg AS ( SELECT cds, `AvgScrMath` + `AvgScrRead` + `AvgScrWrite` AS total_score FROM c_cols GROUP BY cds ), c_agg_filtered AS ( SELECT cds, total_score FROM c_agg WHERE total_score IS NOT NULL ), c_join AS ( SELECT c.cds, c.total_score, s.`County`, ss.`AvgScrMath` FROM c_agg_filtered c JOIN schools s ON c.cds = s.`CDSCode` JOIN satscores ss ON c.cds = ss.cds ), c_min AS ( SELECT * FROM c_join WHERE total_score = (SELECT MIN(total_score) FROM c_join) ) SELECT `AvgScrMath`, `County` FROM c_min;
+SELECT `City` FROM schools JOIN frpm ON schools.`CDSCode` = frpm.`CDSCode` WHERE frpm.`County Name` = 'Merced' AND frpm.`NSLP Provision Status` = 'Lunch Provision 2' AND frpm.`Low Grade` = 9 AND frpm.`High Grade` = 12 AND schools.`EILCode` = 'HS';
+SELECT s.`City`, s.`School`, f.`Low Grade` FROM schools s JOIN frpm f ON s.`CDSCode` = f.`CDSCode` WHERE s.`State` = 'CA' AND s.`Latitude` = ( SELECT MIN(`Latitude`) FROM schools WHERE `State` = 'CA' );
+SELECT COUNT(*) FROM client c INNER JOIN district d ON c.district_id = d.district_id WHERE c.gender = 'M' AND d.A3 = 'North Bohemia' AND d.A11 > 8000;
+
+WITH t_rows AS ( SELECT l.account_id, l.amount FROM loan l INNER JOIN account a ON l.account_id = a.account_id WHERE l.date LIKE '1997%' AND a.frequency = 'POPLATEK TYDNE' ) SELECT account_id, amount FROM t_rows WHERE amount = (SELECT MIN(amount) FROM t_rows);
+SELECT COUNT(*) AS answer FROM account JOIN district ON account.district_id = district.district_id WHERE district.A2 = 'Litomerice' AND account.date LIKE '1996%';
+SELECT COUNT(*) AS answer FROM account a JOIN district d ON a.district_id = d.district_id LEFT JOIN disp disp ON a.account_id = disp.account_id LEFT JOIN card c ON disp.disp_id = c.disp_id WHERE d.A3 = 'South Bohemia' AND c.card_id IS NULL;
+SELECT COUNT(*) AS answer FROM card JOIN disp ON card.disp_id = disp.disp_id WHERE card.type = 'gold' AND disp.type = 'OWNER';
+SELECT `account`.`district_id` FROM `account` INNER JOIN `order` ON `account`.`account_id` = `order`.`account_id` WHERE `order`.`order_id` = 33333;
+SELECT `client_id` FROM `order` INNER JOIN `disp` ON `order`.`account_id` = `disp`.`account_id` WHERE `order`.`order_id` = 32423;
+WITH c_client AS ( SELECT client_id, district_id FROM client WHERE client_id = 992 ), c_disp AS ( SELECT d.account_id FROM c_client c INNER JOIN disp d ON c.client_id = d.client_id ), c_loan AS ( SELECT l.loan_id, l.amount, l.payments, l.status FROM c_disp d INNER JOIN loan l ON d.account_id = l.account_id ) SELECT amount, payments, status FROM c_loan;
+WITH c_cols AS ( SELECT c.client_id, c.gender, c.birth_date, c.district_id, d.A11 FROM client c JOIN district d ON c.district_id = d.district_id WHERE c.gender = 'F' ), c_age AS ( SELECT client_id, gender, birth_date, district_id, A11, (julianday('now') - julianday(birth_date)) / 365.25 AS age FROM c_cols ), c_max_age AS ( SELECT client_id, gender, birth_date, district_id, A11, age FROM c_age WHERE age = (SELECT MAX(age) FROM c_age) ), c_min_a11 AS ( SELECT client_id, A11 FROM c_max_age WHERE A11 = (SELECT MIN(A11) FROM c_max_age) ) SELECT d.account_id FROM disp d JOIN c_min_a11 m ON d.client_id = m.client_id;
+WITH bond_counts AS ( SELECT bond_type, COUNT(*) AS count FROM bond WHERE molecule_id = 'TR010' GROUP BY bond_type ), max_count AS ( SELECT MAX(count) AS max_count FROM bond_counts ), majority_bond AS ( SELECT bond_type FROM bond_counts WHERE count = (SELECT max_count FROM max_count) ) SELECT mb.bond_type, m.label FROM majority_bond mb JOIN molecule m ON m.molecule_id = 'TR010';
+SELECT `element` FROM atom WHERE `molecule_id` = 'TR004';
+SELECT `atom_id2` FROM connected WHERE `atom_id` IN ( SELECT `atom_id` FROM atom WHERE `element` = 's' );
+SELECT `bond_type` FROM `bond` WHERE `molecule_id` BETWEEN 'TR000' AND 'TR050';
+SELECT (COUNT(DISTINCT bond.molecule_id) * 100.0 / (SELECT COUNT(*) FROM molecule)) AS percentage FROM bond WHERE bond.bond_type = '#';
+SELECT (COUNT(CASE WHEN bond_type = ' = ' THEN 1 END) * 100.0 / COUNT(*)) AS percent FROM bond WHERE molecule_id = 'TR047';
+SELECT m.`label` FROM atom a INNER JOIN molecule m ON a.`molecule_id` = m.`molecule_id` WHERE a.`atom_id` = 'TR001_1';
+SELECT COUNT(*) FROM molecule WHERE label = '+';
+SELECT (SELECT `label` FROM `molecule` WHERE `molecule_id` = 'TR006') AS carcinogenic, (SELECT COUNT(*) FROM `bond` WHERE `molecule_id` = 'TR006' AND `bond_type` = ' = ') AS double_bonds;
+SELECT `element` FROM `atom` WHERE `atom_id` IN ( SELECT `atom_id` FROM `connected` WHERE `bond_id` = 'TR000_2_3' UNION SELECT `atom_id2` FROM `connected` WHERE `bond_id` = 'TR000_2_3' );
+
+
+SELECT `element` FROM atom WHERE `molecule_id` = 'TR002' UNION ALL SELECT `bond_type` FROM bond WHERE `molecule_id` = 'TR002';
+
+SELECT c.`id`, r.`text`, c.`hasContentWarning` FROM cards c INNER JOIN rulings r ON c.`uuid` = r.`uuid` WHERE c.`artist` = 'Stephen Daniele';
+WITH c_rows AS ( SELECT `id`, `name`, `number`, `uuid` FROM cards WHERE `name` = 'Annul' AND `number` = '29' ), t_join AS ( SELECT f.`language` FROM c_rows r INNER JOIN foreign_data f ON r.uuid = f.`uuid` ) SELECT * FROM t_join;
+SELECT s.`code`, s.`totalSetSize` FROM sets s INNER JOIN set_translations st ON s.`code` = st.`setCode` WHERE st.`language` = 'Italian';
+SELECT r.text FROM cards c JOIN rulings r ON c.uuid = r.uuid WHERE c.name = 'Condemn';
+SELECT `name`, `colors` FROM cards WHERE `setCode` = 'OGW';
+SELECT (COUNT(CASE WHEN `isStorySpotlight` = 1 AND `isTextless` = 0 THEN 1 END) * 100.0 / COUNT(CASE WHEN `isStorySpotlight` = 1 THEN 1 END)) AS percentage FROM `cards`;
+SELECT COUNT(*) FROM cards WHERE `borderColor` = 'borderless' AND `edhrecRank` > 12000;
+SELECT `cardKingdomFoilId`, `cardKingdomId` FROM cards WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL ORDER BY `cardKingdomFoilId` ASC LIMIT 3;
+SELECT `id` FROM cards WHERE `frameEffects` = 'extendedart';
+SELECT f.name, c.type FROM cards AS c INNER JOIN foreign_data AS f ON c.uuid = f.uuid WHERE c.watermark = 'abzan';
+SELECT s.releaseDate FROM cards c JOIN sets s ON c.setCode = s.code WHERE c.name = 'Ancestor''s Chosen';
+SELECT COUNT(*) FROM cards JOIN sets ON cards.setCode = sets.code WHERE sets.name = 'Coldsnap' AND cards.convertedManaCost > 5 AND (cards.power = '*' OR cards.power IS NULL);
+WITH c_set AS ( SELECT c.uuid FROM cards c JOIN sets s ON c.setCode = s.code WHERE s.name = 'Coldsnap' ) SELECT f.text FROM c_set JOIN foreign_data f ON c_set.uuid = f.uuid WHERE f.language = 'Italian';
+WITH c_set AS ( SELECT c.setCode, c.convertedManaCost, c.uuid, s.name FROM cards c INNER JOIN sets s ON c.setCode = s.code WHERE s.name = 'Coldsnap' ), max_mana AS ( SELECT MAX(convertedManaCost) AS max_mana FROM c_set ), c_high_mana AS ( SELECT uuid FROM c_set WHERE convertedManaCost = (SELECT max_mana FROM max_mana) ) SELECT f.name FROM c_high_mana c INNER JOIN foreign_data f ON c.uuid = f.uuid WHERE f.language = 'Italian';
+SELECT keyruneCode FROM sets WHERE code = 'PKHC';
+SELECT `artist` FROM `cards` WHERE `side` IS NULL AND `convertedManaCost` = ( SELECT MAX(`convertedManaCost`) FROM `cards` WHERE `side` IS NULL );
+WITH t_join AS ( SELECT c.originalReleaseDate, l.format FROM cards c INNER JOIN legalities l ON c.uuid = l.uuid WHERE c.rarity = 'mythic' ) SELECT originalReleaseDate, format FROM t_join WHERE originalReleaseDate = (SELECT MIN(originalReleaseDate) FROM t_join) ORDER BY originalReleaseDate;
+WITH c_cols AS ( SELECT artist, uuid FROM cards ), t_join AS ( SELECT c.artist, l.format FROM c_cols c INNER JOIN legalities l ON c.uuid = l.uuid ), c_agg AS ( SELECT artist, COUNT(*) AS card_count FROM t_join GROUP BY artist ), c_min AS ( SELECT artist, card_count FROM c_agg WHERE card_count = (SELECT MIN(card_count) FROM c_agg) ) SELECT t.artist, t.format FROM t_join t JOIN c_min cm ON t.artist = cm.artist ORDER BY t.format;
+
+SELECT p.Title FROM posts AS p INNER JOIN users AS u ON p.OwnerUserId = u.Id WHERE u.DisplayName = 'csgillespie';
+SELECT DisplayName FROM users WHERE Id = ( SELECT OwnerUserId FROM posts WHERE FavoriteCount IS NOT NULL ORDER BY FavoriteCount DESC LIMIT 1 );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

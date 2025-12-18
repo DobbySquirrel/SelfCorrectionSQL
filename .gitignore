@@ -1,0 +1,53 @@
+# 忽略大文件
+outputs/
+*.json
+!*.json
+# 但保留小的配置文件
+!config/*.json
+!*.json
+# 忽略特定的大文件
+outputs/20250612_170010/sampling_think_sql_generate.json
+
+# 忽略其他常见的大文件
+*.sqlite
+*.db
+*.sqlite3
+*.h5
+*.pkl
+*.pickle
+*.model
+*.bin
+*.pt
+*.pth
+
+# 忽略日志文件
+*.log
+logs/
+
+# 忽略缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# 忽略临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db 
+
+data
+results
+**/__pycache__
+**/.ipynb_checkpoints
+.vscode
+temp
+.env*
+env/
+__pycache__/
+*.pyc
+Output/
+workflows/mcts/test/out/11_20_error_id.json
+workflows/mcts/test/out/

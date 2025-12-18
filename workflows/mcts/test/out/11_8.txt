@@ -1,0 +1,147 @@
+SELECT COUNT(*) AS answer FROM satscores JOIN frpm ON satscores.cds = frpm.CDSCode WHERE satscores.AvgScrMath > 560 AND frpm.`Charter Funding Type` = 'Directly funded';
+SELECT COUNT(*) AS answer FROM frpm WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `FRPM Count (K-12)` < 700;
+SELECT sc.`School`, f.`Charter Funding Type` FROM schools AS sc JOIN satscores AS ss ON sc.CDSCode = ss.cds JOIN frpm AS f ON sc.CDSCode = f.CDSCode WHERE sc.County = 'Riverside' AND ss.AvgScrMath > 400;
+SELECT s.`AdmEmail1` FROM schools s JOIN frpm f ON s.`CDSCode` = f.`CDSCode` WHERE f.`Charter School (Y/N)` = 1 ORDER BY f.`Enrollment (K-12)` ASC LIMIT 1;
+WITH c_cols AS ( SELECT `CDSCode`, `District` FROM schools ), c_rows AS ( SELECT `CDSCode` FROM c_cols WHERE `District` = 'Fresno Unified' ), t_join AS ( SELECT s.`CDSCode`, ss.`AvgScrRead`, s.`Phone` FROM c_rows r INNER JOIN satscores ss ON r.CDSCode = ss.cds INNER JOIN schools s ON r.CDSCode = s.CDSCode ), t_filtered AS ( SELECT `CDSCode`, `AvgScrRead`, `Phone` FROM t_join WHERE `AvgScrRead` IS NOT NULL ), t_min AS ( SELECT `CDSCode`, `AvgScrRead`, `Phone` FROM t_filtered ORDER BY `AvgScrRead` ASC LIMIT 1 ) SELECT `Phone` FROM t_min;
+WITH total_scores AS ( SELECT `County`, `AvgScrMath`, `AvgScrRead`, `AvgScrWrite`, (`AvgScrMath` + `AvgScrRead` + `AvgScrWrite`) AS TotalAvg FROM satscores INNER JOIN schools ON satscores.cds = schools.`CDSCode` WHERE `AvgScrMath` IS NOT NULL AND `AvgScrRead` IS NOT NULL AND `AvgScrWrite` IS NOT NULL ) SELECT `County`, `AvgScrMath` FROM total_scores WHERE TotalAvg = (SELECT MIN(TotalAvg) FROM total_scores);
+SELECT s.`City` FROM frpm f INNER JOIN schools s ON f.`CDSCode` = s.`CDSCode` WHERE f.`NSLP Provision Status` = 'Provision 2' AND f.`Low Grade` = 9 AND f.`High Grade` = 12 AND f.`County Name` = 'Merced' AND s.`EILCode` = 'HS';
+SELECT s.City, s.School, f.`Low Grade` FROM schools s JOIN frpm f ON s.CDSCode = f.CDSCode WHERE s.State = 'CA' ORDER BY s.Latitude ASC LIMIT 1;
+SELECT COUNT(*) FROM client INNER JOIN district ON client.district_id = district.district_id WHERE client.gender = 'M' AND district.A3 = 'North Bohemia' AND district.A11 > 8000;
+SELECT `client_id` FROM disp WHERE `type` = 'DISPONENT';
+WITH c_cols AS ( SELECT account_id, amount, date FROM loan ), c_rows AS ( SELECT account_id, amount, date FROM c_cols WHERE date LIKE '1997%' ), t_join AS ( SELECT l.account_id, l.amount, l.date, a.frequency FROM c_rows l INNER JOIN account a ON l.account_id = a.account_id ), t_freq AS ( SELECT account_id, amount, date FROM t_join WHERE frequency = 'POPLATEK TYDNE' ), min_amt_cte AS ( SELECT MIN(amount) AS min_amount FROM t_freq ), final_accounts AS ( SELECT account_id FROM t_freq WHERE amount = (SELECT min_amount FROM min_amt_cte) ) SELECT account_id FROM final_accounts;
+SELECT COUNT(*) AS answer FROM account JOIN district ON account.district_id = district.district_id WHERE district.A2 = 'Litomerice' AND account.date LIKE '1996%';
+WITH c_cols AS ( SELECT account_id, district_id FROM account ), c_district AS ( SELECT a.account_id, d.A3 FROM c_cols a INNER JOIN district d ON a.district_id = d.district_id ), disp_connect AS ( SELECT c.account_id, d.client_id FROM c_district c INNER JOIN disp d ON c.account_id = d.account_id ), disp_card AS ( SELECT dc.account_id, d.disp_id, c.card_id FROM disp_connect dc INNER JOIN disp d ON dc.account_id = d.account_id LEFT JOIN card c ON d.disp_id = c.disp_id ), cte5 AS ( SELECT dc.account_id, dc.card_id, d.A3 FROM disp_card dc INNER JOIN district d ON dc.account_id = d.district_id ), final_count AS ( SELECT COUNT(*) AS answer FROM cte5 WHERE A3 = 'South Bohemia' AND card_id IS NULL ) SELECT * FROM final_count;
+SELECT COUNT(*) AS answer FROM card INNER JOIN disp ON card.disp_id = disp.disp_id WHERE card.type = 'gold' AND disp.type = 'OWNER';
+SELECT a.`district_id` FROM `order` o INNER JOIN account a ON o.`account_id` = a.`account_id` WHERE o.`order_id` = 33333;
+SELECT c.client_id, c.gender, c.birth_date FROM `order` o INNER JOIN disp d ON o.account_id = d.account_id INNER JOIN client c ON d.client_id = c.client_id WHERE o.order_id = 32423;
+SELECT l.amount, l.payments FROM client c INNER JOIN disp d ON c.client_id = d.client_id INNER JOIN loan l ON d.account_id = l.account_id WHERE c.client_id = 992;
+WITH c_cols AS ( SELECT c.client_id, c.gender, c.birth_date, d.district_id, d.A11 FROM client c JOIN district d ON c.district_id = d.district_id ), c_rows AS ( SELECT client_id, gender, birth_date, district_id, A11 FROM c_cols WHERE gender = 'F' ), c_disp AS ( SELECT c.client_id, c.gender, c.birth_date, c.district_id, c.A11, d.account_id FROM c_rows c JOIN disp d ON c.client_id = d.client_id ), c_age AS ( SELECT client_id, account_id, A11, strftime('%Y', 'now') - strftime('%Y', birth_date) AS age FROM c_disp ), c_age_max AS ( SELECT client_id, account_id, A11, age FROM c_age WHERE age = (SELECT MAX(age) FROM c_age) ), c_min_salary AS ( SELECT account_id FROM c_age_max WHERE A11 = (SELECT MIN(A11) FROM c_age_max) ) SELECT * FROM c_min_salary;
+SELECT bond_type, label FROM bond JOIN molecule ON bond.molecule_id = molecule.molecule_id WHERE bond.molecule_id = 'TR010' GROUP BY bond_type, label ORDER BY COUNT(*) DESC LIMIT 1;
+WITH c_cols AS ( SELECT m.molecule_id, m.label, a.element FROM molecule m JOIN atom a ON m.molecule_id = a.molecule_id ) SELECT element FROM c_cols WHERE molecule_id = 'TR004';
+SELECT `atom_id2` FROM connected INNER JOIN atom ON connected.`atom_id` = atom.`atom_id` WHERE atom.`element` = 's';
+SELECT `bond_type` FROM bond WHERE `molecule_id` BETWEEN 'TR000' AND 'TR050';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,182 @@
+WITH avg_math_scores AS (
+    SELECT cds, AVG(AvgScrMath) AS avg_math_score
+    FROM satscores
+    GROUP BY cds
+),
+high_avg_math AS (
+    SELECT cds
+    FROM avg_math_scores
+    WHERE avg_math_score > 560
+),
+charter_funded AS (
+    SELECT f.`School Code`
+    FROM high_avg_math h
+    INNER JOIN frpm f ON h.cds = f.`CDSCode`
+    WHERE f.`Charter Funding Type` = 'Directly funded'
+),
+final_count AS (
+    SELECT COUNT(*) AS answer
+    FROM charter_funded
+)
+SELECT answer FROM final_count;
+WITH f_cols AS (
+    SELECT `CDSCode`, `Free Meal Count (K-12)`
+    FROM frpm
+    WHERE `County Name` = 'Los Angeles'
+),
+f_rows AS (
+    SELECT `CDSCode`
+    FROM f_cols
+    WHERE `Free Meal Count (K-12)` > 500 AND `Free Meal Count (K-12)` < 700
+),
+s_join AS (
+    SELECT s.CDSCode, s.School
+    FROM f_rows fr
+    INNER JOIN schools s ON fr.CDSCode = s.CDSCode
+)
+SELECT COUNT(*) AS answer FROM s_join;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,61 @@
+SELECT s.`School`, s.`FundingType` FROM schools AS s INNER JOIN satscores AS ss ON s.`CDSCode` = ss.`cds` WHERE s.`County` = 'Riverside' AND ss.`AvgScrMath` > 400 AND ss.`AvgScrMath` IS NOT NULL;
+
+SELECT DISTINCT d.client_id FROM trans t JOIN disp d ON t.account_id = d.account_id WHERE t.type = 'POPLATEK PO OBRATU';
+WITH c_clients AS ( SELECT DISTINCT a.account_id FROM account a INNER JOIN client c ON a.district_id = c.district_id INNER JOIN district d ON c.district_id = d.district_id WHERE d.A3 LIKE '%south bohemia%' ), c_cards AS ( SELECT d.account_id FROM disp d LEFT JOIN card c ON d.disp_id = c.disp_id WHERE c.card_id IS NULL ) SELECT COUNT(*) AS answer FROM c_clients WHERE c_clients.account_id NOT IN (SELECT account_id FROM c_cards);
+
+
+WITH t_bond_count AS ( SELECT bond_type, COUNT(*) AS count FROM bond WHERE molecule_id = 'TR010' GROUP BY bond_type ), t_max_bond AS ( SELECT bond_type FROM t_bond_count WHERE count = (SELECT MAX(count) FROM t_bond_count) ), t_carcinogenic_check AS ( SELECT label AS carcinogenic_status FROM molecule WHERE molecule_id = 'TR010' ) SELECT MAX_bond_type.bond_type AS bond_type, carcinogenic.carcinogenic_status FROM t_max_bond AS MAX_bond_type INNER JOIN t_carcinogenic_check AS carcinogenic ON 1=1;
+SELECT bond_type FROM bond JOIN molecule ON bond.molecule_id = molecule.molecule_id WHERE molecule.molecule_id BETWEEN 'TR000' AND 'TR050';
+WITH total_molecules AS ( SELECT COUNT(DISTINCT m.molecule_id) AS total FROM molecule m ), triple_bond_molecules AS ( SELECT DISTINCT m.molecule_id FROM molecule m JOIN bond b ON m.molecule_id = b.molecule_id JOIN connected c ON b.bond_id = c.bond_id WHERE b.bond_type = '#' ) SELECT (COUNT(*) * 100.0 / total.total) AS percentage FROM triple_bond_molecules, total_molecules total;
+SELECT COUNT(*) AS double_bond_count, m.label FROM bond AS b JOIN molecule AS m ON b.molecule_id = m.molecule_id WHERE b.molecule_id = 'TR006' AND b.bond_type = '=';
+WITH atom_ids AS ( SELECT DISTINCT atom_id FROM atom WHERE molecule_id = 'TR346' ), bond_count AS ( SELECT COUNT(DISTINCT bond_type) AS bond_count FROM bond WHERE molecule_id = 'TR346' ) SELECT atom_ids.atom_id, bond_count.bond_count FROM atom_ids CROSS JOIN bond_count;
+SELECT DISTINCT m.label FROM atom a JOIN connected c ON a.atom_id = c.atom_id JOIN bond b ON c.bond_id = b.bond_id JOIN molecule m ON a.molecule_id = m.molecule_id WHERE a.element = 's' AND b.bond_type = ' = ';
+WITH cte AS ( SELECT c.id, r.text, c.hasContentWarning FROM cards c JOIN rulings r ON c.uuid = r.uuid WHERE c.artist = 'Stephen Daniel' OR c.artist LIKE '%Stephen Daniele%' OR c.artist LIKE '%Daniel Stephen%' OR c.artist LIKE '%Daniele Stephen%' ) SELECT DISTINCT id, text, hasContentWarning FROM cte;
+
+
+WITH t_count AS ( SELECT COUNT(*) AS story_spotlight_without_textbox FROM cards WHERE `isStorySpotlight` = 1 AND `isTextless` = 0 ), t_total AS ( SELECT COUNT(*) AS total_cards FROM cards ), final_percentage AS ( SELECT (t_count.story_spotlight_without_textbox * 100.0 / t_total.total_cards) AS percentage FROM t_count, t_total ), t_ids AS ( SELECT `id` FROM cards WHERE `isStorySpotlight` = 1 AND `isTextless` = 0 ) SELECT final_percentage.percentage, t_ids.`id` AS story_spotlight_id FROM final_percentage, t_ids ORDER BY t_ids.`id`;
+SELECT `id` FROM cards WHERE `cardKingdomFoilId` IS NOT NULL AND `cardKingdomId` IS NOT NULL ORDER BY `cardKingdomFoilId` ASC LIMIT 3;
+
+SELECT MAX(s.releaseDate) AS releaseDate FROM cards AS c JOIN sets AS s ON c.setCode = s.code WHERE c.name = 'Ancestor''s Chosen';
+SELECT f.text FROM cards AS c JOIN foreign_data AS f ON c.uuid = f.uuid JOIN sets AS s ON c.setCode = s.code WHERE s.name = 'Coldsnap' AND f.language = 'Italian';
+WITH set_code AS ( SELECT code FROM sets WHERE name = 'Coldsnap' ), c_cols AS ( SELECT c.`setCode`, c.`convertedManaCost`, f.`name` FROM cards AS c JOIN set_code AS s ON c.`setCode` = s.code LEFT JOIN foreign_data AS f ON c.uuid = f.uuid WHERE f.`language` = 'Italian' ) SELECT `name` FROM c_cols WHERE `convertedManaCost` = (SELECT MAX(`convertedManaCost`) FROM c_cols);
+
+
+SELECT DISTINCT u.DisplayName FROM votes AS v INNER JOIN posts AS p ON v.PostId = p.Id INNER JOIN users AS u ON v.UserId = u.Id WHERE v.BountyAmount = 50 AND p.Title LIKE '%variance%';
+SELECT COUNT(DISTINCT u.Id) FROM users u JOIN badges b1 ON u.Id = b1.UserId JOIN badges b2 ON u.Id = b2.UserId WHERE u.Location = 'New York' AND b1.Name = 'Supporter' AND b2.Name = 'Teachers';
+SELECT pl.RelatedPostId, p.ViewCount FROM postLinks AS pl JOIN posts AS p ON pl.RelatedPostId = p.Id WHERE pl.PostId = 61217;
+SELECT COUNT(*) AS answer FROM users WHERE Location = 'New York, NY';
+SELECT COUNT(*) AS answer FROM posts INNER JOIN users ON posts.OwnerUserId = users.Id WHERE users.DisplayName = 'Daniel Vassallo';
+SELECT u.DisplayName AS ParentDisplayName FROM posts p JOIN users u ON p.ParentId = u.Id WHERE p.ParentId IS NOT NULL AND p.Score = (SELECT MAX(Score) FROM posts WHERE ParentId IS NOT NULL);
+
+SELECT `superhero_name`, `height_cm` FROM superhero INNER JOIN publisher ON superhero.`publisher_id` = publisher.`id` WHERE publisher.`publisher_name` = 'Marvel Comics' ORDER BY `height_cm` DESC;
+SELECT c.`colour` FROM superhero s JOIN colour c ON s.`hair_colour_id` = c.`id` WHERE s.`height_cm` = 185 AND s.`race_id` = 5;
+SELECT c.`colour` AS eyes, h.`colour` AS hair, sk.`colour` AS skin FROM superhero s JOIN publisher p ON s.`publisher_id` = p.`id` JOIN colour c ON s.`eye_colour_id` = c.`id` JOIN colour h ON s.`hair_colour_id` = h.`id` JOIN colour sk ON s.`skin_colour_id` = sk.`id` WHERE p.`publisher_name` = 'Dark Horse Comics' AND s.`gender_id` = 2;
+
+SELECT d.nationality FROM qualifying q JOIN drivers d ON q.driverId = d.driverId WHERE q.raceId = 355 AND q.q2 = '0:01:40';
+WITH c_cols AS ( SELECT r.raceId, d.surname FROM results AS r INNER JOIN drivers AS d ON r.driverId = d.driverId WHERE d.surname = 'Hamilton' ), c_rows AS ( SELECT r.raceId FROM c_cols AS r INNER JOIN races AS ra ON r.raceId = ra.raceId WHERE ra.year >= 2010 ), t_rows AS ( SELECT r.raceId FROM c_rows AS r INNER JOIN results AS res ON r.raceId = res.raceId WHERE res.position > 1 ), t_count AS ( SELECT COUNT(DISTINCT r.raceId) AS total_races, COUNT(DISTINCT CASE WHEN res.position > 1 THEN r.raceId END) AS non_first_place FROM c_rows AS r INNER JOIN results AS res ON r.raceId = res.raceId ) SELECT (non_first_place * 100.0 / total_races) AS percentage FROM t_count;
+
+SELECT res.time FROM races r JOIN driverStandings ds ON r.raceId = ds.raceId JOIN results res ON r.raceId = res.raceId AND ds.driverId = res.driverId WHERE r.name = 'Chinese Grand Prix' AND r.year = 2008 AND ds.position = 2;
+
+SELECT DISTINCT d.forename, d.surname FROM drivers d JOIN driverStandings ds ON d.driverId = ds.driverId WHERE strftime('%Y', d.dob) > '1975' AND ds.position = 2;
+SELECT d.driverId, d.code FROM drivers d JOIN results r ON d.driverId = r.driverId WHERE strftime('%Y', d.dob) = '1971' AND r.fastestLapTime IS NOT NULL ORDER BY r.fastestLapTime ASC LIMIT 1;
+
+WITH filtered_players AS ( SELECT p.`player_name`, pa.`heading_accuracy` FROM Player p JOIN Player_Attributes pa ON p.`player_api_id` = pa.`player_api_id` WHERE p.`height` > 180 ), averaged_accuracy AS ( SELECT `player_name`, AVG(`heading_accuracy`) AS avg_heading_accuracy FROM filtered_players GROUP BY `player_name` ) SELECT `player_name` FROM averaged_accuracy ORDER BY `avg_heading_accuracy` DESC LIMIT 10;
+
+SELECT AVG(l.ALB) AS average_alb FROM Patient p JOIN Laboratory l ON p.ID = l.ID JOIN Examination e ON p.ID = e.ID WHERE p.SEX = 'F' AND l.PLT > 400 AND e.Diagnosis = 'SLE';
+
+SELECT p.`ID` FROM Patient p INNER JOIN Laboratory l ON p.`ID` = l.`ID` WHERE p.`Birthday` = '1982-04-01' AND l.`ALP` < 300;
+
+SELECT MAX(`T-BIL`) AS max_tbil, p.`ID`, p.`SEX`, p.`Birthday` FROM Patient p JOIN Laboratory l ON p.`ID` = l.`ID` WHERE l.`T-BIL` = (SELECT MAX(`T-BIL`) FROM Laboratory);
+SELECT COUNT(DISTINCT p.ID) AS answer FROM Patient p JOIN Laboratory l ON p.ID = l.ID WHERE p.SEX = 'M' AND l.WBC > 3.5 AND l.WBC < 9.0 AND (l.FG <= 150 OR l.FG >= 450);
+SELECT COUNT(DISTINCT p.ID) AS answer FROM Patient p INNER JOIN Laboratory l ON p.ID = l.ID WHERE l.IGG > 900 AND l.IGG < 2000 AND p.Admission = '+';
+
+WITH c_cols AS ( SELECT m.member_id, m.first_name, m.last_name, m.email, m.position, m.t_shirt_size, m.phone, m.zip, m.link_to_major FROM member AS m INNER JOIN attendance AS a ON m.member_id = a.link_to_member INNER JOIN event AS e ON a.link_to_event = e.event_id WHERE e.event_name = 'October Meeting' ) SELECT * FROM c_cols;
+WITH c_cols AS ( SELECT e.event_id, e.event_name, e.event_date, e.type, e.notes, e.location, e.status, b.category, b.amount, b.event_status FROM event AS e LEFT JOIN budget AS b ON e.event_id = b.link_to_event ), c_rows AS ( SELECT event_id, event_name, category, amount FROM c_cols WHERE category = 'Parking' ), t_agg AS ( SELECT SUM(amount) AS total_parking_cost, COUNT(*) AS num_parking_events FROM c_rows ), t_avg AS ( SELECT total_parking_cost / num_parking_events AS avg_parking_cost FROM t_agg ) SELECT event_name FROM c_rows WHERE amount < (SELECT avg_parking_cost FROM t_avg);
+SELECT (SUM(expense.cost) / COUNT(event.event_id)) * 100 AS percentage FROM event JOIN budget ON event.event_id = budget.link_to_event JOIN expense ON budget.budget_id = expense.link_to_budget WHERE event.type = 'Meeting';
+WITH c_cols AS ( SELECT b.link_to_event, b.spent FROM budget AS b WHERE b.category = 'Speaker Gifts' ), c_join AS ( SELECT e.event_name, b.spent FROM c_cols b INNER JOIN event e ON b.link_to_event = e.event_id ) SELECT event_name, SUM(spent) AS total_amount_spent FROM c_join GROUP BY event_name;
+WITH c_cols AS ( SELECT ym.`CustomerID`, ym.`Consumption` FROM yearmonth AS ym INNER JOIN customers AS c ON ym.`CustomerID` = c.`CustomerID` WHERE c.`Segment` = 'LAM' AND ym.`Date` BETWEEN '201201' AND '201212' ) SELECT CustomerID, Consumption FROM c_cols ORDER BY Consumption ASC LIMIT 1;
+WITH c_cols AS ( SELECT y.Date, y.Consumption FROM yearmonth AS y ), c_rows AS ( SELECT Date, SUM(Consumption) AS TotalConsumption FROM c_cols GROUP BY Date ) SELECT SUBSTR(Date, 1, 4) AS answer FROM c_rows ORDER BY TotalConsumption DESC LIMIT 1;
+WITH c_cols AS ( SELECT t.`CustomerID`, t.`Price`, t.`Amount` FROM transactions_1k AS t INNER JOIN customers AS c ON t.`CustomerID` = c.`CustomerID` WHERE c.`Currency` = 'EUR' ), c_rows AS ( SELECT `CustomerID`, `Price` * `Amount` AS `TotalPrice` FROM c_cols ) SELECT AVG(`TotalPrice`) AS answer FROM c_rows;
+WITH c_cols AS ( SELECT t.`GasStationID`, SUM(t.`Amount`) AS total_revenue FROM transactions_1k AS t GROUP BY t.`GasStationID` ), c_rows AS ( SELECT GasStationID, total_revenue FROM c_cols ORDER BY total_revenue DESC LIMIT 1 ), t_join AS ( SELECT g.`GasStationID`, g.`ChainID`, g.`Country`, g.`Segment`, c.total_revenue FROM gasstations AS g INNER JOIN c_rows c ON g.`GasStationID` = c.GasStationID ) SELECT GasStationID, total_revenue FROM t_join;
+WITH c_cols AS ( SELECT t.`CustomerID`, t.`Date`, t.`Price`, t.`Amount`, p.`ProductID` FROM transactions_1k t INNER JOIN products p ON t.`ProductID` = p.`ProductID` WHERE p.`ProductID` = '5' ), c_rows AS ( SELECT `CustomerID` FROM c_cols WHERE `Price` / `Amount` > 29.00 AND `Date` LIKE '2012-08%' ), t_join AS ( SELECT y.`CustomerID`, y.`Consumption` FROM c_rows r INNER JOIN yearmonth y ON r.`CustomerID` = y.`CustomerID` WHERE y.`Date` = '201208' ), t_distinct AS ( SELECT DISTINCT `CustomerID`, `Consumption` FROM t_join ) SELECT `CustomerID`, `Consumption` FROM t_distinct;

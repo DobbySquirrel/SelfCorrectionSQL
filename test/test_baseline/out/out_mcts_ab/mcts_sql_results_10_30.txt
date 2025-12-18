@@ -1,0 +1,165 @@
+WITH avg_math_scores AS (
+    SELECT cds, `AvgScrMath`
+    FROM satscores
+    WHERE `AvgScrMath` IS NOT NULL
+),
+filtered_math_scores AS (
+    SELECT cds, `AvgScrMath`
+    FROM avg_math_scores
+    WHERE `AvgScrMath` > 560
+),
+charter_funding AS (
+    SELECT f.`School Code`
+    FROM filtered_math_scores m
+    INNER JOIN frpm f ON m.cds = f.`CDSCode`
+    WHERE f.`Charter Funding Type` = 'Directly funded'
+)
+SELECT COUNT(*) AS answer FROM charter_funding;
+SELECT COUNT(*) AS answer
+FROM frpm
+WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `Free Meal Count (K-12)` < 700;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

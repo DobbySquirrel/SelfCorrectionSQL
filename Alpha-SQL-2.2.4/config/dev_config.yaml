@@ -1,0 +1,19 @@
+tasks_file_path: "/home/shenshuyu/SQL_tool_multiAgent/Alpha-SQL-2.2.4/data/preprocessed/dev/dev/tasks.pkl"
+subset_file_path: "/home/shenshuyu/SQL_tool_multiAgent/data/dev.json"
+db_root_dir: "/ssd/shenshuyu/work/bird/dev_20240627/dev_databases"
+n_processes: 32
+max_rollout_steps: 24
+max_depth: 16
+exploration_constant: 1.414
+save_root_dir: "/home/shenshuyu/SQL_tool_multiAgent/Alpha-SQL-2.2.4/results/Qwen_Qwen3-8B/dev"
+mcts_model_kwargs:
+    model: "Qwen/Qwen3-8B"
+    n: 3
+    top_p: 0.8
+    max_tokens: 4096
+    temperature: 0.8
+    n_strategy: "single"
+    base_url: "http://localhost:8010/v1"
+    api_key: "dummy-key"
+reward_model_kwargs: null
+random_seed: 42

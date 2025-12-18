@@ -1,0 +1,1 @@
+SELECT d.nationality FROM qualifying q JOIN drivers d ON q.driverId = d.driverId WHERE q.raceId = 355 AND q.q2 LIKE '%1:40%';

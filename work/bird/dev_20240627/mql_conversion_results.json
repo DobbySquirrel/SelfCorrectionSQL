@@ -1,0 +1,3265 @@
+[
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$sort": {
+            "(CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "`Free Meal Count (K-12)` / `Enrollment (K-12)`",
+      "from": "frpm",
+      "where": "`County Name` = 'Alameda'",
+      "order_by": "(CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`) DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 1,
+    "database": "california_schools",
+    "original_sql": "SELECT `Free Meal Count (K-12)` / `Enrollment (K-12)` FROM frpm WHERE `County Name` = 'Alameda' ORDER BY (CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`) DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$sort": {
+            "`Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)`": 1
+          }
+        },
+        {
+          "$limit": 3
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "`Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)`",
+      "from": "frpm",
+      "where": "`Educational Option Type` = 'Continuation School' AND `Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)` IS NOT NULL",
+      "order_by": "`Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)` ASC",
+      "limit": 3,
+      "group_by": ""
+    },
+    "line_number": 2,
+    "database": "california_schools",
+    "original_sql": "SELECT `Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)` FROM frpm WHERE `Educational Option Type` = 'Continuation School' AND `Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)` IS NOT NULL ORDER BY `Free Meal Count (Ages 5-17)` / `Enrollment (Ages 5-17)` ASC LIMIT 3"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Zip",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`District Name` = 'Fresno County Office of Education' AND T1.`Charter School (Y/N)` = 1",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 3,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Zip FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`District Name` = 'Fresno County Office of Education' AND T1.`Charter School (Y/N)` = 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.`FRPM Count (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.MailStreet",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.`FRPM Count (K-12)` DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 4,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.MailStreet FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode ORDER BY T1.`FRPM Count (K-12)` DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.OpenDate": {
+              "$gt": "2000-01-01"
+            }
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Phone",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`Charter Funding Type` = 'Directly funded' AND T1.`Charter School (Y/N)` = 1 AND T2.OpenDate > '2000-01-01'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 5,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Phone FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`Charter Funding Type` = 'Directly funded' AND T1.`Charter School (Y/N)` = 1 AND T2.OpenDate > '2000-01-01'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.Virtual": "F"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(DISTINCT T2.School)",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.Virtual = 'F' AND T1.AvgScrMath > 400",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 6,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(DISTINCT T2.School) FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Virtual = 'F' AND T1.AvgScrMath > 400"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.School",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.Magnet = 1 AND T1.NumTstTakr > 500",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 7,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Magnet = 1 AND T1.NumTstTakr > 500"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.NumGE1500": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Phone",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.NumGE1500 DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 8,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$sort": {
+            "`FRPM Count (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "NumTstTakr",
+      "from": "satscores",
+      "where": "cds = ( SELECT CDSCode FROM frpm",
+      "order_by": "`FRPM Count (K-12)` DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 9,
+    "database": "california_schools",
+    "original_sql": "SELECT NumTstTakr FROM satscores WHERE cds = ( SELECT CDSCode FROM frpm ORDER BY `FRPM Count (K-12)` DESC LIMIT 1 )"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T2.`School Code`)",
+      "from": "satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T1.AvgScrMath > 560 AND T2.`Charter Funding Type` = 'Directly funded'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 10,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T2.`School Code`) FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrMath > 560 AND T2.`Charter Funding Type` = 'Directly funded'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrRead": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.`FRPM Count (Ages 5-17)`",
+      "from": "satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.AvgScrRead DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 11,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.`FRPM Count (Ages 5-17)` FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.AvgScrRead DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.CDSCode",
+      "from": "schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.`Enrollment (K-12)` + T2.`Enrollment (Ages 5-17)` > 500",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 12,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.CDSCode FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.`Enrollment (K-12)` + T2.`Enrollment (Ages 5-17)` > 500"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "MAX(CAST(T1.`Free Meal Count (Ages 5-17)` AS REAL) / T1.`Enrollment (Ages 5-17)`)",
+      "from": "frpm AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "CAST(T2.NumGE1500 AS REAL) / T2.NumTstTakr > 0.3",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 13,
+    "database": "california_schools",
+    "original_sql": "SELECT MAX(CAST(T1.`Free Meal Count (Ages 5-17)` AS REAL) / T1.`Enrollment (Ages 5-17)`) FROM frpm AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE CAST(T2.NumGE1500 AS REAL) / T2.NumTstTakr > 0.3"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "CAST(T2.NumGE1500 AS REAL) / T2.NumTstTakr": -1
+          }
+        },
+        {
+          "$limit": 3
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.Phone",
+      "from": "schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "",
+      "order_by": "CAST(T2.NumGE1500 AS REAL) / T2.NumTstTakr DESC",
+      "limit": 3,
+      "group_by": ""
+    },
+    "line_number": 14,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.Phone FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds ORDER BY CAST(T2.NumGE1500 AS REAL) / T2.NumTstTakr DESC LIMIT 3"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T2.`Enrollment (Ages 5-17)`": -1
+          }
+        },
+        {
+          "$limit": 5
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.NCESSchool",
+      "from": "schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "",
+      "order_by": "T2.`Enrollment (Ages 5-17)` DESC",
+      "limit": 5,
+      "group_by": ""
+    },
+    "line_number": 15,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.NCESSchool FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode ORDER BY T2.`Enrollment (Ages 5-17)` DESC LIMIT 5"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.StatusType": "Active"
+          }
+        },
+        {
+          "$sort": {
+            "T2.AvgScrRead": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.District",
+      "from": "schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "T1.StatusType = 'Active'",
+      "order_by": "T2.AvgScrRead DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 16,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.District FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T1.StatusType = 'Active' ORDER BY T2.AvgScrRead DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.StatusType": "Merged",
+            "T1.County": "Lake"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.CDSCode)",
+      "from": "schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "T1.StatusType = 'Merged' AND T2.NumTstTakr < 100 AND T1.County = 'Lake'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 17,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T1.CDSCode) FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T1.StatusType = 'Merged' AND T2.NumTstTakr < 100 AND T1.County = 'Lake'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "CharterNum": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "$sort": {
+            "AvgScrWrite ) AS WritingScoreRank FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T2.AvgScrWrite > 499 AND CharterNum is not null": -1
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CharterNum, AvgScrWrite, RANK() OVER (ORDER BY AvgScrWrite DESC) AS WritingScoreRank",
+      "from": "schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "T2.AvgScrWrite > 499 AND CharterNum is not null",
+      "order_by": "AvgScrWrite DESC) AS WritingScoreRank FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T2.AvgScrWrite > 499 AND CharterNum is not null",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 18,
+    "database": "california_schools",
+    "original_sql": "SELECT CharterNum, AvgScrWrite, RANK() OVER (ORDER BY AvgScrWrite DESC) AS WritingScoreRank FROM schools AS T1  INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T2.AvgScrWrite > 499 AND CharterNum is not null"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.CDSCode)",
+      "from": "frpm AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "T1.`Charter Funding Type` = 'Directly funded' AND T1.`County Name` = 'Fresno' AND T2.NumTstTakr <= 250",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 19,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T1.CDSCode) FROM frpm AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds WHERE T1.`Charter Funding Type` = 'Directly funded' AND T1.`County Name` = 'Fresno' AND T2.NumTstTakr <= 250"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "satscores",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T2.AvgScrMath": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.Phone",
+      "from": "schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds",
+      "where": "",
+      "order_by": "T2.AvgScrMath DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 20,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.Phone FROM schools AS T1 INNER JOIN satscores AS T2 ON T1.CDSCode = T2.cds ORDER BY T2.AvgScrMath DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Amador"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.`School Name`)",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.County = 'Amador' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 21,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T1.`School Name`) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Amador' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": []
+    },
+    "parsed_sql": {
+      "select": "COUNT(CDSCode)",
+      "from": "frpm",
+      "where": "`County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `FRPM Count (K-12)`< 700",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 22,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(CDSCode) FROM frpm WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `FRPM Count (K-12)`< 700"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$match": {
+            "cname": "Contra Costa",
+            "sname": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "$sort": {
+            "NumTstTakr": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "sname",
+      "from": "satscores",
+      "where": "cname = 'Contra Costa' AND sname IS NOT NULL",
+      "order_by": "NumTstTakr DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 23,
+    "database": "california_schools",
+    "original_sql": "SELECT sname FROM satscores WHERE cname = 'Contra Costa' AND sname IS NOT NULL ORDER BY NumTstTakr DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.School, T1.Street",
+      "from": "schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.`Enrollment (K-12)` - T2.`Enrollment (Ages 5-17)` > 30",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 24,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.School, T1.Street FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.`Enrollment (K-12)` - T2.`Enrollment (Ages 5-17)` > 30"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.`School Name`",
+      "from": "satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode",
+      "where": "CAST(T2.`Free Meal Count (K-12)` AS REAL) / T2.`Enrollment (K-12)` > 0.1 AND T1.NumGE1500 > 0",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 25,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.`School Name` FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE CAST(T2.`Free Meal Count (K-12)` AS REAL) / T2.`Enrollment (K-12)` > 0.1 AND T1.NumGE1500 > 0"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "T1.sname": "$T1.sname",
+              "T2.`Charter Funding Type`": "$T2.`Charter Funding Type`"
+            }
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.sname, T2.`Charter Funding Type`",
+      "from": "satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.`District Name` LIKE 'Riverside%'",
+      "order_by": "",
+      "limit": null,
+      "group_by": "T1.sname, T2.`Charter Funding Type`"
+    },
+    "line_number": 26,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.sname, T2.`Charter Funding Type` FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T2.`District Name` LIKE 'Riverside%' GROUP BY T1.sname, T2.`Charter Funding Type` HAVING CAST(SUM(T1.AvgScrMath) AS REAL) / COUNT(T1.cds) > 400"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Monterey"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`School Name`, T2.Street, T2.City, T2.State, T2.Zip",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.County = 'Monterey' AND T1.`Free Meal Count (Ages 5-17)` > 800 AND T1.`School Type` = 'High Schools (Public)'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 27,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`School Name`, T2.Street, T2.City, T2.State, T2.Zip FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Monterey' AND T1.`Free Meal Count (Ages 5-17)` > 800 AND T1.`School Type` = 'High Schools (Public)'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": []
+    },
+    "parsed_sql": {
+      "select": "T2.School, T1.AvgScrWrite, T2.Phone",
+      "from": "schools AS T2 LEFT JOIN satscores AS T1 ON T2.CDSCode = T1.cds",
+      "where": "strftime('%Y', T2.OpenDate) > '1991' OR strftime('%Y', T2.ClosedDate) < '2000'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 28,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School, T1.AvgScrWrite, T2.Phone FROM schools AS T2 LEFT JOIN satscores AS T1 ON T2.CDSCode = T1.cds WHERE strftime('%Y', T2.OpenDate) > '1991' OR strftime('%Y', T2.ClosedDate) < '2000'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.FundingType": "Locally funded",
+            "T4.FundingType": "Locally funded"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.School, T2.DOC",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.FundingType = 'Locally funded' AND (T1.`Enrollment (K-12)` - T1.`Enrollment (Ages 5-17)`) > (SELECT AVG(T3.`Enrollment (K-12)` - T3.`Enrollment (Ages 5-17)`) FROM frpm AS T3 INNER JOIN schools AS T4 ON T3.CDSCode = T4.CDSCode WHERE T4.FundingType = 'Locally funded')",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 29,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School, T2.DOC FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.FundingType = 'Locally funded' AND (T1.`Enrollment (K-12)` - T1.`Enrollment (Ages 5-17)`) > (SELECT AVG(T3.`Enrollment (K-12)` - T3.`Enrollment (Ages 5-17)`) FROM frpm AS T3 INNER JOIN schools AS T4 ON T3.CDSCode = T4.CDSCode WHERE T4.FundingType = 'Locally funded')"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.`Enrollment (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.OpenDate",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.`Enrollment (K-12)` DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 30,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.OpenDate FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode ORDER BY T1.`Enrollment (K-12)` DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "T2.City": "$T2.City"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "SUM(T1.`Enrollment (K-12)`)": 1
+          }
+        },
+        {
+          "$limit": 5
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.City",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "",
+      "order_by": "SUM(T1.`Enrollment (K-12)`) ASC",
+      "limit": 5,
+      "group_by": "T2.City"
+    },
+    "line_number": 31,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.City FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode GROUP BY T2.City ORDER BY SUM(T1.`Enrollment (K-12)`) ASC LIMIT 5"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$sort": {
+            "`Enrollment (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 9
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`",
+      "from": "frpm",
+      "where": "",
+      "order_by": "`Enrollment (K-12)` DESC",
+      "limit": 9,
+      "group_by": ""
+    },
+    "line_number": 32,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)` FROM frpm ORDER BY `Enrollment (K-12)` DESC LIMIT 9, 2"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.`FRPM Count (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 5
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(T1.`FRPM Count (K-12)` AS REAL) / T1.`Enrollment (K-12)`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.SOC = 66",
+      "order_by": "T1.`FRPM Count (K-12)` DESC",
+      "limit": 5,
+      "group_by": ""
+    },
+    "line_number": 33,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(T1.`FRPM Count (K-12)` AS REAL) / T1.`Enrollment (K-12)` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.SOC = 66 ORDER BY T1.`FRPM Count (K-12)` DESC LIMIT 5"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.Website": {
+              "$exists": true
+            }
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Website, T1.`School Name`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`Free Meal Count (Ages 5-17)` BETWEEN 1900 AND 2000 AND T2.Website IS NOT NULL",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 34,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Website, T1.`School Name` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`Free Meal Count (Ages 5-17)` BETWEEN 1900 AND 2000 AND T2.Website IS NOT NULL"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "frpm",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.AdmFName1": "Kacey",
+            "T1.AdmLName1": "Gibson"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(T2.`Free Meal Count (Ages 5-17)` AS REAL) / T2.`Enrollment (Ages 5-17)`",
+      "from": "schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.AdmFName1 = 'Kacey' AND T1.AdmLName1 = 'Gibson'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 35,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(T2.`Free Meal Count (Ages 5-17)` AS REAL) / T2.`Enrollment (Ages 5-17)` FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.AdmFName1 = 'Kacey' AND T1.AdmLName1 = 'Gibson'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.`Enrollment (K-12)`": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.AdmEmail1",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`Charter School (Y/N)` = 1",
+      "order_by": "T1.`Enrollment (K-12)` ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 36,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.AdmEmail1 FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`Charter School (Y/N)` = 1 ORDER BY T1.`Enrollment (K-12)` ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.NumGE1500": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.AdmFName1, T2.AdmLName1, T2.AdmFName2, T2.AdmLName2, T2.AdmFName3, T2.AdmLName3",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.NumGE1500 DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 37,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.AdmFName1, T2.AdmLName1, T2.AdmFName2, T2.AdmLName2, T2.AdmFName3, T2.AdmLName3 FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "CAST(T1.NumGE1500 AS REAL) / T1.NumTstTakr": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Street, T2.City, T2.State, T2.Zip",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "CAST(T1.NumGE1500 AS REAL) / T1.NumTstTakr ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 38,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Street, T2.City, T2.State, T2.Zip FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY CAST(T1.NumGE1500 AS REAL) / T1.NumTstTakr ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Los Angeles"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Website",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T1.NumTstTakr BETWEEN 2000 AND 3000 AND T2.County = 'Los Angeles'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 39,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Website FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T1.NumTstTakr BETWEEN 2000 AND 3000 AND T2.County = 'Los Angeles'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Fresno"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "AVG(T1.NumTstTakr)",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "strftime('%Y', T2.OpenDate) = '1980' AND T2.County = 'Fresno'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 40,
+    "database": "california_schools",
+    "original_sql": "SELECT AVG(T1.NumTstTakr) FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE strftime('%Y', T2.OpenDate) = '1980' AND T2.County = 'Fresno'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.District": "Fresno Unified",
+            "T1.AvgScrRead": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrRead": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Phone",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.District = 'Fresno Unified' AND T1.AvgScrRead IS NOT NULL",
+      "order_by": "T1.AvgScrRead ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 41,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.District = 'Fresno Unified' AND T1.AvgScrRead IS NOT NULL ORDER BY T1.AvgScrRead ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "SELECT",
+      "pipeline": [
+        {
+          "$match": {
+            "T2.Virtual": "F"
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrRead ) AS rnk FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Virtual = 'F' ) ranked_schools WHERE rnk <= 5": -1
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "School",
+      "from": "(SELECT T2.School,T1.AvgScrRead, RANK() OVER (PARTITION BY T2.County",
+      "where": "T2.Virtual = 'F' ) ranked_schools WHERE rnk <= 5",
+      "order_by": "T1.AvgScrRead DESC) AS rnk FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Virtual = 'F' ) ranked_schools WHERE rnk <= 5",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 42,
+    "database": "california_schools",
+    "original_sql": "SELECT School FROM (SELECT T2.School,T1.AvgScrRead, RANK() OVER (PARTITION BY T2.County ORDER BY T1.AvgScrRead DESC) AS rnk FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Virtual = 'F' ) ranked_schools WHERE rnk <= 5"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrMath": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.EdOpsName",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.AvgScrMath DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 43,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.EdOpsName FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.AvgScrMath DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.AvgScrMath": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrMath + T1.AvgScrRead + T1.AvgScrWrite": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.AvgScrMath, T2.County",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T1.AvgScrMath IS NOT NULL",
+      "order_by": "T1.AvgScrMath + T1.AvgScrRead + T1.AvgScrWrite ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 44,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.AvgScrMath, T2.County FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrMath IS NOT NULL ORDER BY T1.AvgScrMath + T1.AvgScrRead + T1.AvgScrWrite ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.NumGE1500": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.AvgScrWrite, T2.City",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.NumGE1500 DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 45,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.AvgScrWrite, T2.City FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.AdmFName1": "Ricci",
+            "T2.AdmLName1": "Ulrich"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.School, T1.AvgScrWrite",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.AdmFName1 = 'Ricci' AND T2.AdmLName1 = 'Ulrich'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 46,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School, T1.AvgScrWrite FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.AdmFName1 = 'Ricci' AND T2.AdmLName1 = 'Ulrich'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.`Enrollment (K-12)`": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.School",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.DOC = 31",
+      "order_by": "T1.`Enrollment (K-12)` DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 47,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.DOC = 31 ORDER BY T1.`Enrollment (K-12)` DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "County": "Alameda"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(COUNT(School) AS REAL) / 12",
+      "from": "schools",
+      "where": "DOC = 52 AND County = 'Alameda' AND strftime('%Y', OpenDate) = '1980'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 48,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(COUNT(School) AS REAL) / 12 FROM schools WHERE DOC = 52 AND County = 'Alameda' AND strftime('%Y', OpenDate) = '1980'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "StatusType": "Merged",
+            "County": "Orange"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(SUM(CASE WHEN DOC = 54 THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN DOC = 52 THEN 1 ELSE 0 END)",
+      "from": "schools",
+      "where": "StatusType = 'Merged' AND County = 'Orange'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 49,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(SUM(CASE WHEN DOC = 54 THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN DOC = 52 THEN 1 ELSE 0 END) FROM schools WHERE StatusType = 'Merged' AND County = 'Orange'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "StatusType": "Closed"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "County": "$County"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "COUNT(School)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "DISTINCT County, School, ClosedDate",
+      "from": "schools",
+      "where": "County = ( SELECT County FROM schools WHERE StatusType = 'Closed'",
+      "order_by": "COUNT(School) DESC",
+      "limit": 1,
+      "group_by": "County"
+    },
+    "line_number": 50,
+    "database": "california_schools",
+    "original_sql": "SELECT DISTINCT County, School, ClosedDate FROM schools WHERE County = ( SELECT County FROM schools WHERE StatusType = 'Closed' GROUP BY County ORDER BY COUNT(School) DESC LIMIT 1 ) AND StatusType = 'Closed' AND school IS NOT NULL"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrMath": -1
+          }
+        },
+        {
+          "$limit": 6
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.MailStreet, T2.School",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.AvgScrMath DESC",
+      "limit": 6,
+      "group_by": ""
+    },
+    "line_number": 51,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.MailStreet, T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.AvgScrMath DESC LIMIT 6, 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.AvgScrRead": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrRead": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.MailStreet, T2.School",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T1.AvgScrRead IS NOT NULL",
+      "order_by": "T1.AvgScrRead ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 52,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.MailStreet, T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrRead IS NOT NULL ORDER BY T1.AvgScrRead ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.MailCity": "Lakeport"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.cds)",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.MailCity = 'Lakeport' AND (T1.AvgScrRead + T1.AvgScrMath + T1.AvgScrWrite) >= 1500",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 53,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T1.cds) FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.MailCity = 'Lakeport' AND (T1.AvgScrRead + T1.AvgScrMath + T1.AvgScrWrite) >= 1500"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.MailCity": "Fresno"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.NumTstTakr",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "T2.MailCity = 'Fresno'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 54,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.NumTstTakr FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.MailCity = 'Fresno'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "AdmFName1": "Avetik",
+            "AdmLName1": "Atoian"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "School, MailZip",
+      "from": "schools",
+      "where": "AdmFName1 = 'Avetik' AND AdmLName1 = 'Atoian'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 55,
+    "database": "california_schools",
+    "original_sql": "SELECT School, MailZip FROM schools WHERE AdmFName1 = 'Avetik' AND AdmLName1 = 'Atoian'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "MailState": "CA"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(SUM(CASE WHEN County = 'Colusa' THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN County = 'Humboldt' THEN 1 ELSE 0 END)",
+      "from": "schools",
+      "where": "MailState = 'CA'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 56,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(SUM(CASE WHEN County = 'Colusa' THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN County = 'Humboldt' THEN 1 ELSE 0 END) FROM schools WHERE MailState = 'CA'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "City": "San Joaquin",
+            "MailState": "CA",
+            "StatusType": "Active"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(CDSCode)",
+      "from": "schools",
+      "where": "City = 'San Joaquin' AND MailState = 'CA' AND StatusType = 'Active'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 57,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(CDSCode) FROM schools WHERE City = 'San Joaquin' AND MailState = 'CA' AND StatusType = 'Active'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.AvgScrWrite": -1
+          }
+        },
+        {
+          "$limit": 332
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.Phone, T2.Ext",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.AvgScrWrite DESC",
+      "limit": 332,
+      "group_by": ""
+    },
+    "line_number": 58,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.Phone, T2.Ext FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.AvgScrWrite DESC LIMIT 332, 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "Zip": "95203-3704"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "Phone, Ext, School",
+      "from": "schools",
+      "where": "Zip = '95203-3704'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 59,
+    "database": "california_schools",
+    "original_sql": "SELECT Phone, Ext, School FROM schools WHERE Zip = '95203-3704'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "AdmFName1": "Mike",
+            "AdmLName1": "Alvarez"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "Website",
+      "from": "schools",
+      "where": "(AdmFName1 = 'Mike' AND AdmLName1 = 'Larson') OR (AdmFName1 = 'Dante' AND AdmLName1 = 'Alvarez')",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 60,
+    "database": "california_schools",
+    "original_sql": "SELECT Website FROM schools WHERE (AdmFName1 = 'Mike' AND AdmLName1 = 'Larson') OR (AdmFName1 = 'Dante' AND AdmLName1 = 'Alvarez')"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "County": "San Joaquin",
+            "Virtual": "P"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "Website",
+      "from": "schools",
+      "where": "County = 'San Joaquin' AND Virtual = 'P' AND Charter = 1",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 61,
+    "database": "california_schools",
+    "original_sql": "SELECT Website FROM schools WHERE County = 'San Joaquin' AND Virtual = 'P' AND Charter = 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "City": "Hickman"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(School)",
+      "from": "schools",
+      "where": "DOC = 52 AND Charter = 1 AND City = 'Hickman'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 62,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(School) FROM schools WHERE DOC = 52 AND Charter = 1 AND City = 'Hickman'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Los Angeles"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T2.School)",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.County = 'Los Angeles' AND T2.Charter = 0 AND CAST(T1.`Free Meal Count (K-12)` AS REAL) * 100 / T1.`Enrollment (K-12)` < 0.18",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 63,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(T2.School) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Los Angeles' AND T2.Charter = 0 AND CAST(T1.`Free Meal Count (K-12)` AS REAL) * 100 / T1.`Enrollment (K-12)` < 0.18"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "CharterNum": "00D2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "AdmFName1, AdmLName1, School, City",
+      "from": "schools",
+      "where": "Charter = 1 AND CharterNum = '00D2'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 64,
+    "database": "california_schools",
+    "original_sql": "SELECT AdmFName1, AdmLName1, School, City FROM schools WHERE Charter = 1 AND CharterNum = '00D2'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "CharterNum": "00D4",
+            "MailCity": "Hickman"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(*)",
+      "from": "schools",
+      "where": "CharterNum = '00D4' AND MailCity = 'Hickman'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 65,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(*) FROM schools WHERE CharterNum = '00D4' AND MailCity = 'Hickman'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "County": "Santa Clara"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "CAST(SUM(CASE WHEN FundingType = 'Locally funded' THEN 1 ELSE 0 END) AS REAL) * 100 / SUM(CASE WHEN FundingType != 'Locally funded' THEN 1 ELSE 0 END)",
+      "from": "schools",
+      "where": "County = 'Santa Clara' AND Charter = 1",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 66,
+    "database": "california_schools",
+    "original_sql": "SELECT CAST(SUM(CASE WHEN FundingType = 'Locally funded' THEN 1 ELSE 0 END) AS REAL) * 100 / SUM(CASE WHEN FundingType != 'Locally funded' THEN 1 ELSE 0 END) FROM schools WHERE County = 'Santa Clara' AND Charter = 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "County": "Stanislaus",
+            "FundingType": "Directly funded"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(School)",
+      "from": "schools",
+      "where": "strftime('%Y', OpenDate) BETWEEN '2000' AND '2005' AND County = 'Stanislaus' AND FundingType = 'Directly funded'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 67,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(School) FROM schools WHERE strftime('%Y', OpenDate) BETWEEN '2000' AND '2005' AND County = 'Stanislaus' AND FundingType = 'Directly funded'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "City": "San Francisco",
+            "DOCType": "Community College District"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(School)",
+      "from": "schools",
+      "where": "strftime('%Y', ClosedDate) = '1989' AND City = 'San Francisco' AND DOCType = 'Community College District'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 68,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(School) FROM schools WHERE strftime('%Y', ClosedDate) = '1989' AND City = 'San Francisco' AND DOCType = 'Community College District'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "StatusType": "Closed"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "County": "$County"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "COUNT(School)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "County",
+      "from": "schools",
+      "where": "strftime('%Y', ClosedDate) BETWEEN '1980' AND '1989' AND StatusType = 'Closed' AND SOC = 11",
+      "order_by": "COUNT(School) DESC",
+      "limit": 1,
+      "group_by": "County"
+    },
+    "line_number": 69,
+    "database": "california_schools",
+    "original_sql": "SELECT County FROM schools WHERE strftime('%Y', ClosedDate) BETWEEN '1980' AND '1989' AND StatusType = 'Closed' AND SOC = 11 GROUP BY County ORDER BY COUNT(School) DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": []
+    },
+    "parsed_sql": {
+      "select": "NCESDist",
+      "from": "schools",
+      "where": "SOC = 31",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 70,
+    "database": "california_schools",
+    "original_sql": "SELECT NCESDist FROM schools WHERE SOC = 31"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "StatusType": "Closed",
+            "County": "Alpine"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(School)",
+      "from": "schools",
+      "where": "(StatusType = 'Closed' OR StatusType = 'Active') AND SOC = 69 AND County = 'Alpine'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 71,
+    "database": "california_schools",
+    "original_sql": "SELECT COUNT(School) FROM schools WHERE (StatusType = 'Closed' OR StatusType = 'Active') AND SOC = 69 AND County = 'Alpine'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.City": "Fresno"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`District Code`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.City = 'Fresno' AND T2.Magnet = 0",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 72,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`District Code` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.City = 'Fresno' AND T2.Magnet = 0"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.EdOpsCode": "SSS",
+            "T2.City": "Fremont"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`Enrollment (Ages 5-17)`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.EdOpsCode = 'SSS' AND T2.City = 'Fremont' AND T1.`Academic Year` BETWEEN 2014 AND 2015",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 73,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`Enrollment (Ages 5-17)` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.EdOpsCode = 'SSS' AND T2.City = 'Fremont' AND T1.`Academic Year` BETWEEN 2014 AND 2015"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.MailStreet": "PO Box 1040",
+            "T2.SOCType": "Youth Authority Facilities"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`FRPM Count (Ages 5-17)`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.MailStreet = 'PO Box 1040' AND T2.SOCType = 'Youth Authority Facilities'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 74,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`FRPM Count (Ages 5-17)` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.MailStreet = 'PO Box 1040' AND T2.SOCType = 'Youth Authority Facilities'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.NCESDist": "0613360",
+            "T2.EdOpsCode": "SPECON"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "MIN(T1.`Low Grade`)",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.NCESDist = '0613360' AND T2.EdOpsCode = 'SPECON'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 75,
+    "database": "california_schools",
+    "original_sql": "SELECT MIN(T1.`Low Grade`) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.NCESDist = '0613360' AND T2.EdOpsCode = 'SPECON'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.EILName, T2.School",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`NSLP Provision Status` = 'Breakfast Provision 2' AND T1.`County Code` = 37",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 76,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.EILName, T2.School FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`NSLP Provision Status` = 'Breakfast Provision 2' AND T1.`County Code` = 37"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Merced",
+            "T2.EILCode": "HS"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.City",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T1.`NSLP Provision Status` = 'Lunch Provision 2' AND T2.County = 'Merced' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12 AND T2.EILCode = 'HS'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 77,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.City FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`NSLP Provision Status` = 'Lunch Provision 2' AND T2.County = 'Merced' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12 AND T2.EILCode = 'HS'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "Los Angeles",
+            "T2.GSserved": "K-9"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.School, T1.`FRPM Count (Ages 5-17)` * 100 / T1.`Enrollment (Ages 5-17)`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.County = 'Los Angeles' AND T2.GSserved = 'K-9'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 78,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.School, T1.`FRPM Count (Ages 5-17)` * 100 / T1.`Enrollment (Ages 5-17)` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Los Angeles' AND T2.GSserved = 'K-9'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "City": "Adelanto"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "GSserved": "$GSserved"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "COUNT(GSserved)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "GSserved",
+      "from": "schools",
+      "where": "City = 'Adelanto'",
+      "order_by": "COUNT(GSserved) DESC",
+      "limit": 1,
+      "group_by": "GSserved"
+    },
+    "line_number": 79,
+    "database": "california_schools",
+    "original_sql": "SELECT GSserved FROM schools WHERE City = 'Adelanto' GROUP BY GSserved ORDER BY COUNT(GSserved) DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "County": "San Diego",
+            "Virtual": "F"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "County": "$County"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "COUNT(Virtual)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "County, COUNT(Virtual)",
+      "from": "schools",
+      "where": "(County = 'San Diego' OR County = 'Santa Barbara') AND Virtual = 'F'",
+      "order_by": "COUNT(Virtual) DESC",
+      "limit": 1,
+      "group_by": "County"
+    },
+    "line_number": 80,
+    "database": "california_schools",
+    "original_sql": "SELECT County, COUNT(Virtual) FROM schools WHERE (County = 'San Diego' OR County = 'Santa Barbara') AND Virtual = 'F' GROUP BY County ORDER BY COUNT(Virtual) DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T2.Latitude": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`School Type`, T1.`School Name`, T2.Latitude",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "",
+      "order_by": "T2.Latitude DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 81,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`School Type`, T1.`School Name`, T2.Latitude FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode ORDER BY T2.Latitude DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.State": "CA"
+          }
+        },
+        {
+          "$sort": {
+            "T2.Latitude": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.City, T1.`Low Grade`, T1.`School Name`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.State = 'CA'",
+      "order_by": "T2.Latitude ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 82,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.City, T1.`Low Grade`, T1.`School Name` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.State = 'CA' ORDER BY T2.Latitude ASC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$sort": {
+            "ABS(longitude)": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "GSoffered",
+      "from": "schools",
+      "where": "",
+      "order_by": "ABS(longitude) DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 83,
+    "database": "california_schools",
+    "original_sql": "SELECT GSoffered FROM schools ORDER BY ABS(longitude) DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.GSoffered": "K-8"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "T2.City": "$T2.City"
+            }
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.City, COUNT(T2.CDSCode)",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.Magnet = 1 AND T2.GSoffered = 'K-8' AND T1.`NSLP Provision Status` = 'Multiple Provision Types'",
+      "order_by": "",
+      "limit": null,
+      "group_by": "T2.City"
+    },
+    "line_number": 84,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.City, COUNT(T2.CDSCode) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.Magnet = 1 AND T2.GSoffered = 'K-8' AND T1.`NSLP Provision Status` = 'Multiple Provision Types' GROUP BY T2.City"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$group": {
+            "_id": {
+              "admfname1": "$admfname1"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "COUNT(admfname1)": -1
+          }
+        },
+        {
+          "$limit": 2
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "DISTINCT T1.AdmFName1, T1.District",
+      "from": "schools AS T1 INNER JOIN ( SELECT admfname1 FROM schools",
+      "where": "",
+      "order_by": "COUNT(admfname1) DESC",
+      "limit": 2,
+      "group_by": "admfname1"
+    },
+    "line_number": 85,
+    "database": "california_schools",
+    "original_sql": "SELECT DISTINCT T1.AdmFName1, T1.District FROM schools AS T1 INNER JOIN ( SELECT admfname1 FROM schools GROUP BY admfname1 ORDER BY COUNT(admfname1) DESC LIMIT 2 ) AS T2 ON T1.AdmFName1 = T2.admfname1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.AdmFName1": "Alusine"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.`Free Meal Count (K-12)` * 100 / T1.`Enrollment (K-12)`, T1.`District Code`",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.AdmFName1 = 'Alusine'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 86,
+    "database": "california_schools",
+    "original_sql": "SELECT T1.`Free Meal Count (K-12)` * 100 / T1.`Enrollment (K-12)`, T1.`District Code` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.AdmFName1 = 'Alusine'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "schools",
+      "pipeline": [
+        {
+          "$match": {
+            "CharterNum": "0040"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "AdmLName1, District, County, School",
+      "from": "schools",
+      "where": "CharterNum = '0040'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 87,
+    "database": "california_schools",
+    "original_sql": "SELECT AdmLName1, District, County, School FROM schools WHERE CharterNum = '0040'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "frpm",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "CDSCode",
+            "foreignField": "CDSCode",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.County": "San Bernardino",
+            "T2.City": "San Bernardino"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.AdmEmail1, T2.AdmEmail2",
+      "from": "frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode",
+      "where": "T2.County = 'San Bernardino' AND T2.City = 'San Bernardino' AND T2.DOC = 54 AND strftime('%Y', T2.OpenDate) BETWEEN '2009' AND '2010' AND T2.SOC = 62",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 88,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.AdmEmail1, T2.AdmEmail2 FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'San Bernardino' AND T2.City = 'San Bernardino' AND T2.DOC = 54 AND strftime('%Y', T2.OpenDate) BETWEEN '2009' AND '2010' AND T2.SOC = 62"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "california_schools",
+      "collection": "satscores",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "schools",
+            "localField": "cds",
+            "foreignField": "cds",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.NumGE1500": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.AdmEmail1, T2.School",
+      "from": "satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode",
+      "where": "",
+      "order_by": "T1.NumGE1500 DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 89,
+    "database": "california_schools",
+    "original_sql": "SELECT T2.AdmEmail1, T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "district",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "account",
+            "localField": "district_id",
+            "foreignField": "district_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.A3": "east Bohemia",
+            "T2.frequency": "POPLATEK PO OBRATU"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T2.account_id)",
+      "from": "district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id",
+      "where": "T1.A3 = 'east Bohemia' AND T2.frequency = 'POPLATEK PO OBRATU'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 90,
+    "database": "financial",
+    "original_sql": "SELECT COUNT(T2.account_id) FROM district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id WHERE T1.A3 = 'east Bohemia' AND T2.frequency = 'POPLATEK PO OBRATU'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "account",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "loan",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T3.A3": "Prague"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.account_id)",
+      "from": "account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id INNER JOIN district AS T3 ON T1.district_id = T3.district_id",
+      "where": "T3.A3 = 'Prague'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 91,
+    "database": "financial",
+    "original_sql": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id INNER JOIN district AS T3 ON T1.district_id = T3.district_id WHERE T3.A3 = 'Prague'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "district",
+      "pipeline": []
+    },
+    "parsed_sql": {
+      "select": "DISTINCT IIF(AVG(A13) > AVG(A12), '1996', '1995')",
+      "from": "district",
+      "where": "",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 92,
+    "database": "financial",
+    "original_sql": "SELECT DISTINCT IIF(AVG(A13) > AVG(A12), '1996', '1995') FROM district"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "client",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "district",
+            "localField": "district_id",
+            "foreignField": "district_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.gender": "F"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(DISTINCT T2.district_id)",
+      "from": "client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id",
+      "where": "T1.gender = 'F' AND T2.A11 BETWEEN 6000 AND 10000",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 93,
+    "database": "financial",
+    "original_sql": "SELECT COUNT(DISTINCT T2.district_id)  FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.gender = 'F' AND T2.A11 BETWEEN 6000 AND 10000"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "client",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "district",
+            "localField": "district_id",
+            "foreignField": "district_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.gender": "M",
+            "T2.A3": "north Bohemia"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.client_id)",
+      "from": "client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id",
+      "where": "T1.gender = 'M' AND T2.A3 = 'north Bohemia' AND T2.A11 > 8000",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 94,
+    "database": "financial",
+    "original_sql": "SELECT COUNT(T1.client_id) FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.gender = 'M' AND T2.A3 = 'north Bohemia' AND T2.A11 > 8000"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "account",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "district",
+            "localField": "district_id",
+            "foreignField": "district_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "gender": "F"
+          }
+        },
+        {
+          "$sort": {
+            "birth_date": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.account_id , ( SELECT MAX(A11) - MIN(A11)",
+      "from": "district ) FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T1.account_id = T3.account_id INNER JOIN client AS T4 ON T3.client_id = T4.client_id",
+      "where": "T2.district_id = ( SELECT district_id FROM client WHERE gender = 'F'",
+      "order_by": "birth_date ASC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 95,
+    "database": "financial",
+    "original_sql": "SELECT T1.account_id , ( SELECT MAX(A11) - MIN(A11) FROM district ) FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T1.account_id = T3.account_id INNER JOIN client AS T4 ON T3.client_id = T4.client_id WHERE T2.district_id = ( SELECT district_id FROM client WHERE gender = 'F' ORDER BY birth_date ASC LIMIT 1 ) ORDER BY T2.A11 DESC LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "account",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "disp",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$group": {
+            "_id": {
+              "T4.A11": "$T4.A11",
+              "T1.account_id": "$T1.account_id"
+            }
+          }
+        },
+        {
+          "$sort": {
+            "birth_date": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.account_id",
+      "from": "account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id INNER JOIN client AS T3 ON T2.client_id = T3.client_id INNER JOIN district AS T4 on T4.district_id = T1.district_id",
+      "where": "T2.client_id = ( SELECT client_id FROM client",
+      "order_by": "birth_date DESC",
+      "limit": 1,
+      "group_by": "T4.A11, T1.account_id"
+    },
+    "line_number": 96,
+    "database": "financial",
+    "original_sql": "SELECT T1.account_id  FROM account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id INNER JOIN client AS T3 ON T2.client_id = T3.client_id INNER JOIN district AS T4 on T4.district_id = T1.district_id WHERE T2.client_id = ( SELECT client_id FROM client ORDER BY birth_date DESC LIMIT 1) GROUP BY T4.A11, T1.account_id"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "account",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "disp",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.type": "OWNER",
+            "T1.frequency": "POPLATEK TYDNE"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "COUNT(T1.account_id)",
+      "from": "account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id",
+      "where": "T2.type = 'OWNER' AND T1.frequency = 'POPLATEK TYDNE'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 97,
+    "database": "financial",
+    "original_sql": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id WHERE T2.type = 'OWNER' AND T1.frequency = 'POPLATEK TYDNE'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "account",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "disp",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T1.frequency": "POPLATEK PO OBRATU",
+            "T2.type": "DISPONENT"
+          }
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.client_id",
+      "from": "account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id",
+      "where": "T1.frequency = 'POPLATEK PO OBRATU' AND T2.type = 'DISPONENT'",
+      "order_by": "",
+      "limit": null,
+      "group_by": ""
+    },
+    "line_number": 98,
+    "database": "financial",
+    "original_sql": "SELECT T2.client_id FROM account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id WHERE T1.frequency = 'POPLATEK PO OBRATU' AND T2.type = 'DISPONENT'"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "loan",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "account",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$match": {
+            "T2.frequency": "POPLATEK TYDNE"
+          }
+        },
+        {
+          "$sort": {
+            "T1.amount": 1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T2.account_id",
+      "from": "loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id",
+      "where": "STRFTIME('%Y', T1.date) = '1997' AND T2.frequency = 'POPLATEK TYDNE'",
+      "order_by": "T1.amount",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 99,
+    "database": "financial",
+    "original_sql": "SELECT T2.account_id FROM loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id WHERE STRFTIME('%Y', T1.date) = '1997' AND T2.frequency = 'POPLATEK TYDNE' ORDER BY T1.amount LIMIT 1"
+  },
+  {
+    "success": true,
+    "mql_query": {
+      "database": "financial",
+      "collection": "loan",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "account",
+            "localField": "account_id",
+            "foreignField": "account_id",
+            "as": "T2"
+          }
+        },
+        {
+          "$sort": {
+            "T1.amount": -1
+          }
+        },
+        {
+          "$limit": 1
+        }
+      ]
+    },
+    "parsed_sql": {
+      "select": "T1.account_id",
+      "from": "loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id",
+      "where": "STRFTIME('%Y', T2.date) = '1993' AND T1.duration > 12",
+      "order_by": "T1.amount DESC",
+      "limit": 1,
+      "group_by": ""
+    },
+    "line_number": 100,
+    "database": "financial",
+    "original_sql": "SELECT T1.account_id FROM loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id WHERE STRFTIME('%Y', T2.date) = '1993' AND T1.duration > 12 ORDER BY T1.amount DESC LIMIT 1"
+  }
+]

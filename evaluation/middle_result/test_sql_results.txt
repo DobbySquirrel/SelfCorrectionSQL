@@ -1,0 +1,5 @@
+SELECT COUNT(*) FROM schools AS s INNER JOIN satscores AS ss ON s.CDSCode = ss.cds WHERE ss.AvgScrMath > 560 AND s.FundingType = 'Directly funded';
+SELECT COUNT(*) FROM frpm WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `Free Meal Count (K-12)` < 700;
+SELECT s."School", s."FundingType" FROM schools s JOIN satscores sa ON s."CDSCode" = sa."cds" WHERE s."County" = 'Riverside' AND sa."AvgScrMath" IS NOT NULL GROUP BY s."School", s."FundingType" HAVING AVG(sa."AvgScrMath") > 400
+SELECT s.AdmEmail1 FROM frpm f JOIN schools s ON f.CDSCode = s.CDSCode WHERE f.`Charter School (Y/N)` = 1 ORDER BY f.`Enrollment (K-12)` ASC LIMIT 1;
+SELECT Phone FROM schools WHERE CDSCode = ( SELECT cds FROM satscores WHERE dname = 'Fresno Unified' AND AvgScrRead IS NOT NULL ORDER BY AvgScrRead ASC LIMIT 1 );

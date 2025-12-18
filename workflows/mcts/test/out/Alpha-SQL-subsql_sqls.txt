@@ -1,0 +1,147 @@
+SELECT COUNT(*) FROM satscores INNER JOIN schools ON satscores.cds = schools.cdscode WHERE satscores.avgscrmath > 560 AND schools.fundingtype = 'Directly funded'
+SELECT COUNT(*) FROM frpm WHERE "County Name" = 'Los Angeles' AND "Free Meal Count (K-12)" > 500 AND "FRPM Count (K-12)" < 700
+SELECT DISTINCT schools.fundingtype FROM frpm INNER JOIN satscores ON frpm.cdscode = satscores.cds INNER JOIN schools ON schools.cdscode = satscores.cds WHERE frpm."County Name" = 'Riverside' AND satscores.avgscrmath > 400
+SELECT t2.admemail1 FROM frpm AS t1 INNER JOIN schools AS t2 ON t1.cdscode = t2.cdscode WHERE t1."Charter School (Y/N)" = 1 ORDER BY t1."Enrollment (K-12)" ASC LIMIT 1
+SELECT phone FROM schools WHERE cdscode = (SELECT a.cds FROM satscores AS a INNER JOIN schools AS s ON a.cds = s.cdscode WHERE s.district = 'Fresno Unified' ORDER BY a.avgscrread ASC LIMIT 1)
+SELECT s.avgscrmath, sc.county FROM satscores AS s INNER JOIN schools AS sc ON s.cds = sc.cdscode ORDER BY (s.avgscrmath + s.avgscrread + s.avgscrwrite) ASC LIMIT 1
+SELECT schools.city FROM schools INNER JOIN frpm ON schools.cdscode = frpm.cdscode WHERE frpm."County Name" = 'Merced' AND frpm."NSLP Provision Status" = 'Lunch Provision 2' AND frpm."Low Grade" = '9' AND frpm."High Grade" = '12'
+SELECT city, school FROM schools WHERE state = 'CA' ORDER BY latitude ASC LIMIT 1
+SELECT COUNT(client.client_id) FROM client INNER JOIN district ON client.district_id = district.district_id WHERE client.gender = 'M' AND district.a3 = 'north Bohemia' AND district.a11 > 8000
+SELECT DISTINCT disp.client_id FROM account INNER JOIN disp ON account.account_id = disp.account_id WHERE account.frequency = 'POPLATEK PO OBRATU' AND disp.type = 'DISPONENT'
+SELECT a.account_id FROM account AS a INNER JOIN loan AS l ON a.account_id = l.account_id WHERE STRFTIME('%Y', l.date) = '1997' AND a.frequency = 'POPLATEK TYDNE' ORDER BY l.amount ASC LIMIT 1
+SELECT COUNT(*) FROM account INNER JOIN district ON account.district_id = district.district_id WHERE STRFTIME('%Y', account.date) = '1996' AND district.a2 = 'Litomerice'
+SELECT COUNT(DISTINCT client.client_id) FROM district INNER JOIN client ON district.district_id = client.district_id INNER JOIN disp ON client.client_id = disp.client_id LEFT JOIN card ON disp.disp_id = card.disp_id WHERE district.a3 = 'South Bohemia' AND card.card_id IS NULL
+SELECT COUNT(*) FROM card INNER JOIN disp ON card.disp_id = disp.disp_id WHERE card.type = 'gold' AND disp.type = 'OWNER'
+SELECT t2.district_id FROM "order" AS t1 INNER JOIN "account" AS t2 ON t1.account_id = t2.account_id WHERE t1.order_id = 33333
+SELECT t3.client_id FROM "order" AS t1 INNER JOIN disp AS t2 ON t1.account_id = t2.account_id INNER JOIN client AS t3 ON t2.client_id = t3.client_id WHERE t1.order_id = 32423
+SELECT loan.amount, loan.status FROM loan INNER JOIN disp ON loan.account_id = disp.account_id WHERE disp.client_id = 992
+SELECT disp.account_id FROM disp INNER JOIN client ON disp.client_id = client.client_id INNER JOIN district ON client.district_id = district.district_id WHERE client.gender = 'F' AND client.birth_date = (SELECT MIN(birth_date) FROM client WHERE gender = 'F' AND district_id = (SELECT district_id FROM district ORDER BY a11 ASC LIMIT 1)) AND district.a11 = (SELECT MIN(a11) FROM district)
+SELECT b.bond_type, m.label FROM bond AS b INNER JOIN molecule AS m ON b.molecule_id = m.molecule_id WHERE b.molecule_id = 'TR010' GROUP BY b.bond_type ORDER BY COUNT(b.bond_type) DESC LIMIT 1
+SELECT element FROM atom WHERE molecule_id = 'TR004'
+SELECT atom_id2 FROM connected JOIN atom ON connected.atom_id = atom.atom_id WHERE atom.element = 's'
+SELECT bond_type FROM bond WHERE molecule_id BETWEEN 'TR000' AND 'TR050'
+SELECT CAST(COUNT(DISTINCT CASE WHEN bond.bond_type = '#' THEN bond.molecule_id ELSE NULL END) AS REAL) * 100 / COUNT(DISTINCT molecule.molecule_id) AS percentage FROM molecule INNER JOIN bond ON molecule.molecule_id = bond.molecule_id
+SELECT CAST(SUM(bond_type = '=') AS REAL) * 100 / COUNT(*) AS percent FROM bond WHERE molecule_id = 'TR047'
+SELECT molecule.label FROM atom INNER JOIN molecule ON atom.molecule_id = molecule.molecule_id WHERE atom.atom_id = 'TR001_1'
+SELECT COUNT(*) FROM molecule WHERE label = '+'
+SELECT COUNT(CASE WHEN t1.bond_type = '=' THEN 1 ELSE NULL END) AS double_bonds, t2.label FROM bond AS t1 INNER JOIN molecule AS t2 ON t1.molecule_id = t2.molecule_id WHERE t1.molecule_id = 'TR006'
+SELECT DISTINCT t1.element, t2.element FROM atom AS t1 INNER JOIN connected AS c ON t1.atom_id = c.atom_id INNER JOIN atom AS t2 ON t2.atom_id = c.atom_id2 WHERE c.bond_id = 'TR000_2_3' ORDER BY t1.element, t2.element
+SELECT atom.atom_id, COUNT(DISTINCT bond.bond_type) AS bond_type_count FROM atom INNER JOIN connected ON atom.atom_id = connected.atom_id INNER JOIN bond ON connected.bond_id = bond.bond_id WHERE atom.molecule_id = 'TR346' GROUP BY atom.atom_id
+SELECT DISTINCT atom.molecule_id FROM atom INNER JOIN connected ON atom.atom_id = connected.atom_id INNER JOIN bond ON connected.bond_id = bond.bond_id WHERE atom.element = 's' AND bond.bond_type = '='
+SELECT atom.element, bond.bond_type FROM atom INNER JOIN connected ON atom.atom_id = connected.atom_id INNER JOIN bond ON connected.bond_id = bond.bond_id WHERE atom.molecule_id = 'TR002' AND bond.molecule_id = 'TR002'
+SELECT DISTINCT a.atom_id FROM atom AS a INNER JOIN connected AS c ON a.atom_id = c.atom_id INNER JOIN bond AS b ON c.bond_id = b.bond_id WHERE a.element = 'c' AND b.molecule_id = 'TR012' AND b.bond_type = '='
+SELECT cards.id, rulings.text, cards.hascontentwarning FROM cards INNER JOIN rulings ON cards.uuid = rulings.uuid WHERE cards.artist = 'Stephen Daniele'
+SELECT DISTINCT foreign_data.language FROM cards INNER JOIN foreign_data ON cards.uuid = foreign_data.uuid WHERE cards.name = 'Annul' AND cards.number = '29'
+SELECT sets.name, sets.totalsetsize FROM sets INNER JOIN set_translations ON sets.code = set_translations.setcode WHERE set_translations.language = 'Italian'
+SELECT r.text FROM rulings AS r INNER JOIN cards AS c ON r.uuid = c.uuid WHERE c.name = 'Condemn'
+SELECT name, colors FROM cards WHERE setcode = 'OGW'
+SELECT CAST(SUM(CASE WHEN "isTextless" = 0 THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) AS percentage, "id" FROM "cards" WHERE "isStorySpotlight" = 1
+SELECT COUNT(*) FROM cards WHERE bordercolor = 'borderless' AND edhrecrank > 12000
+SELECT "cards"."id" FROM "cards" WHERE NOT "cards"."cardKingdomFoilId" IS NULL AND NOT "cards"."cardKingdomId" IS NULL ORDER BY "cards"."cardKingdomFoilId" ASC LIMIT 3
+SELECT id FROM cards WHERE frameeffects = 'extendedart'
+SELECT fd.name, fd.type FROM cards AS c INNER JOIN foreign_data AS fd ON c.uuid = fd.uuid WHERE c.watermark = 'abzan'
+SELECT DISTINCT sets.releasedate FROM cards INNER JOIN sets ON cards.setcode = sets.code WHERE cards.name = 'Ancestor''s Chosen'
+SELECT COUNT(t1.id) FROM cards AS t1 INNER JOIN sets AS t2 ON t2.code = t1.setcode WHERE t2.name = 'Coldsnap' AND t1.convertedmanacost > 5 AND (t1.power = '*' OR t1.power IS NULL)
+SELECT fd.text FROM sets AS s INNER JOIN cards AS c ON c.setcode = s.code INNER JOIN foreign_data AS fd ON fd.uuid = c.uuid WHERE s.name = 'Coldsnap' AND fd.language = 'Italian'
+SELECT fd.name FROM sets AS s INNER JOIN cards AS c ON s.code = c.setcode INNER JOIN foreign_data AS fd ON c.uuid = fd.uuid WHERE s.name = 'Coldsnap' AND fd.language = 'Italian' AND c.convertedmanacost = (SELECT MAX(convertedmanacost) FROM cards WHERE setcode = (SELECT code FROM sets WHERE name = 'Coldsnap'))
+SELECT keyrunecode FROM sets WHERE code = 'PKHC'
+SELECT artist FROM cards WHERE side IS NULL AND convertedmanacost = (SELECT MAX(convertedmanacost) FROM cards WHERE side IS NULL)
+SELECT cards.originalreleasedate, legalities.format FROM cards INNER JOIN legalities ON cards.uuid = legalities.uuid WHERE cards.rarity = 'mythic' AND cards.originalreleasedate = (SELECT MIN(originalreleasedate) FROM cards WHERE rarity = 'mythic')
+SELECT t2.artist, t1.format FROM legalities AS t1 INNER JOIN cards AS t2 ON t1.uuid = t2.uuid GROUP BY t2.artist ORDER BY COUNT(t2.id) ASC LIMIT 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

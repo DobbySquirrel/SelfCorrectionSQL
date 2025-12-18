@@ -1,0 +1,20 @@
+{
+  "326": {
+    "sql": "WITH c_cols AS (\n    SELECT a.molecule_id\n    FROM atom AS a\n    WHERE a.element = 's'\n),\nc_cols_bond AS (\n    SELECT c.molecule_id, b.bond_type\n    FROM c_cols AS c\n    INNER JOIN bond AS b ON c.molecule_id = b.molecule_id\n),\nc_rows AS (\n    SELECT c.molecule_id\n    FROM c_cols_bond AS c\n    WHERE c.bond_type = '='\n)\nSELECT m.label\nFROM c_rows AS c\nINNER JOIN molecule AS m ON c.molecule_id = m.molecule_id;",
+    "stats": {
+      "average_reward": 0.05689100930078341,
+      "total_visits": 10,
+      "elapsed_time": 656.800005197525,
+      "timing": {
+        "total_s": 656.7997782230377,
+        "rollout_s": 3109.021192550659,
+        "cte_gen_s": 2559.4075422286987,
+        "sql_gen_s": 526.6285178661346,
+        "db_exec_s": 3.063368320465088,
+        "rollout_count": 10
+      },
+      "gold_match": false,
+      "gold_sql": "SELECT DISTINCT T1.molecule_id FROM atom AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.element = 's' AND T2.bond_type = '='"
+    }
+  }
+}
