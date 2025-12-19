@@ -1,1 +1,0 @@
-SELECT `element` FROM atom WHERE `molecule_id` = 'TR002' UNION ALL SELECT `bond_type` FROM bond WHERE `molecule_id` = 'TR002';

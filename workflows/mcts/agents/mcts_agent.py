@@ -94,7 +94,7 @@ class MCTSAgent:
         execution_info: Optional[Dict[str, Any]] = None
     ) -> Tuple[float, float, str]:
         """
-        评估 CTE 节点的质量（MASTER 框架的核心方法）
+        评估 CTE 节点的质量
         
         Args:
             question: 用户问题

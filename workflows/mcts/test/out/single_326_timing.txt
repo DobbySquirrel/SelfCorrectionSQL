@@ -1,1 +1,0 @@
-WITH c_cols AS ( SELECT a.molecule_id FROM atom AS a WHERE a.element = 's' ), c_cols_bond AS ( SELECT c.molecule_id, b.bond_type FROM c_cols AS c INNER JOIN bond AS b ON c.molecule_id = b.molecule_id ), c_rows AS ( SELECT c.molecule_id FROM c_cols_bond AS c WHERE c.bond_type = '=' ) SELECT m.label FROM c_rows AS c INNER JOIN molecule AS m ON c.molecule_id = m.molecule_id;
