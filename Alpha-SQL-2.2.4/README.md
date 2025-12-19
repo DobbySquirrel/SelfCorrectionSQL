@@ -1,133 +1,99 @@
-# Alpha-SQL: Zero-Shot Text-to-SQL Using Monte Carlo Tree Search 📊
+# Alpha-SQL 快速开始指南
 
-![GitHub release](https://img.shields.io/github/release/Ahm-rgb/Alpha-SQL.svg) ![GitHub issues](https://img.shields.io/github/issues/Ahm-rgb/Alpha-SQL.svg) ![GitHub stars](https://img.shields.io/github/stars/Ahm-rgb/Alpha-SQL.svg)
+## 前提条件
 
-Welcome to the official repository for the paper **"Alpha-SQL: Zero-Shot Text-to-SQL using Monte Carlo Tree Search"** presented at ICML 2025. This project aims to bridge the gap between natural language and SQL queries using advanced techniques.
+1. 已安装 Python 依赖（`pip install -r requirements.txt`）
+2. 已配置 LLM API（OpenAI 或其他）
+**使用本地 vLLM 服务：**
+```bash
 
-## Table of Contents
+# 或者使用 VLLM_API_URL 和 VLLM_API_KEY（会自动映射）
+export VLLM_API_URL="http://localhost:8008/v1"
+export VLLM_API_KEY="dummy-key"
+```
 
-1. [Introduction](#introduction)
-2. [Installation](#installation)
-3. [Usage](#usage)
-4. [Model Architecture](#model-architecture)
-5. [Datasets](#datasets)
-6. [Evaluation](#evaluation)
-7. [Contributing](#contributing)
-8. [License](#license)
-9. [Contact](#contact)
-10. [Releases](#releases)
-
-## Introduction
-
-In recent years, the demand for converting natural language queries into SQL has grown significantly. Traditional methods often require extensive training data and may not generalize well to unseen queries. Our approach, Alpha-SQL, leverages Monte Carlo Tree Search (MCTS) to achieve zero-shot performance, allowing the model to handle queries it has never encountered before.
-
-This repository contains the code, datasets, and instructions needed to replicate our results and build upon our work.
-
-## Installation
-
-To get started with Alpha-SQL, follow these steps:
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/Ahm-rgb/Alpha-SQL.git
-   cd Alpha-SQL
+**使用 OpenAI API：**
+```bash
+export OPENAI_API_KEY="your-openai-key"
+```
+3. 数据文件格式为 JSON，包含 `question_id`, `db_id`, `question`, `evidence`, `SQL` 等字段
+4. 数据库文件按以下结构组织：
+   ```
+   database_root_dir/
+     └── db_id/
+         └── db_id.sqlite
    ```
 
-2. **Install the required packages:**
+## 快速开始（3步）
 
-   We recommend using a virtual environment. You can create one using `venv` or `conda`.
+### 步骤 1: 转换数据格式
 
-   ```bash
-   python -m venv env
-   source env/bin/activate  # On Windows use `env\Scripts\activate`
-   pip install -r requirements.txt
-   ```
+如果您的数据格式与 Alpha-SQL 不完全一致，先转换：
 
-3. **Download the necessary files:**
+```bash
+cd Alpha-SQL-2.2.4
+python convert_data_format.py \
+    --input_file /data/dev.json \
+    --output_file data/dev_alpha_sql.json \
+    --db_path_prefix /ssd/shenshuyu/work/bird/dev_20240627/dev_databases
+```
 
-   Visit our [Releases section](https://github.com/Ahm-rgb/Alpha-SQL/releases) to download the latest release. Make sure to execute the necessary scripts to set up your environment correctly.
+### 步骤 2: 预处理数据
 
-## Usage
+```bash
+python -m alphasql.runner.preprocessor \
+    --data_file_path data/dev_alpha_sql.json \
+    --database_root_dir /ssd/shenshuyu/work/bird/dev_20240627/dev_databases \
+    --save_root_dir data/preprocessed/dev \
+    --lsh_threshold 0.5 \
+    --lsh_signature_size 128 \
+    --lsh_n_gram 3 \
+    --lsh_top_k 20 \
+    --edit_similarity_threshold 0.3 \
+    --embedding_similarity_threshold 0.6 \
+    --n_parallel_processes 8 \
+    --max_dataset_samples -1
+```
 
-To use Alpha-SQL, you can follow these simple steps:
 
-1. **Prepare your input data:**
+## 一键运行（使用脚本）
 
-   Create a text file with your natural language queries. Ensure each query is on a new line.
+编辑 `run_mcts_only.sh` 中的配置，然后运行：
 
-2. **Run the model:**
+```bash
+bash run_mcts_only.sh
+```
 
-   Use the following command to start the model:
+## 数据格式说明
 
-   ```bash
-   python run_alpha_sql.py --input_file your_queries.txt --output_file results.txt
-   ```
+Alpha-SQL 需要的数据格式：
 
-3. **Check the results:**
+```json
+[
+  {
+    "question_id": 0,
+    "db_id": "california_schools",
+    "question": "What is the highest eligible free rate?",
+    "evidence": "Eligible free rate = Free Meal Count / Enrollment",
+    "SQL": "SELECT ...",
+    "difficulty": "simple"
+  }
+]
+```
 
-   The output will be saved in `results.txt`, where you can find the generated SQL queries corresponding to your input.
+字段说明：
+- `question_id`: 必需，整数
+- `db_id`: 必需，字符串，对应数据库目录名
+- `question`: 必需，自然语言问题
+- `evidence`: 可选，证据/提示信息
+- `SQL`: 可选，标准答案（用于评估）
+- `difficulty`: 可选，难度级别
 
-## Model Architecture
 
-Alpha-SQL is built on a combination of natural language processing techniques and reinforcement learning. The core components include:
 
-- **Monte Carlo Tree Search (MCTS):** This algorithm helps explore possible SQL query paths efficiently.
-- **Transformer Models:** We utilize transformer architectures to encode natural language input and decode SQL output.
-- **Fine-tuning Mechanisms:** These allow the model to adapt to specific datasets and improve performance.
+## 输出结果
 
-### Architecture Diagram
+运行完成后，结果保存在 `save_root_dir` 指定的目录中：
+- 每个任务生成一个 `{question_id}.pkl` 文件
+- 包含生成的 SQL 和 MCTS 搜索过程
 
-![Model Architecture](https://example.com/model-architecture.png)
-
-## Datasets
-
-We evaluated Alpha-SQL on several benchmark datasets:
-
-- **WikiSQL:** A large dataset for natural language to SQL conversion.
-- **ATIS:** A dataset focused on airline travel information.
-- **Custom Datasets:** We also created synthetic datasets to test various query structures.
-
-Each dataset comes with specific preprocessing requirements, which are documented in the `data/` folder.
-
-## Evaluation
-
-We measure the performance of Alpha-SQL using several metrics:
-
-- **Accuracy:** The percentage of correctly generated SQL queries.
-- **Execution Success Rate:** The rate at which generated SQL queries successfully execute against the database.
-- **F1 Score:** A harmonic mean of precision and recall.
-
-For detailed evaluation results, refer to our paper and the results section in this repository.
-
-## Contributing
-
-We welcome contributions to Alpha-SQL. To contribute:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them.
-4. Open a pull request.
-
-Please ensure your code adheres to our coding standards and includes appropriate tests.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-## Contact
-
-For questions or feedback, please reach out:
-
-- **Author:** [Your Name](https://github.com/yourprofile)
-- **Email:** your.email@example.com
-
-## Releases
-
-To download the latest version of Alpha-SQL, visit our [Releases section](https://github.com/Ahm-rgb/Alpha-SQL/releases). Make sure to execute the downloaded files as instructed in the installation section.
-
-## Conclusion
-
-Thank you for your interest in Alpha-SQL. We hope this project helps advance the field of natural language processing and SQL generation. Feel free to explore the code, test the model, and contribute to the project.
-
-![Thank You](https://example.com/thank-you.png)
