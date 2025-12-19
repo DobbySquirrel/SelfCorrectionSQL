@@ -115,24 +115,33 @@ class MCTSWorkflow:
             'rollout_count': 0,
         }
         
-        # 加载关系信息
-        self._relationships_map = self._load_relationships_map()
-        # 将关系映射传递给CTE生成器
-        if hasattr(self.cte_generator, 'relationships_map'):
-            self.cte_generator.relationships_map = self._relationships_map
-        
-        # 初始化Schema动态管理器（用于动态扩充和剪枝）
-        self.schema_manager = SchemaDynamicManager(
-            relationships_map=self._relationships_map,
-            strike_threshold=3  # 表出现3次但从未被选中则剔除
-        )
-        
         # Schema动态管理配置（已废弃，使用新的基于rollout的schema选择策略）
         self.enable_dynamic_expansion = False  # 是否启用动态扩充
         self.enable_dynamic_pruning = False  # 是否启用动态剪枝（默认关闭，因为可能影响后续rollout）
         
         # 新的基于rollout的schema选择策略
         self.enable_rollout_based_schema_selection = False  # 启用基于rollout的schema选择
+        
+        # 关系信息配置
+        self.enable_relationships_map = False  # 是否加载和使用关系信息（relationships.json）
+        
+        # 加载关系信息（如果启用）
+        if self.enable_relationships_map:
+            self._relationships_map = self._load_relationships_map()
+            # 将关系映射传递给CTE生成器
+            if hasattr(self.cte_generator, 'relationships_map'):
+                self.cte_generator.relationships_map = self._relationships_map
+        else:
+            self._relationships_map = {}
+            # 将空的关系映射传递给CTE生成器
+            if hasattr(self.cte_generator, 'relationships_map'):
+                self.cte_generator.relationships_map = {}
+        
+        # 初始化Schema动态管理器（用于动态扩充和剪枝）
+        self.schema_manager = SchemaDynamicManager(
+            relationships_map=self._relationships_map,
+            strike_threshold=3  # 表出现3次但从未被选中则剔除
+        )
         
         # 保存原始schema（在solve中设置）
         self._original_schema: Optional[str] = None
