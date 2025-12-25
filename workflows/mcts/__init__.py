@@ -6,7 +6,7 @@ The workflow follows the cycle: Select Node → Generate CTE → Execute (CTE an
 Statistics Analysis → Backpropagation → Repeat until END → Select Optimal SQL.
 """
 
-from .mcts_workflow import MCTSWorkflow
+# from .mcts_workflow import MCTSWorkflow
 from .core.mcts_node import MCTSNode
 from .core.mcts_tree import MCTSTree
 

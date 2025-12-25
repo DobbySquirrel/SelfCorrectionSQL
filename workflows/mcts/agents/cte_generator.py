@@ -7,7 +7,6 @@ CTE生成器智能体
 
 import autogen
 from typing import Dict, List, Any
-from utils.prompts import Prompts
 import Levenshtein
 import random
 import re
@@ -257,9 +256,6 @@ WITH final_count AS (
         # 通过node.parent向上追溯获取前序CTE信息
         preceding_cte_info = self._get_preceding_cte_info(node)
         
-        # 获取1:1邻居表信息（作为背景信息）
-        one_to_one_neighbors = self._get_one_to_one_neighbors(node, self.relationships_map)
-        
         # 获取当前深度和剩余深度
         current_depth = node.depth
         remaining_steps = max(0, self.max_depth - current_depth)
@@ -273,7 +269,6 @@ WITH final_count AS (
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 * **Preceding CTE and Results (Limit执行快速验证)**: 
 {preceding_cte_info}
-{one_to_one_neighbors}
 * **深度信息**: 
   - 允许生成的最大步骤数: {self.max_depth}
   - 当前是第 {current_depth + 1} 步（深度: {current_depth}）
@@ -758,14 +753,6 @@ For a target string value (e.g., "Target"), you MUST include:
 
 4. **Structural Match**: If the string contains symbols (e.g., "=", "-", ":"), try removing them or adding spaces around them (e.g., if target is " = ", try "=" and "%=%").
 
-### [BAD EXAMPLE - DO NOT DO THIS]
-
-❌ Redundant and useless:
-
-```sql
-WHERE col1 LIKE '%Value%'
-   OR col1 LIKE '%Value%' -- Duplicate!
-   OR col1 LIKE '%Value%' -- Duplicate!
 ```
 
 ### [GOOD EXAMPLE - DO THIS]
@@ -776,17 +763,10 @@ WHERE col1 LIKE '%Value%'
 WHERE 
    -- Checking Column A (Target: "Value")
    col1 LIKE '%Value%'       -- Standard contains
-   OR col1 LIKE 'Value %'    -- Trailing space
-   OR col1 LIKE '% Value'    -- Leading space
-   OR col1 = 'Value'         -- Exact match
-   OR col1 LIKE 'Value%'     -- Starts with
-   OR col1 LIKE '%Value'      -- Ends with
+
    
    -- Checking Column B (Target: " = ")
    OR col2 LIKE '%=%'        -- No spaces
-   OR col2 = '='             -- Exact symbol
-   OR col2 LIKE '% = %'      -- With spaces
-   OR col2 LIKE '%=%'        -- No spaces, contains
    
 LIMIT 5;
 ```
@@ -797,146 +777,8 @@ LIMIT 5;
 - **If the target string is simple (e.g., "TR047")**, try: `'%TR047%'`, `'TR047%'`, `'%TR047'`, `'TR047'`, `'%TR%047%'` (split), etc.
 - **If the target contains special characters**, try variations with/without spaces, with/without the special characters.
 - **Always include a LIMIT clause** to prevent excessive results.
-
-**Method 2: Use SQLite functions for similarity calculation (if Method 1 fails)**:
-```sql
-WITH fuzzy_match AS (
-    SELECT column,
-           ABS(LENGTH(column) - LENGTH('search_value')) AS len_diff,
-           CASE WHEN INSTR(column, 'search_value') > 0 THEN 0 ELSE 1 END AS contains_score,
-           CASE WHEN column LIKE '%search%' AND column LIKE '%value%' THEN 0 ELSE 1 END AS pattern_score
-    FROM previous_cte
-    WHERE column LIKE '%search%' OR column LIKE '%value%'
-    ORDER BY len_diff, contains_score, pattern_score
-    LIMIT 5
-)
-```
 """
         return hint_text
-    
-    def _get_one_to_one_neighbors(self, node, relationships_map: Dict[str, Dict[str, Any]]) -> str:
-        """
-        获取1:1邻居表信息（作为背景信息）
-        
-        Args:
-            node: MCTS节点
-            relationships_map: 关系映射字典，格式: {f"{table1}<->{table2}": {'type': '1:1', ...}, ...}
-            
-        Returns:
-            格式化的1:1邻居表信息字符串
-        """
-        if not relationships_map:
-            return ""
-        
-        # 从schema_info中提取所有表名
-        schema_info = node.schema_info if hasattr(node, 'schema_info') else ""
-        tables_in_schema = set()
-        
-        # 从schema_info中提取表名（格式通常是 "table_name(col1, col2, ...)"）
-        import re
-        for line in schema_info.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            # 匹配表名（在括号前）
-            match = re.match(r'^`?([^`(]+)`?\s*\(', line)
-            if match:
-                table_name = match.group(1).strip().strip('`')
-                tables_in_schema.add(table_name)
-        
-        # 从前序CTE中提取表名
-        current = node
-        while current is not None:
-            if current.cte and current.cte != "" and current.cte != "<END>":
-                # 从CTE中提取FROM和JOIN后的表名
-                cte_text = current.cte
-                # 匹配 FROM table_name 或 JOIN table_name
-                from_matches = re.findall(r'\bFROM\s+`?([^\s`(,]+)`?', cte_text, re.IGNORECASE)
-                join_matches = re.findall(r'\bJOIN\s+`?([^\s`(,]+)`?', cte_text, re.IGNORECASE)
-                for table in from_matches + join_matches:
-                    table = table.strip().strip('`')
-                    if table:
-                        tables_in_schema.add(table)
-            current = current.parent
-        
-        if not tables_in_schema:
-            return ""
-        
-        # 找到与这些表有1:1关系的邻居表
-        one_to_one_neighbors = []
-        for table in tables_in_schema:
-            for rel_key, rel_info in relationships_map.items():
-                rel_type = rel_info.get('type', '')
-                if rel_type != '1:1':
-                    continue
-                
-                table1 = rel_info.get('table1', '').strip().strip('`')
-                table2 = rel_info.get('table2', '').strip().strip('`')
-                col1 = rel_info.get('col1', '')
-                col2 = rel_info.get('col2', '')
-                description = rel_info.get('description', '')
-                
-                # 如果当前表是table1，则table2是邻居
-                if table == table1:
-                    neighbor_table = table2
-                    neighbor_col = col2
-                    join_col = col1
-                elif table == table2:
-                    neighbor_table = table1
-                    neighbor_col = col1
-                    join_col = col2
-                else:
-                    continue
-                
-                # 如果邻居表不在当前涉及的表列表中，则添加
-                if neighbor_table not in tables_in_schema:
-                    one_to_one_neighbors.append({
-                        'current_table': table,
-                        'current_col': join_col,
-                        'neighbor_table': neighbor_table,
-                        'neighbor_col': neighbor_col,
-                        'description': description
-                    })
-        
-        if not one_to_one_neighbors:
-            return ""
-        
-        # 格式化输出
-        formatted_info = []
-        formatted_info.append("**1:1 Relationship Neighbors (Background Information)**:")
-        formatted_info.append("The following tables have 1:1 relationships with tables you've already used.")
-        formatted_info.append("**Important**: This is for reference only. Only join these tables if the question explicitly requires data from them. Do NOT join them just because they have a 1:1 relationship.")
-        formatted_info.append("")
-        
-        for neighbor_info in one_to_one_neighbors:
-            current_table = neighbor_info['current_table']
-            current_col = neighbor_info['current_col']
-            neighbor_table = neighbor_info['neighbor_table']
-            neighbor_col = neighbor_info['neighbor_col']
-            description = neighbor_info['description']
-            
-            formatted_info.append(f"- `{current_table}`.`{current_col}` <-> `{neighbor_table}`.`{neighbor_col}` (1:1)")
-            # 只显示描述中关于关系性质的部分，过滤掉建议join的内容
-            if description:
-                # 移除包含"Join them"、"access"等建议性内容的句子
-                desc_sentences = description.split('.')
-                filtered_sentences = []
-                for sentence in desc_sentences:
-                    sentence_lower = sentence.strip().lower()
-                    # 过滤掉建议join的句子
-                    if 'join them' in sentence_lower or 'access full details' in sentence_lower:
-                        continue
-                    # 保留描述关系性质的句子
-                    if sentence.strip():
-                        filtered_sentences.append(sentence.strip())
-                
-                if filtered_sentences:
-                    filtered_desc = '. '.join(filtered_sentences)
-                    if filtered_desc:
-                        formatted_info.append(f"  {filtered_desc}")
-        
-        formatted_info.append("")
-        return "\n".join(formatted_info)
     
     def _get_preceding_cte_info(self, node) -> str:
         """
@@ -1040,6 +882,16 @@ WITH fuzzy_match AS (
             
             if exec_result.get('valid', False):
                 query_result = exec_result.get('query_result', [])
+                # 确保query_result是列表格式（可能需要转换）
+                try:
+                    query_result = MCTSUtils.safe_to_dict(query_result)
+                except Exception:
+                    pass
+                if not isinstance(query_result, list):
+                    try:
+                        query_result = list(query_result)
+                    except Exception:
+                        query_result = []
                 if query_result:
                     # 限制只展示前20行数据
                     total_rows = len(query_result)
@@ -1143,9 +995,6 @@ WITH fuzzy_match AS (
         # 通过node.parent向上追溯获取前序CTE信息
         preceding_cte_info = self._get_preceding_cte_info(node)
         
-        # 获取1:1邻居表信息（作为背景信息）
-        one_to_one_neighbors = self._get_one_to_one_neighbors(node, self.relationships_map)
-        
         # 检查前序CTE是否执行失败，如果失败则直接剪枝
         # 但是，如果当前节点是失败节点（is_failed=True），允许继续生成（因为失败节点的目的就是保存错误信息并继续探索）
         is_failed_node = node.execution_results.get('is_failed', False)
@@ -1212,10 +1061,6 @@ WITH fuzzy_match AS (
 """
         
         # 构建用户输入
-        # 确保 one_to_one_neighbors 已定义（防御性编程）
-        if 'one_to_one_neighbors' not in locals():
-            one_to_one_neighbors = self._get_one_to_one_neighbors(node, self.relationships_map)
-        
         # 优先级指导prompt（放在最显眼的位置）
         priority_guidance = """
 ### [CRITICAL: INFORMATION PRIORITY HIERARCHY]
@@ -1259,7 +1104,6 @@ WITH fuzzy_match AS (
 {priority_guidance}
 
 * **Preceding CTE and Results (Limit执行快速验证)**: {preceding_cte_info}
-{one_to_one_neighbors}
 * {used_names_str}
 {failed_attempts_section}* **深度信息**: 
   - 允许生成的最大步骤数: {self.max_depth}
@@ -1375,7 +1219,11 @@ WITH fuzzy_match AS (
                     return group_ctes
                 except Exception as e:
                     if should_monitor:
-                        print(f"[CTE生成] temperature={temperature} 失败: {e}")
+                        error_type = type(e).__name__
+                        error_msg = str(e)
+                        print(f"[CTE生成] temperature={temperature} 失败: {error_type}: {error_msg}")
+                        # 打印更详细的调试信息
+                        print(f"  端点: {selected_base_url}, 模型: {selected_model}")
                     return []
             
             # 并行执行所有temperature组

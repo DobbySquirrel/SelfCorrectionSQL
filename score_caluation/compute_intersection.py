@@ -15,21 +15,33 @@ def load_json(file_path):
 
 def main():
     parser = argparse.ArgumentParser(description='计算多种SQL生成方法的交集准确率')
-    parser.add_argument('--straightforward_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/12_17_wo_schemaFilter.json', help='straightforward方法的预测结果路径')
+    parser.add_argument('--straightforward_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/Alpha-SQL-2.2.4/results/matched_sqls_formatted.json', help='straightforward方法的预测结果路径')
     parser.add_argument('--ground_truth_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/data/', help='ground truth路径')
     parser.add_argument('--data_mode', type=str, default='sub_sampled_dev_gold.sql', help='数据模式')
     parser.add_argument('--db_root_path',   type=str, default='/home/shenshuyu/RSL_SQL/RSL-SQL/database/dev_databases/', help='数据库根路径')
     parser.add_argument('--diff_json_path', type=str, default='/home/shenshuyu/RSL_SQL/RSL-SQL/data/sub_sampled_bird_dev_set.json', help='难度分类JSON路径')
     args = parser.parse_args()
-    evaluation_script = "/ssd/shenshuyu/SQL_tool/score_caluation/evaluation.py"
-    error_analysis_dir = "/ssd/shenshuyu/SQL_tool/score_caluation/"
+    evaluation_script = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/evaluation.py"
+    
+    # 从路径中提取文件名（不含扩展名）作为方法名，并加上_acc后缀
+    straightforward_basename = os.path.splitext(os.path.basename(args.straightforward_path))[0]
+    method_name = f"{straightforward_basename}_acc"
+    
+    # 获取straightforward_path所在的目录，用于保存error_analysis文件
+    straightforward_dir = os.path.dirname(args.straightforward_path)
+    
     methods = {
-        "straightforward": args.straightforward_path,
+        method_name: args.straightforward_path,
     }
 
     for name, path in methods.items():
         error_analysis_default_output = "error_analysis.json"
-        error_analysis_unique_name = os.path.join(error_analysis_dir, f"error_analysis_{name}.json")
+        # 根据方法名确定保存目录：如果是straightforward相关的方法，保存到straightforward_path所在目录
+        if name == method_name:
+            save_dir = straightforward_dir
+        else:
+            save_dir = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/"  # 默认目录
+        error_analysis_unique_name = os.path.join(save_dir, f"error_analysis_{name}.json")
         
         print(f"Running evaluation for {name}...")
         os.system(f"python {evaluation_script} --predicted_sql_path {path} --ground_truth_path {args.ground_truth_path} --data_mode {args.data_mode} --db_root_path {args.db_root_path} --diff_json_path {args.diff_json_path}")
@@ -43,10 +55,15 @@ def main():
 
     all_error_analysis_results = {}
     for name in methods.keys():
-        error_analysis_filename_to_load = os.path.join(error_analysis_dir, f"error_analysis_{name}.json")
+        # 根据方法名确定加载目录
+        if name == method_name:
+            load_dir = straightforward_dir
+        else:
+            load_dir = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/"  # 默认目录
+        error_analysis_filename_to_load = os.path.join(load_dir, f"error_analysis_{name}.json")
         all_error_analysis_results[name] = load_json(error_analysis_filename_to_load)
 
-    straightforward_analysis = all_error_analysis_results.get('straightforward', {"error_details": [], "stats": {}})
+    straightforward_analysis = all_error_analysis_results.get(method_name, {"error_details": [], "stats": {}})
 
     diff_data = load_json(args.diff_json_path)
     if diff_data is None:
@@ -66,10 +83,6 @@ def main():
     straightforward_correct_ids = {str(item['idx']) for item in (straightforward_analysis['error_details'] if straightforward_analysis and 'error_details' in straightforward_analysis else []) if item.get('success') == 1}
 
     straightforward_correct = len(straightforward_correct_ids)
-
-    straightforward_evaluated_ids = {str(item['idx']) for item in (straightforward_analysis['error_details'] if straightforward_analysis and 'error_details' in straightforward_analysis else [])}
-
-    straightforward_incorrect_ids = {str(item['idx']) for item in (straightforward_analysis['error_details'] if straightforward_analysis and 'error_details' in straightforward_analysis else []) if item.get('success') == 0}
 
     stats = {
         'simple': {'total': 0, 'straightforward': 0},

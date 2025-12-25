@@ -51,10 +51,6 @@ class MCTSWorkflow:
         self.llm_config = llm_config
         self.db_connector = db_connector
         self.helpers = AgentHelpers()
-        
-        # MCTS参数（需要在组件初始化之前定义）
-        # 基于分析：visit_count相关性弱(r=0.153)，需要更多rollout让visit_count收敛
-        # 建议增加到10-15个rollout，但考虑到时间成本，先设为10
         self.rollouts_per_iteration = 6  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         # 基于分析结果优化：超过7层成功率显著下降（r=-0.329）
@@ -167,11 +163,6 @@ class MCTSWorkflow:
         # 重置计时统计
         for k in list(self._timing.keys()):
             self._timing[k] = 0.0 if k.endswith('_s') else 0
-        
-        # 保存原始schema（用于动态扩充、表/列解析、foreign_key 重建）
-        # 优先使用调用方显式传入的 original_schema；
-        # 否则尝试从 dev_tables.json 重建一份「完整列」版本的 DDL（参考 RSL-SQL 的做法）；
-        # 如果重建失败，再退回到当前的 schema_info（simplified_ddl）。
         if original_schema is not None:
             self._original_schema = original_schema
         else:

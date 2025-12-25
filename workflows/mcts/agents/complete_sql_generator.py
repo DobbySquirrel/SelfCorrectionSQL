@@ -206,6 +206,16 @@ class CompleteSQLGenerator:
             exec_result = cte_info['execution_result']
             if exec_result.get('valid', False):
                 query_result = exec_result.get('query_result', [])
+                # 确保query_result是列表格式（可能需要转换）
+                try:
+                    query_result = MCTSUtils.safe_to_dict(query_result)
+                except Exception:
+                    pass
+                if not isinstance(query_result, list):
+                    try:
+                        query_result = list(query_result)
+                    except Exception:
+                        query_result = []
                 if query_result:
                     # 限制只展示前20行数据
                     total_rows = len(query_result)
@@ -407,7 +417,11 @@ Please generate a complete SQL query based on the **Natural language question**:
                             group_sqls.append(sql)
                     return group_sqls
                 except Exception as e:
-                    print(f"[SQL生成] temperature={temperature} 失败: {e}")
+                    error_type = type(e).__name__
+                    error_msg = str(e)
+                    print(f"[SQL生成] temperature={temperature} 失败: {error_type}: {error_msg}")
+                    # 打印更详细的调试信息
+                    print(f"  端点: {selected_base_url}, 模型: {selected_model}")
                     return []
             
             # 并行执行所有temperature组

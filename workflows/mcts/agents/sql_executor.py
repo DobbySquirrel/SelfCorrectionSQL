@@ -520,6 +520,8 @@ class SQLExecutor:
         """
         构建可执行的完整CTE SQL：拼接路径上的所有历史CTE + 当前CTE，保留最后SELECT。
         自动处理<END>与空输入。
+        
+        注意：current_cte 就是 node.cte，所以应该从 node.parent 开始遍历，避免重复。
         """
         if not current_cte or current_cte is None:
             print(f"⚠️  build_executable_cte_sql: current_cte 为 None 或空")
@@ -527,9 +529,9 @@ class SQLExecutor:
 
         current_cte_stripped = current_cte.strip()
 
-        # 收集路径上所有历史CTE
+        # 收集路径上所有历史CTE（从parent开始，因为current_cte就是node.cte）
         cte_sequence: List[str] = []
-        current_node = node
+        current_node = node.parent if node else None  # 从parent开始，避免重复收集node.cte
         while current_node is not None:
             if getattr(current_node, 'cte', None) and current_node.cte != "" and current_node.cte != "<END>":
                 cte_sequence.insert(0, current_node.cte)
@@ -545,7 +547,26 @@ class SQLExecutor:
         if not cte_sequence:
             return ""
         if len(cte_sequence) == 1:
-            return cte_sequence[0]
+            # 单个CTE：检查是否已经有SELECT语句，如果没有则添加
+            single_cte = cte_sequence[0]
+            # 检查是否已经有 SELECT * FROM 或 SELECT ... FROM
+            if re.search(r'\bSELECT\s+.*?\s+FROM\s+\w+', single_cte, re.IGNORECASE | re.DOTALL):
+                # 已经有SELECT语句，直接返回
+                return single_cte
+            else:
+                # 没有SELECT语句，需要添加
+                cte_name = self.extract_cte_name(single_cte)
+                if cte_name:
+                    # 提取CTE定义部分
+                    cte_def = self.extract_cte_definition(single_cte)
+                    if cte_def:
+                        return f"WITH {cte_def}\nSELECT * FROM {cte_name};"
+                    else:
+                        # 如果提取失败，尝试直接使用
+                        return f"{single_cte}\nSELECT * FROM {cte_name};"
+                else:
+                    # 无法提取CTE名称，直接返回（可能格式不正确）
+                    return single_cte
 
         cte_definitions: List[str] = []
         for cte in cte_sequence:
