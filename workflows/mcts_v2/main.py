@@ -85,29 +85,31 @@ def run_once(sample: dict, multi_base_urls: list = None) -> dict:
 # 保留你原来的 Gold 验证逻辑 (因为写得很好)
 # ==========================================
 def compare_with_gold(predicted_sql: str, gold_sql: str, db_path: str) -> bool:
-    """执行并比较结果"""
+    """执行并比较结果 (增强版：出错时自动打印差异)"""
     if not predicted_sql or not gold_sql: return False
     
     conn = DatabaseConnector(db_path)
     try:
+        # 1. 执行 Gold
         gold_res, gold_err = conn.execute_sql(gold_sql)
-        pred_res, pred_err = conn.execute_sql(predicted_sql)
-        
-        if gold_err: 
+        if gold_err:
             print(f"⚠️ Gold Error: {gold_err}")
             return False
-        if pred_err: 
-            # print(f"⚠️ Pred Error: {pred_err}") # 预测错误很正常，不打印太多日志
+
+        # 2. 执行 Predict
+        pred_res, pred_err = conn.execute_sql(predicted_sql)
+        if pred_err:
+            # --- 报错时打印 ---
+            print(f"\n❌ [Exec Error] Execution failed!")
+            print(f"  > My SQL:   {predicted_sql}")
+            print(f"  > Error:    {pred_err}")
             return False
             
-        # 结果比较逻辑 (Set Equivalence)
-        # 同样使用你之前的 normalize 逻辑
+        # 3. 结果比较逻辑
         def normalize(rows):
             if not rows: return set()
-            # 转字符串 + 排序
             norm_rows = []
             for row in rows:
-                # 处理 row 里的每个元素
                 cleaned = []
                 for item in row:
                     if item is None: cleaned.append("none")
@@ -115,7 +117,21 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_path: str) -> bool:
                 norm_rows.append(tuple(cleaned))
             return set(norm_rows)
             
-        return normalize(gold_res) == normalize(pred_res)
+        norm_gold = normalize(gold_res)
+        norm_pred = normalize(pred_res)
+        
+        is_match = (norm_gold == norm_pred)
+        
+        # --- 4. 关键：如果不匹配，在这里打印对比 ---
+        if not is_match:
+            print(f"\n❌ [Mismatch] Result differs from Gold!")
+            print(f"  > My SQL:   {predicted_sql}")
+            print(f"  > Gold SQL: {gold_sql}")
+            print(f"  > My Rows (First 5):   {list(pred_res)[:5]}")
+            print(f"  > Gold Rows (First 5): {list(gold_res)[:5]}")
+            print("-" * 50)
+
+        return is_match
         
     except Exception as e:
         print(f"Compare Error: {e}")

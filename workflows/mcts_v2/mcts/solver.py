@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .node import MCTSNode, ActionType, KnowledgeState
 from agents.llm_client import LLMClient
-from agents.probe_generator import ProbeGenerator # 只用到它的 render_tool_library 方法，或者你可以把那个方法搬过来
 from agents.prompts import MASTER_AGENT_PROMPT, PROBE_TEMPLATES_JSON
 from env.db_connector import DatabaseConnector
 from env.sc_evaluator import SelfConsistencyEvaluator
@@ -79,11 +78,54 @@ class CoCTEMCTSSolver:
             current = current.parent
 
     def _merge_ctes(self, history_sql: str, new_cte: str) -> str:
-        if not new_cte or new_cte == "<END>": return history_sql
-        new_cte = new_cte.strip()
-        if not history_sql: return new_cte
-        cleaned_new_cte = re.sub(r'^\s*WITH\s+', '', new_cte, flags=re.IGNORECASE).strip()
-        return f"{history_sql},\n{cleaned_new_cte}"
+            """
+            带 Debug 日志的拼接函数，用于定位语法错误
+            """
+            # --- DEBUG START ---
+            print(f"\n{'='*20} [Merge CTE Debug] {'='*20}")
+            # 使用 repr() 可以看到换行符 \n 和空格，这对于排查 SQL 错误至关重要
+            print(f"[1] History SQL (len={len(history_sql)}): {repr(history_sql)}")
+            print(f"[2] Raw New CTE from LLM: {repr(new_cte)}")
+            # -------------------
+
+            if not new_cte or new_cte == "<END>": 
+                print("[Result] Keep History (End or Empty)")
+                return history_sql
+                
+            # 1. 预处理：去掉首尾空白
+            clean_new = new_cte.strip()
+            
+            # 2. 核心清洗：去掉开头的 WITH (不管有没有)
+            # 这一步是为了防止 LLM 自己加了 WITH，导致变成 "WITH WITH CTE..."
+            clean_new = re.sub(r'^\s*WITH\s+', '', clean_new, flags=re.IGNORECASE).strip()
+            
+            # 3. 核心清洗：去掉开头的逗号 (不管有没有)
+            # 这一步是为了防止 LLM 听从了 Prompt 里的 ", new_cte" 格式，导致变成 ", , CTE..."
+            if clean_new.startswith(','):
+                clean_new = clean_new[1:].strip()
+
+            print(f"[3] Cleaned CTE Body: {repr(clean_new)}")
+
+            # 4. 拼接逻辑
+            final_sql = ""
+            
+            # 情况 A: 这是整个链条的第一步 (History 为空)
+            if not history_sql:
+                # 强制补上 WITH
+                final_sql = f"WITH {clean_new}"
+                print("[Logic] First Step -> Adding 'WITH' prefix")
+                
+            # 情况 B: 这是后续步骤 (History 不为空)
+            else:
+                # 强制补上 逗号
+                final_sql = f"{history_sql},\n{clean_new}"
+                print("[Logic] Subsequent Step -> Adding ',' connector")
+
+            # --- DEBUG END ---
+            print(f"[4] Final Merged SQL:\n{final_sql}")
+            print(f"{'='*60}\n")
+            
+            return final_sql
 
     def _extract_cte_name(self, cte_sql: str) -> str:
         match = re.search(r"WITH\s+(\w+)\s+AS", cte_sql, re.IGNORECASE) or re.search(r",\s*(\w+)\s+AS", cte_sql, re.IGNORECASE)
@@ -162,7 +204,7 @@ class CoCTEMCTSSolver:
         
         print(f"  > Eval: V={reward:.2f} | Status={sc_data['status']}")
         if sc_data['best_error']: print(f"    Err: {sc_data['best_error'][:60]}...")
-
+        sample_rows = sc_data['best_result'][:3] if sc_data['best_result'] else []
         # 6. 创建子节点
         child = MCTSNode(parent=node, action_type=major_action)
         child.question = node.question
@@ -173,25 +215,44 @@ class CoCTEMCTSSolver:
             'status': sc_data['status'],
             'row_count': len(sc_data['best_result']) if sc_data['best_result'] else 0,
             'error_message': sc_data['best_error'],
-            'sc_score': reward
+            'sc_score': reward,
+            'sample': str(sample_rows)  # <--- 新增：存入样本字符串
         }
 
-        # 根据动作类型更新状态
         if major_action == ActionType.PROBE:
-            # Probe 成功的话，更新知识库
             self._update_knowledge_from_probe(child, sc_data['best_result'])
-            child.accumulated_sql = node.accumulated_sql # 保持 SQL 不变
+            child.accumulated_sql = node.accumulated_sql 
             
         elif major_action in [ActionType.BUILD, ActionType.REFINE]:
-            if best_content != "<END>":
-                child.accumulated_sql = self._merge_ctes(node.accumulated_sql, best_content)
-            else:
+            if best_content == "<END>":
                 child.accumulated_sql = node.accumulated_sql
-                # 如果生成了 <END>，虽然 Action 是 BUILD，但实际上意味着结束
-                # 我们在下一轮或者这里直接标记 finish
-                # 为了简单，如果这里解析出 <END>，可以直接标记 terminal
                 child.action_type = ActionType.FINISH
                 child.is_terminal = True
+            else:
+                # ====================================================
+                # 🔥 核心修复逻辑：智能判断是 [追加] 还是 [替换]
+                # ====================================================
+                
+                # 清理一下，方便判断
+                clean_content = best_content.strip()
+                
+                # 判断条件 1: 动作是 REFINE (通常意味着重写)
+                # 判断条件 2: 内容以 WITH 开头 (说明 LLM 给了完整的 SQL)
+                is_full_rewrite = (major_action == ActionType.REFINE) or \
+                                  (clean_content.upper().startswith("WITH "))
+
+                if is_full_rewrite:
+                    print(f"  > [Logic] REFINE/Full Rewrite detected -> Replacing SQL.")
+                    # 替换：直接用新的，但要保证它真的以 WITH 开头 (防止 REFINE 只吐了中间一段)
+                    # 简单的归一化：如果它没写 WITH，我们帮它加 (虽然很少见)
+                    if not clean_content.upper().startswith("WITH"):
+                        child.accumulated_sql = "WITH " + clean_content
+                    else:
+                        child.accumulated_sql = clean_content
+                else:
+                    print(f"  > [Logic] BUILD/Incremental -> Merging CTE.")
+                    # 追加：使用之前的 _merge_ctes 逻辑
+                    child.accumulated_sql = self._merge_ctes(node.accumulated_sql, best_content)
                 
         elif major_action == ActionType.FINISH:
             child.accumulated_sql = node.accumulated_sql
@@ -199,20 +260,39 @@ class CoCTEMCTSSolver:
             
         node.add_child(child)
         return reward
-
     def _generate_unified_candidates(self, node: MCTSNode, k: int) -> List[Dict]:
-        """调用 LLM 并解析"""
+        """调用 LLM 并解析 (带 Sample)"""   
+        # 提取样本，如果没有则显示 None
+        sample_text = node.observation.get('sample', '[]')
+        
+        # 组装 Prompt
         prompt = MASTER_AGENT_PROMPT.format(
             question=node.question,
             schema_info=node.schema_info,
             knowledge_text=node.knowledge.to_prompt_text(),
             accumulated_sql=node.accumulated_sql if node.accumulated_sql else "-- Start",
-            observation_section=f"- Status: {node.observation.get('status', 'init')}\n- Error: {node.observation.get('error_message')}\n- Rows: {node.observation.get('row_count', 0)}",
+            
+            # --- 修改这里：加入 Sample ---
+            observation_section=f"""- Status: {node.observation.get('status', 'init')}
+- Error: {node.observation.get('error_message')}
+- Rows: {node.observation.get('row_count', 0)}
+- Sample Data: {sample_text}""",
+            # ---------------------------
+            
             tool_library_desc=self.tool_library_text
         )
-        
+
+        # --- DEBUG: 打印完整的 Prompt ---
+        # # 只打印前 2000 个字符防止刷屏太严重，或者打印全部
+        # print(f"\n{'='*20} [PROMPT DEBUG] {'='*20}")
+        # print(prompt) 
+        # print(f"{'='*60}\n")
+        # -------------------------------
+
+        # 2. 调用 LLM
         raw_responses = self.llm_client.chat([{"role": "user", "content": prompt}], n=k)
         
+        # 3. 解析
         parsed = []
         for text in raw_responses:
             res = self._parse_unified_response(text)
@@ -220,72 +300,141 @@ class CoCTEMCTSSolver:
         return parsed
 
     def _parse_unified_response(self, text: str) -> Optional[Dict]:
-        """解析 ACTION: ... \n CONTENT: ..."""
+        """
+        专用 JSON 解析器：只提取第一个合法的 JSON 对象
+        """
+        import json
+        import re
+
+        print(f"[DEBUG] Raw LLM Response: {repr(text[:200])}...") # 打印前200字符
+
         try:
-            lines = text.strip().split('\n')
-            action = None
-            content_lines = []
-            is_collecting = False
+            # 1. 寻找 JSON 块
+            # 匹配最外层的 { ... }，re.DOTALL 让 . 可以匹配换行符
+            match = re.search(r'\{.*\}', text, re.DOTALL)
             
-            for line in lines:
-                clean_line = line.strip()
-                if clean_line.upper().startswith("ACTION:"):
-                    act_str = clean_line.split(":", 1)[1].strip().upper()
-                    if "PROBE" in act_str: action = ActionType.PROBE
-                    elif "BUILD" in act_str: action = ActionType.BUILD
-                    elif "REFINE" in act_str: action = ActionType.REFINE
-                    elif "FINISH" in act_str: action = ActionType.FINISH
-                elif clean_line.upper().startswith("SQL:") or clean_line.upper().startswith("TOOLS:"):
-                    is_collecting = True
-                elif is_collecting:
-                    content_lines.append(line)
+            if not match:
+                print("  > ❌ Parser: No JSON found.")
+                return None
+
+            json_str = match.group(0)
             
-            content = "\n".join(content_lines).strip()
-            # 清理 Markdown
-            content = re.sub(r'^```\w*\s*', '', content)
-            content = re.sub(r'\s*```$', '', content)
+            # 2. 解析 JSON
+            data = json.loads(json_str)
             
+            # 3. 提取字段
+            action_str = data.get("action", "").upper()
+            content = data.get("content", "")
+            thought = data.get("thought", "")
+
+            # 4. 映射 Action
+            action_map = {
+                "PROBE": ActionType.PROBE,
+                "BUILD": ActionType.BUILD,
+                "REFINE": ActionType.REFINE,
+                "FINISH": ActionType.FINISH
+            }
+            action = action_map.get(action_str)
+
             if action:
-                return {"action": action, "content": content}
-        except Exception as e:
-            print(f"Parse Error: {e}")
-        return None
-
-    def _execute_unified(self, node: MCTSNode, candidates: List[str], action: ActionType) -> List[Tuple[List, str]]:
-        """根据动作类型执行"""
-        tasks = []
-        for cand in candidates:
-            if action == ActionType.PROBE:
-                # 解析 JSON -> SQL
-                probe_sql = self._json_tools_to_sql(cand)
-                tasks.append(probe_sql)
+                # 打印模型的思考过程 (很有用!)
+                if thought:
+                    print(f"  > 💭 Thought: {thought}")
                 
-            elif action in [ActionType.BUILD, ActionType.REFINE]:
-                if cand == "<END>":
-                    # 测试当前的 SQL
-                    cte_name = self._get_last_cte_name(node.accumulated_sql)
-                    tasks.append(f"{node.accumulated_sql}\nSELECT * FROM {cte_name} LIMIT 5;")
-                else:
-                    full_sql = self._merge_ctes(node.accumulated_sql, cand)
-                    cte_name = self._extract_cte_name(cand)
-                    tasks.append(f"{full_sql}\nSELECT * FROM {cte_name} LIMIT 5;")
-            
-            elif action == ActionType.FINISH:
-                cte_name = self._get_last_cte_name(node.accumulated_sql)
-                tasks.append(f"{node.accumulated_sql}\nSELECT * FROM {cte_name};")
+                # 如果是 Probe，content 可能是 list/dict，转成 string
+                if isinstance(content, (list, dict)):
+                    content = json.dumps(content)
+                
+                return {"action": action, "content": str(content).strip()}
+            else:
+                print(f"  > ❌ Parser: Unknown action '{action_str}'")
 
-        # 并行执行
-        results = []
-        with ThreadPoolExecutor(max_workers=len(tasks) or 1) as executor:
-            future_to_idx = {executor.submit(self.db.execute_sql, sql): i for i, sql in enumerate(tasks) if sql}
-            results = [([], None)] * len(tasks)
-            for future in as_completed(future_to_idx):
-                idx = future_to_idx[future]
-                try:
-                    results[idx] = future.result()
-                except Exception as e:
-                    results[idx] = ([], str(e))
-        return results
+        except json.JSONDecodeError as e:
+            print(f"  > ❌ Parser: Invalid JSON format. Error: {e}")
+        except Exception as e:
+            print(f"  > ❌ Parser: Unexpected error: {e}")
+
+        return None
+    def _json_tools_to_sql_list(self, json_str: str) -> List[str]:
+        """解析 JSON 并返回 SQL 列表"""
+        try:
+            tools = json.loads(json_str)
+            sqls = []
+            for tool in tools:
+                tid = tool.get('tool_id')
+                params = tool.get('params', {})
+                template = next((t for t in PROBE_TEMPLATES_JSON if t['id'] == tid), None)
+                if template:
+                    sql = template['sql_template']
+                    for k, v in params.items():
+                        sql = sql.replace(f"{{{k}}}", str(v))
+                    sqls.append(sql)
+            return sqls
+        except:
+            return []
+    def _execute_unified(self, node: MCTSNode, candidates: List[str], action: ActionType) -> List[Tuple[List, str]]:
+            """根据动作类型执行"""
+            tasks = []
+            for cand in candidates:
+                if action == ActionType.PROBE:
+                    # --- 修改这里 ---
+                    # 获取多条 SQL 语句的列表，而不是拼成一个字符串
+                    probe_sqls = self._json_tools_to_sql_list(cand) 
+                    
+                    # 我们这里简化处理：只执行第一条，或者把它们合并成一个复杂的 Query
+                    # 为了不破坏并行结构，最简单的方法是只取第一条有效的
+                    if probe_sqls:
+                        tasks.append(probe_sqls[0]) 
+                    else:
+                        tasks.append("") # 空任务
+                    
+                elif action == ActionType.BUILD:
+                    # BUILD 是增量，必须拼接
+                    if cand == "<END>":
+                        cte_name = self._get_last_cte_name(node.accumulated_sql)
+                        tasks.append(f"{node.accumulated_sql}\nSELECT * FROM {cte_name} LIMIT 5;")
+                    else:
+                        full_sql = self._merge_ctes(node.accumulated_sql, cand)
+                        cte_name = self._extract_cte_name(cand)
+                        tasks.append(f"{full_sql}\nSELECT * FROM {cte_name} LIMIT 5;")
+
+                elif action == ActionType.REFINE:
+                    # ==========================================
+                    # 🔥 修复点：REFINE 是替换，不要和旧 SQL 拼接！
+                    # ==========================================
+                    clean_cand = cand.strip()
+                    
+                    # 如果 REFINE 给的是完整 SQL (带 WITH)，直接用
+                    if clean_cand.upper().startswith("WITH"):
+                        full_sql = clean_cand
+                    else:
+                        # 如果只给了 CTE 定义，帮它补上 WITH
+                        full_sql = f"WITH {clean_cand}"
+                    
+                    cte_name = self._extract_cte_name(clean_cand)
+                    tasks.append(f"{full_sql}\nSELECT * FROM {cte_name} LIMIT 5;")
+                
+                elif action == ActionType.FINISH:
+                    # ... (不变)
+                    clean_cand = cand.strip()
+                    if clean_cand.upper().startswith("SELECT"):
+                        tasks.append(f"{node.accumulated_sql}\n{clean_cand}")
+                    else:
+                        cte_name = self._get_last_cte_name(node.accumulated_sql)
+                        tasks.append(f"{node.accumulated_sql}\nSELECT * FROM {cte_name};")
+
+            # 并行执行
+            results = []
+            with ThreadPoolExecutor(max_workers=len(tasks) or 1) as executor:
+                future_to_idx = {executor.submit(self.db.execute_sql, sql): i for i, sql in enumerate(tasks) if sql}
+                results = [([], None)] * len(tasks)
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    try:
+                        results[idx] = future.result()
+                    except Exception as e:
+                        results[idx] = ([], str(e))
+            return results
 
     def _json_tools_to_sql(self, json_str: str) -> str:
         """将 LLM 生成的 JSON 工具调用转换为 SQL"""

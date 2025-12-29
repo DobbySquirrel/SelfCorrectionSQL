@@ -1,0 +1,72 @@
+{
+  "25": {
+    "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+    "stats": {
+      "timing": {
+        "total_s": 22.49406933784485,
+        "cte_gen_s": 8.194917917251587,
+        "sql_gen_s": 11.854984283447266,
+        "db_exec_s": 1.7435622215270996
+      },
+      "reward": 1.0,
+      "sql_bucket_count": 5,
+      "valid_count": 5,
+      "gold_match": false,
+      "gold_sql": "SELECT T1.sname, T2.`Charter Funding Type` FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T2.`District Name` LIKE 'Riverside%' GROUP BY T1.sname, T2.`Charter Funding Type` HAVING CAST(SUM(T1.AvgScrMath) AS REAL) / COUNT(T1.cds) > 400"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+        "all_sql_variants": [
+          {
+            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
+            "result_row_count": 8
+          },
+          {
+            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
+            "result_row_count": 8
+          },
+          {
+            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nAND (\n    SELECT AVG(`AvgScrMath`)\n    FROM `satscores` AS `s`\n    WHERE `s`.`cds` = `schools`.`CDSCode`\n) > 400;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
+            "result_row_count": 8
+          },
+          {
+            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
+            "result_row_count": 8
+          },
+          {
+            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "valid": true,
+            "error": null,
+            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
+            "result_row_count": 8
+          }
+        ],
+        "result_buckets": {
+          "5_2_ad2f75c863d6a663aa24640b14b1d91e": 5
+        },
+        "valid_count": 5,
+        "error_reason": null
+      }
+    ]
+  }
+}
