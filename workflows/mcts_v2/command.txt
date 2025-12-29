@@ -1,0 +1,362 @@
+torch_gpu 跑模型
+vllm serve /ssd/shenshuyu/Qwen2.5-Coder-7B-Instruct   --tensor-parallel-size 4   --gpu-memory-utilization 0.8   --max-model-len 8192   --host 0.0.0.0   --port 8008
+
+CUDA_VISIBLE_DEVICES=2,3 python -m vllm.entrypoints.openai.api_server   --model /ssd/shenshuyu/Qwen2.5-Coder-7B-Instruct   --served-model-name Qwen2.5-Coder-7B-Instruct   --max-model-len=8192   --port 8008   --host 0.0.0.0   --tensor-parallel-size 2   --gpu-memory-utilization 0.8
+转换txt2json
+
+CUDA_VISIBLE_DEVICES=2,3 python -m vllm.entrypoints.openai.api_server --model /ssd/shenshuyu/Qwen3-8B  --served-model-name Qwen3-8B --max-model-len=8192 --port 8010 --host 0.0.0.0 --tensor-parallel-size 2
+
+CUDA_VISIBLE_DEVICES=0,1 python -m sglang.launch_server --model-path /ssd/shenshuyu/Qwen3-8B --port 8010 --context-length 12000 --host 0.0.0.0 --tp 2
+
+CUDA_VISIBLE_DEVICES=2 python -m vllm.entrypoints.openai.api_server \
+  --model /ssd/shenshuyu/Qwen3-8B \
+  --served-model-name Qwen3-8B \
+  --max-model-len=8192 \
+  --port 8009 \
+  --host 0.0.0.0 \
+  --tensor-parallel-size 1 \
+  --gpu-memory-utilization 0.8 \
+  --disable-custom-all-reduce
+
+# python /home/shenshuyu/SQL_tool_multiAgent/evaluation/TXTjson.py --input_txt /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/b.txt --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json --output_json /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/b.json
+
+跑排列组合表
+python test/test_baseline/baseline_sql_generator_table_permutation.py \
+    --ppl_file data/subset_ppl_dev_python.json \
+    --sql_out test/test_baseline/out/permutation.sql \
+    --analysis_out test/test_baseline/out/analysis.json \
+    --start 0 \
+    --max_workers 32 \
+    --num_permutations 3
+
+python test/test_baseline/baseline_sql_generator_grouped_sc.py     --ppl_file data/subset_ppl_dev_python.json     --sql_out test/test_baseline/out/schema_5/grouped_sc.sql     --analysis_out test/test_baseline/out/schema_5/grouped_sc_analysis.json     --max_workers 64     --num_runs 7
+
+
+python test/test_baseline/run_templerature_reversed.py --ppl_file data/subset_ppl_dev_python.json --output_dir /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/temperature_reversed --skip_original --num_permutations 5
+
+
+跑mcts
+
+python workflows/mcts/test/test_mcts_workflow.py     --ppl_file data/subset_ppl_dev_python.json     --sql_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.txt     --json_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.json     --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json     --start 0     --max_workers 20  
+
+
+
+python workflows/mcts/test/test_ab_entropy_backprop.py \
+    --ppl_file data/subset_ppl_dev_python.json \
+    --sql_out_a workflows/mcts/test/out/ab_baseline.txt \
+    --sql_out_b workflows/mcts/test/out/ab_entropy.txt \
+    --json_out  workflows/mcts/test/out/ab_results.json
+
+
+python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_bc_parallel_rollout_backup11_5.py \
+  --ppl_file data/subset_ppl_dev_python.json \
+  --index <index_of_qid_1040_in_that_file> \
+  --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/single_1040_timing.json \
+  --parallel_workers 1
+
+
+
+
+
+--- 测试完整MCTS工作流 ---
+
+################################################################################
+🔄 MCTS回合 [1/1]
+################################################################################
+
+--- Rollout [1/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 1
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 6
+[扩展] 生成了 20 个CTE变体，去重后: 2
+[扩展] 生成了 20 个CTE变体，去重后: 5
+[扩展] 生成了 20 个CTE变体，去重后: 5
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[回溯路径] #35(d10) -> #32(d9) -> #29(d8) -> #24(d7) -> #19(d6) -> #16(d5) -> #13(d4) -> #7(d3) -> #3(d2) -> #2(d1) -> #1(d0)
+  节点#35 UCB=0.0000 (c=2, 父访问=1)
+  [0] 节点#35 深度=10: 访问 0→1, 奖励 0.0000→0.0000
+  节点#32 UCB=0.0000 (c=2, 父访问=1)
+  [1] 节点#32 深度=9: 访问 0→1, 奖励 0.0000→0.0000
+  节点#29 UCB=0.0000 (c=2, 父访问=1)
+  [2] 节点#29 深度=8: 访问 0→1, 奖励 0.0000→0.0000
+  节点#24 UCB=0.0000 (c=2, 父访问=1)
+  [3] 节点#24 深度=7: 访问 0→1, 奖励 0.0000→0.0000
+  节点#19 UCB=0.0000 (c=2, 父访问=1)
+  [4] 节点#19 深度=6: 访问 0→1, 奖励 0.0000→0.0000
+  节点#16 UCB=0.0000 (c=2, 父访问=1)
+  [5] 节点#16 深度=5: 访问 0→1, 奖励 0.0000→0.0000
+  节点#13 UCB=0.0000 (c=2, 父访问=1)
+  [6] 节点#13 深度=4: 访问 0→1, 奖励 0.0000→0.0000
+  节点#7 UCB=0.0000 (c=2, 父访问=1)
+  [7] 节点#7 深度=3: 访问 0→1, 奖励 0.0000→0.0000
+  节点#3 UCB=0.0000 (c=2, 父访问=1)
+  [8] 节点#3 深度=2: 访问 0→1, 奖励 0.0000→0.0000
+  节点#2 UCB=0.0000 (c=2, 父访问=1)
+  [9] 节点#2 深度=1: 访问 0→1, 奖励 0.0000→0.0000
+  [10] 节点#1 深度=0: 访问 0→1, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 1 奖励: 0.0000
+
+--- Rollout [2/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 0
+[回溯路径] #4(d2) -> #2(d1) -> #1(d0)
+  节点#4 UCB=1.6651 (c=2, 父访问=2)
+  [0] 节点#4 深度=2: 访问 0→1, 奖励 0.0000→0.0000
+  节点#2 UCB=1.1774 (c=2, 父访问=2)
+  [1] 节点#2 深度=1: 访问 1→2, 奖励 0.0000→0.0000
+  [2] 节点#1 深度=0: 访问 1→2, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 2 奖励: 0.0000
+
+--- Rollout [3/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 1
+[扩展] 生成了 20 个CTE变体，去重后: 0
+[回溯路径] #40(d4) -> #37(d3) -> #5(d2) -> #2(d1) -> #1(d0)
+  节点#40 UCB=0.0000 (c=2, 父访问=1)
+  [0] 节点#40 深度=4: 访问 0→1, 奖励 0.0000→0.0000
+  节点#37 UCB=0.0000 (c=2, 父访问=1)
+  [1] 节点#37 深度=3: 访问 0→1, 奖励 0.0000→0.0000
+  节点#5 UCB=2.0963 (c=2, 父访问=3)
+  [2] 节点#5 深度=2: 访问 0→1, 奖励 0.0000→0.0000
+  节点#2 UCB=1.2103 (c=2, 父访问=3)
+  [3] 节点#2 深度=1: 访问 2→3, 奖励 0.0000→0.0000
+  [4] 节点#1 深度=0: 访问 2→3, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 3 奖励: 0.0000
+
+--- Rollout [4/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 6
+[扩展] 生成了 20 个CTE变体，去重后: 6
+[扩展] 生成了 20 个CTE变体，去重后: 2
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 2
+[回溯路径] #65(d10) -> #62(d9) -> #59(d8) -> #57(d7) -> #51(d6) -> #48(d5) -> #41(d4) -> #6(d3) -> #3(d2) -> #2(d1) -> #1(d0)
+  节点#65 UCB=0.0000 (c=2, 父访问=1)
+  [0] 节点#65 深度=10: 访问 0→1, 奖励 0.0000→0.0000
+  节点#62 UCB=0.0000 (c=2, 父访问=1)
+  [1] 节点#62 深度=9: 访问 0→1, 奖励 0.0000→0.0000
+  节点#59 UCB=0.0000 (c=2, 父访问=1)
+  [2] 节点#59 深度=8: 访问 0→1, 奖励 0.0000→0.0000
+  节点#57 UCB=0.0000 (c=2, 父访问=1)
+  [3] 节点#57 深度=7: 访问 0→1, 奖励 0.0000→0.0000
+  节点#51 UCB=0.0000 (c=2, 父访问=1)
+  [4] 节点#51 深度=6: 访问 0→1, 奖励 0.0000→0.0000
+  节点#48 UCB=0.0000 (c=2, 父访问=1)
+  [5] 节点#48 深度=5: 访问 0→1, 奖励 0.0000→0.0000
+  节点#41 UCB=0.0000 (c=2, 父访问=1)
+  [6] 节点#41 深度=4: 访问 0→1, 奖励 0.0000→0.0000
+  节点#6 UCB=1.6651 (c=2, 父访问=2)
+  [7] 节点#6 深度=3: 访问 0→1, 奖励 0.0000→0.0000
+  节点#3 UCB=1.6651 (c=2, 父访问=4)
+  [8] 节点#3 深度=2: 访问 1→2, 奖励 0.0000→0.0000
+  节点#2 UCB=1.1774 (c=2, 父访问=4)
+  [9] 节点#2 深度=1: 访问 3→4, 奖励 0.0000→0.0000
+  [10] 节点#1 深度=0: 访问 3→4, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 4 奖励: 0.0000
+
+--- Rollout [5/10] ---
+[回溯路径] #4(d2) -> #2(d1) -> #1(d0)
+  节点#4 UCB=1.7941 (c=2, 父访问=5)
+  [0] 节点#4 深度=2: 访问 1→2, 奖励 0.0000→0.0000
+  节点#2 UCB=1.1347 (c=2, 父访问=5)
+  [1] 节点#2 深度=1: 访问 4→5, 奖励 0.0000→0.0000
+  [2] 节点#1 深度=0: 访问 4→5, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 5 奖励: 0.0000
+
+--- Rollout [6/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 1
+[扩展] 生成了 20 个CTE变体，去重后: 0
+[回溯路径] #67(d4) -> #38(d3) -> #5(d2) -> #2(d1) -> #1(d0)
+  节点#67 UCB=0.0000 (c=2, 父访问=1)
+  [0] 节点#67 深度=4: 访问 0→1, 奖励 0.0000→0.0000
+  节点#38 UCB=1.6651 (c=2, 父访问=2)
+  [1] 节点#38 深度=3: 访问 0→1, 奖励 0.0000→0.0000
+  节点#5 UCB=1.8930 (c=2, 父访问=6)
+  [2] 节点#5 深度=2: 访问 1→2, 奖励 0.0000→0.0000
+  节点#2 UCB=1.0929 (c=2, 父访问=6)
+  [3] 节点#2 深度=1: 访问 5→6, 奖励 0.0000→0.0000
+  [4] 节点#1 深度=0: 访问 5→6, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 6 奖励: 0.0000
+
+--- Rollout [7/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 8
+[扩展] 生成了 20 个CTE变体，去重后: 2
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 6
+[扩展] 生成了 20 个CTE变体，去重后: 5
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[回溯路径] #99(d10) -> #93(d9) -> #91(d8) -> #83(d7) -> #79(d6) -> #77(d5) -> #69(d4) -> #8(d3) -> #3(d2) -> #2(d1) -> #1(d0)
+  节点#99 UCB=0.0000 (c=2, 父访问=1)
+  [0] 节点#99 深度=10: 访问 0→1, 奖励 0.0000→0.0000
+  节点#93 UCB=0.0000 (c=2, 父访问=1)
+  [1] 节点#93 深度=9: 访问 0→1, 奖励 0.0000→0.0000
+  节点#91 UCB=0.0000 (c=2, 父访问=1)
+  [2] 节点#91 深度=8: 访问 0→1, 奖励 0.0000→0.0000
+  节点#83 UCB=0.0000 (c=2, 父访问=1)
+  [3] 节点#83 深度=7: 访问 0→1, 奖励 0.0000→0.0000
+  节点#79 UCB=0.0000 (c=2, 父访问=1)
+  [4] 节点#79 深度=6: 访问 0→1, 奖励 0.0000→0.0000
+  节点#77 UCB=0.0000 (c=2, 父访问=1)
+  [5] 节点#77 深度=5: 访问 0→1, 奖励 0.0000→0.0000
+  节点#69 UCB=0.0000 (c=2, 父访问=1)
+  [6] 节点#69 深度=4: 访问 0→1, 奖励 0.0000→0.0000
+  节点#8 UCB=2.0963 (c=2, 父访问=3)
+  [7] 节点#8 深度=3: 访问 0→1, 奖励 0.0000→0.0000
+  节点#3 UCB=1.6108 (c=2, 父访问=7)
+  [8] 节点#3 深度=2: 访问 2→3, 奖励 0.0000→0.0000
+  节点#2 UCB=1.0545 (c=2, 父访问=7)
+  [9] 节点#2 深度=1: 访问 6→7, 奖励 0.0000→0.0000
+  [10] 节点#1 深度=0: 访问 6→7, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 7 奖励: 0.0000
+
+--- Rollout [8/10] ---
+[回溯路径] #4(d2) -> #2(d1) -> #1(d0)
+  节点#4 UCB=1.6651 (c=2, 父访问=8)
+  [0] 节点#4 深度=2: 访问 2→3, 奖励 0.0000→0.0000
+  节点#2 UCB=1.0197 (c=2, 父访问=8)
+  [1] 节点#2 深度=1: 访问 7→8, 奖励 0.0000→0.0000
+  [2] 节点#1 深度=0: 访问 7→8, 奖励 0.0000→0.0000
+[回溯] 奖励 0.0000 已更新到整条路径
+Rollout 8 奖励: 0.0000
+
+--- Rollout [9/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 6
+[扩展] 生成了 20 个CTE变体，去重后: 3
+[扩展] 生成了 20 个CTE变体，去重后: 1
+[模拟] 到达<END>，开始基于整条链生成多个SQL变体...
+[模拟] 生成了 20 个SQL变体
+[模拟] 奖励: 0.1500 (通过率: 5/20)
+[模拟] 对应结果内容如下:
+       id                                               text  hasContentWarning
+0      29  You can’t put an Aura card from your hand onto...                  0
+1    3872  This card now has Enchant Swamp, which works e...                  0
+2    6651  Cycling is an activated ability. Effects that ...                  0
+3    6652  Cycling is an activated ability. Effects that ...                  0
+4    7950  Cycling is an activated ability. Effects that ...                  0
+5    7970  Cycling is an activated ability. Effects that ...                  0
+6    8107  Cycling is an activated ability. Effects that ...                  0
+7    8109  Cycling is an activated ability. Effects that ...                  0
+8    8448  Cycling is an activated ability. Effects that ...                  0
+9    8787  Cycling is an activated ability. Effects that ...                  0
+10   8791  Cycling is an activated ability. Effects that ...                  0
+11   9117  Cycling is an activated ability. Effects that ...                  0
+12   9124  Cycling is an activated ability. Effects that ...                  0
+13  12407  Cycling is an activated ability. Effects that ...                  0
+14  12417  Cycling is an activated ability. Effects that ...                  0
+15  14653  Cycling is an activated ability. Effects that ...                  0
+16  14686  Cycling is an activated ability. Effects that ...                  0
+17  19041  The lands are put onto the battlefield during ...                  0
+18  19041  You discard all the cards still in your hand a...                  0
+19  19041  Putting a land onto the battlefield does not c...                  0
+20  21535  Cycling is an activated ability. Effects that ...                  0
+21  21568  Cycling is an activated ability. Effects that ...                  0
+22  38456  Cycling is an activated ability. Effects that ...                  0
+[回溯路径] #109(d6) -> #107(d5) -> #100(d4) -> #39(d3) -> #5(d2) -> #2(d1) -> #1(d0)
+  节点#109 UCB=0.1500 (c=2, 父访问=1)
+  [0] 节点#109 深度=6: 访问 0→1, 奖励 0.0000→0.1500
+  节点#107 UCB=0.1500 (c=2, 父访问=1)
+  [1] 节点#107 深度=5: 访问 0→1, 奖励 0.0000→0.1500
+  节点#100 UCB=0.1500 (c=2, 父访问=1)
+  [2] 节点#100 深度=4: 访问 0→1, 奖励 0.0000→0.1500
+  节点#39 UCB=2.2463 (c=2, 父访问=3)
+  [3] 节点#39 深度=3: 访问 0→1, 奖励 0.0000→0.1500
+  节点#5 UCB=1.7616 (c=2, 父访问=9)
+  [4] 节点#5 深度=2: 访问 2→3, 奖励 0.0000→0.0500
+  节点#2 UCB=1.0049 (c=2, 父访问=9)
+  [5] 节点#2 深度=1: 访问 8→9, 奖励 0.0000→0.0167
+  [6] 节点#1 深度=0: 访问 8→9, 奖励 0.0000→0.0167
+[回溯] 奖励 0.1500 已更新到整条路径
+Rollout 9 奖励: 0.1500
+
+--- Rollout [10/10] ---
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 7
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 4
+[扩展] 生成了 20 个CTE变体，去重后: 1
+[模拟] 到达<END>，开始基于整条链生成多个SQL变体...
+[模拟] 生成了 20 个SQL变体
+[模拟] 奖励: 0.4000 (通过率: 8/20)
+[模拟] 对应结果内容如下:
+       id                                               text  hasContentWarning
+0      29  You can’t put an Aura card from your hand onto...                  0
+1    3872  This card now has Enchant Swamp, which works e...                  0
+2    6651  Cycling is an activated ability. Effects that ...                  0
+3    6652  Cycling is an activated ability. Effects that ...                  0
+4    7950  Cycling is an activated ability. Effects that ...                  0
+5    7970  Cycling is an activated ability. Effects that ...                  0
+6    8107  Cycling is an activated ability. Effects that ...                  0
+7    8109  Cycling is an activated ability. Effects that ...                  0
+8    8448  Cycling is an activated ability. Effects that ...                  0
+9    8787  Cycling is an activated ability. Effects that ...                  0
+10   8791  Cycling is an activated ability. Effects that ...                  0
+11   9117  Cycling is an activated ability. Effects that ...                  0
+12   9124  Cycling is an activated ability. Effects that ...                  0
+13  12407  Cycling is an activated ability. Effects that ...                  0
+14  12417  Cycling is an activated ability. Effects that ...                  0
+15  14653  Cycling is an activated ability. Effects that ...                  0
+16  14686  Cycling is an activated ability. Effects that ...                  0
+17  19041  The lands are put onto the battlefield during ...                  0
+18  19041  You discard all the cards still in your hand a...                  0
+19  19041  Putting a land onto the battlefield does not c...                  0
+20  21535  Cycling is an activated ability. Effects that ...                  0
+21  21568  Cycling is an activated ability. Effects that ...                  0
+22  38456  Cycling is an activated ability. Effects that ...                  0
+[回溯路径] #129(d9) -> #128(d8) -> #121(d7) -> #118(d6) -> #110(d5) -> #101(d4) -> #39(d3) -> #5(d2) -> #2(d1) -> #1(d0)
+  节点#129 UCB=0.4000 (c=2, 父访问=1)
+  [0] 节点#129 深度=9: 访问 0→1, 奖励 0.0000→0.4000
+  节点#128 UCB=0.4000 (c=2, 父访问=1)
+  [1] 节点#128 深度=8: 访问 0→1, 奖励 0.0000→0.4000
+  节点#121 UCB=0.4000 (c=2, 父访问=1)
+  [2] 节点#121 深度=7: 访问 0→1, 奖励 0.0000→0.4000
+  节点#118 UCB=0.4000 (c=2, 父访问=1)
+  [3] 节点#118 深度=6: 访问 0→1, 奖励 0.0000→0.4000
+  节点#110 UCB=0.4000 (c=2, 父访问=1)
+  [4] 节点#110 深度=5: 访问 0→1, 奖励 0.0000→0.4000
+  节点#101 UCB=2.0651 (c=2, 父访问=2)
+  [5] 节点#101 深度=4: 访问 0→1, 奖励 0.0000→0.4000
+  节点#39 UCB=1.9401 (c=2, 父访问=4)
+  [6] 节点#39 深度=3: 访问 1→2, 奖励 0.1500→0.2750
+  节点#5 UCB=1.6549 (c=2, 父访问=10)
+  [7] 节点#5 深度=2: 访问 3→4, 奖励 0.0500→0.1375
+  节点#2 UCB=1.0147 (c=2, 父访问=10)
+  [8] 节点#2 深度=1: 访问 9→10, 奖励 0.0167→0.0550
+  [9] 节点#1 深度=0: 访问 9→10, 奖励 0.0167→0.0550
+[回溯] 奖励 0.4000 已更新到整条路径
+Rollout 10 奖励: 0.4000
+
+📈 MCTS回合 1 完成:
+   总节点数: 129
+本回合最优奖励=0.4000，并列条数=1
+共 1 条每轮代表SQL用于最终投票
+  统计信息: {'total_visits': 10, 'average_reward': 0.05500000000000001, 'tree_depth': 10, 'total_nodes': 129}
+================================================================================
+SQL 评估结果
+================================================================================
+
+1️⃣ Gold Answer SQL:
+   SELECT T1.id, T2.text, T1.hasContentWarning FROM cards AS T1 INNER JOIN rulings AS T2 ON T1.uuid = T2.uuid WHERE T1.artist = 'Stephen Daniele'
+   结果: [{'id': 29, 'text': 'You can’t put an Aura card from your hand onto the battlefield this way if that Aura can’t legally enchant Academy Researchers. For example, you can’t put an Aura with “enchant land” or “enchant green creature” onto the battlefield attached to Academy Res', 'hasContentWarning': 0}, {'id': 3872, 'text': 'This card now has Enchant Swamp, which works exactly like any other Enchant ability. This means it can only be cast targeting a Swamp, and it will be put into its owner’s graveyard if the permanent it’s attached to ever stops being a Swamp.', 'hasContentWarning': 0}, {'id': 6651, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 6652, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 7950, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 7970, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 8107, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 8109, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 8448, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 8787, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 8791, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 9117, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 9124, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 12407, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 12417, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 14653, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 14686, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 19041, 'text': 'The lands are put onto the battlefield during the resolution of the ability.', 'hasContentWarning': 0}, {'id': 19041, 'text': 'You discard all the cards still in your hand after you put the lands onto the battlefield.', 'hasContentWarning': 0}, {'id': 19041, 'text': 'Putting a land onto the battlefield does not count as playing a land.', 'hasContentWarning': 0}, {'id': 21535, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 21568, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 38456, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}]
+
+2️⃣ Generated SQL:
+   SELECT cd.id, rd.text, cd.hasContentWarning
+FROM cards cd
+INNER JOIN rulings rd ON cd.uuid = rd.uuid
+WHERE cd.artist = 'Stephen Daniele';)
+   结果: [{'id': 29, 'text': 'You can’t put an Aura card from your hand onto the battlefield this way if that Aura can’t legally enchant Academy Researchers. For example, you can’t put an Aura with “enchant land” or “enchant green creature” onto the battlefield attached to Academy Res', 'hasContentWarning': 0}, {'id': 3872, 'text': 'This card now has Enchant Swamp, which works exactly like any other Enchant ability. This means it can only be cast targeting a Swamp, and it will be put into its owner’s graveyard if the permanent it’s attached to ever stops being a Swamp.', 'hasContentWarning': 0}, {'id': 6651, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or Rings of Brighthearth) will interact with cycling. Effects that interact with spells (such as Remove Soul or Faerie Tauntings) will not.', 'hasContentWarning': 0}, {'id': 6652, 'text': 'Cycling is an activated ability. Effects that interact with activated abilities (such as Stifle or 
+
+3️⃣ 结果对比:
+   ✅ 结果一致
+      答案: {'id': 29, 'text': 'You can’t put an Aura card from your hand onto the battlefield this way if that Aura can’t legally enchant Academy Researchers. For example, you can’t put an Aura with “enchant land” or “enchant green creature” onto the battlefield attached to Academy Res', 'hasContentWarning': 0}
+================================================================================
