@@ -9,6 +9,7 @@ import argparse
 import time
 import threading
 import os
+import random
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
@@ -23,7 +24,7 @@ from env.db_connector import DatabaseConnector
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def build_solver(db_name: str, llm_config: dict) -> CoCTEMCTSSolver:
+def build_solver(db_name: str, llm_config: dict, max_rollouts: int = 10) -> CoCTEMCTSSolver:
     """构建新版 MCTS Solver"""
     # 这里你需要根据你的实际路径修改
     db_path = f"/ssd/shenshuyu/work/bird/dev_20240627/dev_databases/{db_name}/{db_name}.sqlite"
@@ -34,41 +35,53 @@ def build_solver(db_name: str, llm_config: dict) -> CoCTEMCTSSolver:
         if os.path.exists(local_path):
             db_path = local_path
             
-    return CoCTEMCTSSolver(llm_config, db_path, max_iterations=10)
+    return CoCTEMCTSSolver(llm_config, db_path, max_rollouts=max_rollouts)
 
-def run_once(sample: dict, multi_base_urls: list = None) -> dict:
-    """运行单个样本"""
+# 线程安全的 URL 轮询计数器
+_url_counter_lock = threading.Lock()
+_url_counter = 0
+
+def get_next_base_url(multi_base_urls: list) -> str:
+    """线程安全地轮询选择下一个 base_url"""
+    if not multi_base_urls:
+        return "http://localhost:8000/v1"
+    
+    global _url_counter
+    with _url_counter_lock:
+        url = multi_base_urls[_url_counter % len(multi_base_urls)]
+        _url_counter += 1
+        return url
+
+def run_single_strategy(sample: dict, strategy: str, multi_base_urls: list = None, max_rollouts: int = 10) -> dict:
+    """使用固定策略运行单个样本"""
     db_name = sample["db"]
     question = sample["question"]
-    # evidence = sample.get("evidence", "") # 使用 evidence 作为 context
-    evidence = sample.get("evidence", "") 
+    evidence = sample.get("evidence", "")
 
     # 构建 LLM 配置
-    # 这里简化处理，如果你有多模型轮询逻辑，可以在 LLMClient 内部实现，或者在这里随机选一个 url
-    base_url = multi_base_urls[0] if multi_base_urls else "http://localhost:8000/v1"
+    # 使用轮询方式选择 base_url，实现负载均衡
+    base_url = get_next_base_url(multi_base_urls)
     api_key = os.environ.get("OPENAI_API_KEY", "dummy")
     
     llm_config = {
-        "model": "deepseek-coder", # 或者你的模型名
+        "model": "deepseek-coder",
         "api_key": api_key,
         "base_url": base_url,
-        "timeout": 120  # LLM调用超时时间（秒），默认120秒
+        "timeout": 120
     }
     
-    # 实例化 Solver
     try:
-        solver = build_solver(db_name, llm_config)
-        
-        # 执行求解
-        # 我们把 evidence 传入 additional_context
-        result = solver.solve(question, additional_context=evidence)
+        solver = build_solver(db_name, llm_config, max_rollouts=max_rollouts)
+        result = solver.solve(question, additional_context=evidence, fixed_strategy=strategy)
         
         return {
+            "strategy": strategy,
             "sql": result["sql"],
             "stats": {
                 "score": result["score"],
                 "time": result["time"],
-                "steps": result["steps"]
+                "rollouts": result.get("rollouts", result.get("steps", 0)),
+                "total_iterations": result.get("total_iterations", result.get("steps", 0))
             },
             "error": None
         }
@@ -76,10 +89,101 @@ def run_once(sample: dict, multi_base_urls: list = None) -> dict:
         import traceback
         traceback.print_exc()
         return {
+            "strategy": strategy,
             "sql": "",
             "stats": {},
             "error": str(e)
         }
+
+def select_best_result(strategy_results: list) -> dict:
+    """
+    从多个策略结果中选择最优的
+    
+    优先级：
+    1. 无 error
+    2. SQL 非空
+    3. score 最高
+    """
+    # 过滤掉有 error 的结果
+    valid_results = [r for r in strategy_results if r.get("error") is None]
+    
+    if not valid_results:
+        # 如果所有结果都有 error，返回第一个（至少记录错误信息）
+        return strategy_results[0] if strategy_results else {}
+    
+    # 过滤掉 SQL 为空的结果
+    non_empty_results = [r for r in valid_results if r.get("sql") and r["sql"].strip()]
+    
+    if not non_empty_results:
+        # 如果所有结果 SQL 都为空，返回第一个有效结果
+        return valid_results[0]
+    
+    # 按 score 排序，选择最高的
+    best = max(non_empty_results, key=lambda r: r.get("stats", {}).get("score", -float('inf')))
+    return best
+
+def run_once(sample: dict, multi_base_urls: list = None, total_max_rollouts: int = 40) -> dict:
+    """
+    运行单个样本，使用 Multi-root/Multi-rollout 方案
+    
+    Args:
+        sample: 样本数据
+        multi_base_urls: 多个 base_url 列表
+        total_max_rollouts: 总 rollout 预算，会平均分配给 4 个策略
+    """
+    # 将总预算平均分配给 4 个策略
+    rollouts_per_strategy = max(1, total_max_rollouts // 4)
+    
+    strategies = ["S1", "S2", "S3", "S4"]
+    
+    # 并行运行 4 个策略
+    strategy_results = []
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(run_single_strategy, sample, strategy, multi_base_urls, rollouts_per_strategy): strategy
+            for strategy in strategies
+        }
+        
+        for future in as_completed(futures):
+            strategy = futures[future]
+            try:
+                result = future.result()
+                strategy_results.append(result)
+                print(f"  ✓ Strategy {strategy} completed: score={result.get('stats', {}).get('score', 'N/A'):.2f}, "
+                      f"error={'Yes' if result.get('error') else 'No'}")
+            except Exception as e:
+                print(f"  ✗ Strategy {strategy} failed: {str(e)}")
+                strategy_results.append({
+                    "strategy": strategy,
+                    "sql": "",
+                    "stats": {},
+                    "error": str(e)
+                })
+    
+    # 选择最优结果
+    best_result = select_best_result(strategy_results)
+    
+    # 添加所有策略的结果信息（用于调试和分析）
+    best_result["all_strategies"] = {
+        r["strategy"]: {
+            "score": r.get("stats", {}).get("score", "N/A"),
+            "error": r.get("error"),
+            "sql_length": len(r.get("sql", ""))
+        }
+        for r in strategy_results
+    }
+    
+    print(f"  🏆 Best strategy: {best_result.get('strategy', 'N/A')}, "
+          f"score={best_result.get('stats', {}).get('score', 'N/A'):.2f}")
+    
+    # 返回格式与原来兼容
+    return {
+        "sql": best_result.get("sql", ""),
+        "stats": best_result.get("stats", {}),
+        "error": best_result.get("error"),
+        "selected_strategy": best_result.get("strategy"),
+        "all_strategies": best_result.get("all_strategies", {})
+    }
 
 # ==========================================
 # 保留你原来的 Gold 验证逻辑 (因为写得很好)
@@ -91,13 +195,13 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_path: str) -> bool:
     conn = DatabaseConnector(db_path)
     try:
         # 1. 执行 Gold
-        gold_res, gold_err = conn.execute_sql(gold_sql)
+        gold_res, gold_cols, gold_err = conn.execute_sql(gold_sql)
         if gold_err:
             print(f"⚠️ Gold Error: {gold_err}")
             return False
 
         # 2. 执行 Predict
-        pred_res, pred_err = conn.execute_sql(predicted_sql)
+        pred_res, pred_cols, pred_err = conn.execute_sql(predicted_sql)
         if pred_err:
             # --- 报错时打印 ---
             print(f"\n❌ [Exec Error] Execution failed!")
@@ -141,13 +245,13 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_path: str) -> bool:
 # 任务处理包装器
 # ==========================================
 def process_single_task(args_tuple):
-    idx, sample, gold_sqls, multi_base_urls = args_tuple
+    idx, sample, gold_sqls, multi_base_urls, total_max_rollouts = args_tuple
     qid = str(sample.get('question_id', idx))
     
     print(f">>> Processing #{qid} (DB: {sample['db']})")
     
     # 运行
-    res = run_once(sample, multi_base_urls)
+    res = run_once(sample, multi_base_urls, total_max_rollouts=total_max_rollouts)
     
     # 验证
     gold_match = None
@@ -180,6 +284,8 @@ def main():
     parser.add_argument("--qid", type=str, default=None)
     parser.add_argument("--max_workers", type=int, default=5)
     parser.add_argument("--base_urls", type=str, default="http://localhost:8000/v1")
+    parser.add_argument("--total_max_rollouts", type=int, default=40, 
+                        help="总 rollout 预算，会平均分配给 4 个策略（S1/S2/S3/S4）")
     args = parser.parse_args()
     
     # 1. 加载数据
@@ -195,16 +301,20 @@ def main():
 
     # 2. 筛选任务
     tasks = []
-    base_urls = args.base_urls.split(',')
+    # 解析 base_urls，支持逗号分隔的多个 URL
+    base_urls = [url.strip() for url in args.base_urls.split(',')]
     
     target_qids = args.qid.split(',') if args.qid else None
     
     for i, s in enumerate(samples):
         s_qid = str(s.get('question_id', i))
-        if target_idx := (target_qids and s_qid in target_qids):
-            tasks.append((i, s, gold_sqls, base_urls))
-        elif not target_qids:
-             tasks.append((i, s, gold_sqls, base_urls))
+        # 如果指定了 qid，只处理匹配的；否则处理所有
+        if target_qids:
+            if s_qid in target_qids:
+                tasks.append((i, s, gold_sqls, base_urls, args.total_max_rollouts))
+        else:
+            # 不指定 qid 时，处理所有任务
+            tasks.append((i, s, gold_sqls, base_urls, args.total_max_rollouts))
 
     print(f"Total Tasks: {len(tasks)}")
     

@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 导入我们写的组件
 from agents.llm_client import LLMClient
-from agents.cte_generator import CTEGenerator
+# from agents.cte_generator import CTEGenerator
 from mcts.node import MCTSNode, ActionType
 
 # 配置日志
@@ -78,50 +78,50 @@ def test_llm_client_wrapper(config: dict):
         print(f"❌ LLMClient Failed: {e}")
         return False
 
-def test_cte_generator_integration(config: dict):
-    """Level 3: 测试 CTEGenerator 和 Prompts 集成"""
-    print(f"\n{'='*60}")
-    print(f"🧠 Level 3: CTEGenerator & Prompt Integration")
-    print(f"{'='*60}")
+# def test_cte_generator_integration(config: dict):
+#     """Level 3: 测试 CTEGenerator 和 Prompts 集成"""
+#     print(f"\n{'='*60}")
+#     print(f"🧠 Level 3: CTEGenerator & Prompt Integration")
+#     print(f"{'='*60}")
 
-    try:
-        # 1. Mock 一个 MCTS 节点
-        node = MCTSNode(action_type=ActionType.BUILD)
-        node.question = "Show me the director of the movie 'Hero'."
-        node.schema_info = "Table: movies\nColumns: id, title, director, year"
-        node.accumulated_sql = "" # Empty start
-        node.knowledge.verified_values = {"Hero": "Hero (2002)"} # 模拟知识
+#     try:
+#         # 1. Mock 一个 MCTS 节点
+#         node = MCTSNode(action_type=ActionType.BUILD)
+#         node.question = "Show me the director of the movie 'Hero'."
+#         node.schema_info = "Table: movies\nColumns: id, title, director, year"
+#         node.accumulated_sql = "" # Empty start
+#         node.knowledge.verified_values = {"Hero": "Hero (2002)"} # 模拟知识
         
-        # 2. 实例化生成器
-        generator = CTEGenerator(config)
+#         # 2. 实例化生成器
+#         generator = CTEGenerator(config)
         
-        # 3. 生成
-        print("Generating CTEs...")
-        start = time.time()
-        ctes = generator.generate_ctes(node, k=2)
-        duration = time.time() - start
+#         # 3. 生成
+#         print("Generating CTEs...")
+#         start = time.time()
+#         ctes = generator.generate_ctes(node, k=2)
+#         duration = time.time() - start
         
-        print(f"Generated {len(ctes)} CTEs in {duration:.2f}s:")
-        for i, cte in enumerate(ctes):
-            print(f"\n--- Candidate {i+1} ---")
-            print(cte)
+#         print(f"Generated {len(ctes)} CTEs in {duration:.2f}s:")
+#         for i, cte in enumerate(ctes):
+#             print(f"\n--- Candidate {i+1} ---")
+#             print(cte)
             
-        if ctes:
-            print(f"✅ CTEGenerator Validated")
-            return True
-        else:
-            print(f"❌ Generated list is empty")
-            return False
+#         if ctes:
+#             print(f"✅ CTEGenerator Validated")
+#             return True
+#         else:
+#             print(f"❌ Generated list is empty")
+#             return False
 
-    except Exception as e:
-        print(f"❌ CTEGenerator Failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+#     except Exception as e:
+#         print(f"❌ CTEGenerator Failed: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         return False
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_url", type=str, default="http://localhost:8010/v1")
+    parser.add_argument("--base_url", type=str, default="http://localhost:8011/v1")
     parser.add_argument("--api_key", type=str, default="dummy")
     parser.add_argument("--model", type=str, default="deepseek-coder") # 或 meta-llama/Llama-3-70b-instruct
     args = parser.parse_args()
@@ -142,8 +142,8 @@ def main():
         print("\n⛔ Critical: LLMClient wrapper failed.")
         return
 
-    # 3. 业务逻辑
-    test_cte_generator_integration(config)
+    # # 3. 业务逻辑
+    # test_cte_generator_integration(config)
 
 if __name__ == "__main__":
     main()

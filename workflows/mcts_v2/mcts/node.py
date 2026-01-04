@@ -3,6 +3,7 @@ import math
 from enum import Enum
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
+from utils.execution_trace import StepRecord
 
 class ActionType(Enum):
     """
@@ -40,6 +41,14 @@ class KnowledgeState:
         for join in self.confirmed_joins:
             txt += f"- Confirmed Join Path: {join}\n"
         return txt
+    
+    def clone(self) -> 'KnowledgeState':
+        """深拷贝知识状态（避免 MCTS 分支污染）"""
+        return KnowledgeState(
+            verified_values=self.verified_values.copy(),
+            confirmed_joins=self.confirmed_joins.copy(),
+            notes=self.notes.copy()
+        )
 
 class MCTSNode:
     def __init__(self, parent: Optional['MCTSNode'] = None, action_type: ActionType = ActionType.STRATEGIZE):
@@ -54,7 +63,8 @@ class MCTSNode:
         
         # --- 节点核心状态 (Context) ---
         self.action_type = action_type
-        self.strategy: str = "S4"   # 当前路径所属的宏观策略 (S1-S4)，默认 S4
+        # 策略：根节点（parent=None）时为空，让模型选择；子节点继承父节点策略
+        self.strategy: Optional[str] = None if parent is None else (parent.strategy if parent else None)
         
         # SQL 状态 (CoCTE 核心)
         # accumulated_sql: 截止到当前节点，完整的、可执行的 SQL 序列
@@ -72,6 +82,13 @@ class MCTSNode:
             'error_message': None,
             'sc_score': 0.0        # 这一步得到的自洽性评分 (Instant Reward)
         }
+        
+        # --- Execution Trace ---
+        # 存储从根节点到当前节点的所有步骤记录（用于 prompt）
+        self.execution_trace: List[StepRecord] = []
+        if parent:
+            # 继承父节点的 trace
+            self.execution_trace = parent.execution_trace.copy()
         
         self.is_terminal: bool = False
 
