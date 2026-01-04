@@ -125,8 +125,8 @@ def print_model_info(base_url: str = None, api_key: str = None):
         print(f"✗ 获取模型列表失败: {e}")
 
 
-# python workflows/mcts/test/test_bc_parallel_rollout_backup11_5.py \
+# python workflows/mcts_v1/test/test_bc_parallel_rollout_backup11_5.py \
 #   --ppl_file data/subset_ppl_dev_python.json \
 #   --qid 1040 \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/single_1040_timing_parallel.json \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/single_1040_timing_parallel.json \
 #   --parallel_workers 5

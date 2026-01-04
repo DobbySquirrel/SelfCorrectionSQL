@@ -38,7 +38,7 @@ class SQLExecutor:
         start_ts = time.time()
         try:
             # 使用带缓存的执行函数（优化1和2：SQL缓存和标准化）
-            from workflows.mcts.utils.sql_exec_helpers import _execute_with_cache
+            from workflows.mcts_v1.utils.sql_exec_helpers import _execute_with_cache
             df, err = _execute_with_cache(self.db_connector, sql, timeout_s=timeout_s)
             duration = time.time() - start_ts
             # print(f"[监控] SQL执行耗时: {duration:.3f}s, rows={len(df) if df is not None else 0}")

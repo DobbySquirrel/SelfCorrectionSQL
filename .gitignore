@@ -49,5 +49,5 @@ env/
 __pycache__/
 *.pyc
 Output/
-workflows/mcts/test/out/11_20_error_id.json
-workflows/mcts/test/out/
+workflows/mcts_v1/test/out/11_20_error_id.json
+workflows/mcts_v1/test/out/

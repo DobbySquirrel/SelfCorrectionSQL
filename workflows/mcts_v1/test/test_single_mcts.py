@@ -21,9 +21,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from workflows.mcts.single_workflow import SimpleRolloutWorkflow
+from workflows.mcts_v1.single_workflow import SimpleRolloutWorkflow
 from core.database_connector import DatabaseConnector
-from workflows.mcts.utils.model_utils import get_llm_config, print_model_info, pick_model
+from workflows.mcts_v1.utils.model_utils import get_llm_config, print_model_info, pick_model
 import logging
 logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
 
@@ -37,7 +37,7 @@ def build_db_connector(db_name: str) -> DatabaseConnector:
 
 
 def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str] = None, 
-             workflow_config: dict = None) -> dict:
+             workflow_config: dict = None, strategy_mode: Optional[str] = None) -> dict:
     db_name = sample["db"]
     question = sample["question"]
     schema_info = sample["simplified_ddl"]
@@ -73,7 +73,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
         llm_config = get_llm_config(temperature=0.7, auto_select=True)
 
     # 使用parallel_workers参数设置工作流内部的max_workers
-    w = SimpleRolloutWorkflow(llm_config, db, max_workers=parallel_workers)
+    w = SimpleRolloutWorkflow(llm_config, db, max_workers=parallel_workers, strategy_mode=strategy_mode)
     
     # 应用工作流配置（如果提供）
     if workflow_config:
@@ -107,14 +107,14 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
 
 def process_single_task(args_tuple):
     """处理单个任务的包装函数，用于并行执行"""
-    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, workflow_config = args_tuple
+    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, workflow_config, strategy_mode = args_tuple
     try:
         qid = str(sample.get('question_id', idx))
         print(f"\n{'='*80}")
         print(f">>> 样本#{idx} (question_id={qid}) | DB={sample['db']}")
         print(f"{'='*80}")
 
-        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, workflow_config=workflow_config)
+        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, workflow_config=workflow_config, strategy_mode=strategy_mode)
 
         # 与gold SQL对比（如果提供）
         predicted_sql = result['sql']
@@ -356,6 +356,9 @@ def main():
     parser.add_argument("--max_cte_nodes", type=int, default=5, help="每次生成的CTE变体数量（默认5）")
     parser.add_argument("--max_depth", type=int, default=8, help="CTE链最大深度（默认8）")
     parser.add_argument("--num_sql_variants", type=int, default=5, help="最终生成的SQL变体数量（默认5）")
+    parser.add_argument("--strategy_mode", type=str, default=None,
+                        choices=["FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4", "NONE", "LLM_PICK_ONCE"],
+                        help="策略模式：强制策略、无策略、或LLM选择")
     args = parser.parse_args()
     
     # 工作流配置
@@ -437,7 +440,7 @@ def main():
     tasks = []
     for idx in indices:
         sample = load_sample(args.ppl_file, idx)
-        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, workflow_config))
+        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, workflow_config, args.strategy_mode))
     
     # 统一使用并行处理模式（max_workers=1时也是并行处理，只是单线程）
     print(f"\n处理 {len(tasks)} 个样本（{args.max_workers} 个worker）...")
@@ -519,25 +522,25 @@ if __name__ == "__main__":
 
 
 # 使用示例：
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_single_mcts.py \
+# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_single_mcts.py \
 #   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_single_rollout.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_single_rollout.json \
+#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout.txt \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout.json \
 #   --qid 25 \
 #   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
 #   --parallel_workers 5
 
 # 多样本测试：
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_single_mcts.py \
+# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_single_mcts.py \
 #   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --qids "25,40,93" \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_single_rollout.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_single_rollout.json \
+#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout_1_4.txt \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout_1_4.json \
 #   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
 #   --parallel_workers 5 \
 #   --max_cte_nodes 5 \
 #   --max_depth 8 \
-#   --num_sql_variants 5
+#   --num_sql_variants 5 \
+#   --multi_base_urls "http://localhost:8010/v1,http://localhost:8009/v1,http://localhost:8012/v1"
 
 
 # python test/test_single_mcts.py \

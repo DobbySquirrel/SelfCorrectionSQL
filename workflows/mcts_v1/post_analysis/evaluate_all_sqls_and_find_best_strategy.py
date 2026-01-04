@@ -19,7 +19,7 @@ from tqdm import tqdm
 # 添加项目路径
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 from core.database_connector import DatabaseConnector
-from workflows.mcts.test.test_mcts import compare_with_gold, build_db_connector
+from workflows.mcts_v1.test.test_mcts import compare_with_gold, build_db_connector
 
 
 def compute_path_entropy(cte_buckets_per_node: List[List[Dict[str, Any]]]) -> float:

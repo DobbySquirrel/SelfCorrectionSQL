@@ -16,6 +16,7 @@ from .agents.cte_generator import CTEGenerator
 from .agents.complete_sql_generator import CompleteSQLGenerator
 from .agents.sql_executor import SQLExecutor
 from .agents.probe_generator import ProbeGenerator
+from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
 from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_exec_helpers import execute_sqls_parallel
 from core.database_connector import DatabaseConnector
@@ -25,7 +26,7 @@ from .utils.agent_helpers import AgentHelpers
 class SimpleRolloutWorkflow:
     """简化版单Rollout工作流"""
     
-    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None, enable_probe: bool = False):
+    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None, enable_probe: bool = False, strategy_mode: Optional[str] = None):
         """
         初始化简化工作流
         
@@ -34,6 +35,7 @@ class SimpleRolloutWorkflow:
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数
             enable_probe: 是否启用Probe步骤（在生成CTE前先执行probe探测），默认为True
+            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
@@ -43,6 +45,12 @@ class SimpleRolloutWorkflow:
         self.num_sql_variants = 5  # 最终生成的SQL变体数量
         self.max_workers = max_workers
         self.enable_probe = enable_probe  # Probe功能开关
+        
+        # 策略模式配置
+        if strategy_mode:
+            self.strategy_mode: StrategyMode = strategy_mode  # type: ignore
+        else:
+            self.strategy_mode: StrategyMode = GLOBAL_STRATEGY_CONFIG.mode  # type: ignore
                 # 从llm_config中提取multi_model_configs（如果存在config_list）
         multi_model_configs = None
         if 'config_list' in llm_config and len(llm_config['config_list']) > 1:
@@ -166,6 +174,17 @@ class SimpleRolloutWorkflow:
             cte_variants = self._generate_cte_variants(current_context, probe_results_text=probe_results_text)
             self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
             
+            # 处理 LLM_PICK_ONCE 模式的策略提取和清洗
+            if self.strategy_mode == "LLM_PICK_ONCE" and current_context['depth'] == 0 and not current_context.get("picked_strategy"):
+                new_variants = []
+                for c in cte_variants:
+                    s, cleaned = self._extract_strategy_and_clean_cte(c)
+                    if s in ("S1", "S2", "S3", "S4") and not current_context.get("picked_strategy"):
+                        current_context["picked_strategy"] = s
+                        print(f"[策略选择] LLM选择了策略: {s}")
+                    new_variants.append(cleaned)
+                cte_variants = new_variants
+            
             if not cte_variants:
                 print(f"[CTE生成] 未生成任何CTE变体，停止扩展")
                 break
@@ -268,19 +287,31 @@ class SimpleRolloutWorkflow:
             context: 当前上下文
             probe_results_text: Probe结果文本（用于传递给CTE生成器）
         """
+        # 获取策略相关参数
+        picked_strategy = context.get("picked_strategy", None)
+        depth = len(context['cte_chain'])
+        
+        # 生成策略注入文本
+        strategy_text = build_strategy_injection_text(
+            mode=self.strategy_mode,
+            picked_strategy=picked_strategy,
+            depth=depth
+        )
+        
         # 构建简单的节点对象（仅用于CTE生成）
         class SimpleNode:
-            def __init__(self, question, schema_info, additional_context, cte_chain, cte="", parent=None, depth=None, probe_results_text="", execution_result=None):
+            def __init__(self, question, schema_info, additional_context, cte_chain, cte="", parent=None, depth=None, probe_results_text="", execution_result=None, strategy_text=""):
                 self.question = question
                 self.schema_info = schema_info
-                # 将probe结果添加到additional_context中
+                # 通用拼接：additional_context + strategy_text + probe_results_text
+                extra_blocks = []
+                if additional_context:
+                    extra_blocks.append(additional_context)
+                if strategy_text:
+                    extra_blocks.append(strategy_text)
                 if probe_results_text:
-                    if additional_context:
-                        self.additional_context = additional_context + "\n\n" + probe_results_text
-                    else:
-                        self.additional_context = probe_results_text
-                else:
-                    self.additional_context = additional_context
+                    extra_blocks.append(probe_results_text)
+                self.additional_context = "\n\n".join(extra_blocks)
                 self.cte_chain = cte_chain
                 self.parent = parent
                 # 添加CTE和执行结果属性（cte_generator需要）
@@ -314,7 +345,8 @@ class SimpleRolloutWorkflow:
                 parent=current_node,
                 depth=i,  # depth从0开始（根节点为0）
                 probe_results_text="",  # parent节点不需要probe结果（只在第一次生成时使用）
-                execution_result=execution_result  # 传递真实的执行结果
+                execution_result=execution_result,  # 传递真实的执行结果
+                strategy_text=""  # parent节点不需要策略文本（只在当前节点需要）
             )
         
         # 当前节点（要生成下一个CTE的节点）
@@ -328,7 +360,8 @@ class SimpleRolloutWorkflow:
             cte="",  # 当前节点还没有CTE（要生成）
             parent=current_node,  # 连接到parent链
             depth=len(context['cte_chain']),  # 当前深度
-            probe_results_text=probe_results_text if use_probe else ""
+            probe_results_text=probe_results_text if use_probe else "",
+            strategy_text=strategy_text  # 传递策略文本
         )
         
         return self.cte_generator.generate_multiple_cte_variants(
@@ -336,6 +369,28 @@ class SimpleRolloutWorkflow:
             num_variants=self.max_cte_nodes_per_iteration,
             failed_attempts=[]  # 简化版不处理失败重试
         )
+    
+    def _extract_strategy_and_clean_cte(self, cte: str) -> Tuple[Optional[str], str]:
+        """
+        从CTE文本中提取策略并清洗
+        
+        Args:
+            cte: CTE文本，可能包含第一行的策略注释
+        
+        Returns:
+            (策略字符串或None, 清洗后的CTE文本)
+        """
+        if not cte:
+            return None, cte
+        
+        lines = cte.strip().splitlines()
+        if lines and lines[0].strip().startswith("-- STRATEGY:"):
+            first = lines[0].strip()
+            s = first.replace("-- STRATEGY:", "").strip()
+            cleaned = "\n".join(lines[1:]).strip()
+            return s, cleaned
+        
+        return None, cte
     
     def _deduplicate_cte_variants(self, cte_variants: List[str], context: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
         """

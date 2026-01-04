@@ -3,7 +3,7 @@ import os
 import statistics
 
 # 文件路径
-file_path = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/12_11.json'
+file_path = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.json'
 
 def analyze_performance(path):
     if not os.path.exists(path):

@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # 添加项目路径
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from workflows.mcts.utils.model_utils import pick_model, get_llm_config
+from workflows.mcts_v1.utils.model_utils import pick_model, get_llm_config
 
 
 def test_api_connection(base_url: str, api_key: str, timeout: int = 30) -> bool:

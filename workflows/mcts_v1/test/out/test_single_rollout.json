@@ -1,12 +1,12 @@
 {
   "25": {
-    "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+    "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
     "stats": {
       "timing": {
-        "total_s": 22.49406933784485,
-        "cte_gen_s": 8.194917917251587,
-        "sql_gen_s": 11.854984283447266,
-        "db_exec_s": 1.7435622215270996
+        "total_s": 141.70108461380005,
+        "cte_gen_s": 114.50404739379883,
+        "sql_gen_s": 21.3966646194458,
+        "db_exec_s": 5.475545883178711
       },
       "reward": 1.0,
       "sql_bucket_count": 5,
@@ -18,51 +18,254 @@
     "rollout_stats": [
       {
         "reward": 1.0,
-        "cte_path": [],
-        "cte_bucket_counts": [],
-        "cte_depths": [],
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT * FROM t_join;",
+          "WITH final_count AS (\n    SELECT COUNT(*) AS answer\n    FROM t_join\n)\nSELECT * FROM final_count;",
+          "WITH t_funding_types AS (\n    SELECT `Charter Funding Type`\n    FROM t_join\n)\nSELECT * FROM t_funding_types;"
+        ],
+        "cte_bucket_counts": [
+          5,
+          5,
+          4,
+          5,
+          5
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
         "sql_bucket_count": 5,
         "sql_total_variants": 5,
-        "selected_sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+        "selected_sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
         "all_sql_variants": [
           {
-            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
             "valid": true,
             "error": null,
-            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
-            "result_row_count": 8
+            "result_signature": "5_1_edd69257e4540f1f3f5d6a43a73e8f1e",
+            "result_row_count": 61
           },
           {
-            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
             "valid": true,
             "error": null,
-            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
-            "result_row_count": 8
+            "result_signature": "5_1_edd69257e4540f1f3f5d6a43a73e8f1e",
+            "result_row_count": 61
           },
           {
-            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nAND (\n    SELECT AVG(`AvgScrMath`)\n    FROM `satscores` AS `s`\n    WHERE `s`.`cds` = `schools`.`CDSCode`\n) > 400;",
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
             "valid": true,
             "error": null,
-            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
-            "result_row_count": 8
+            "result_signature": "5_1_edd69257e4540f1f3f5d6a43a73e8f1e",
+            "result_row_count": 61
           },
           {
-            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
             "valid": true,
             "error": null,
-            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
-            "result_row_count": 8
+            "result_signature": "5_1_edd69257e4540f1f3f5d6a43a73e8f1e",
+            "result_row_count": 61
           },
           {
-            "sql": "SELECT DISTINCT `schools`.`School`, `schools`.`FundingType`\nFROM `schools`\nJOIN `satscores` ON `schools`.`CDSCode` = `satscores`.`cds`\nWHERE `schools`.`City` = 'Riverside'\nGROUP BY `schools`.`CDSCode`\nHAVING AVG(`satscores`.`AvgScrMath`) > 400;",
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrMath`, f.`Charter Funding Type`\n    FROM satscores AS ss\n    INNER JOIN frpm AS f ON ss.cds = f.`CDSCode`\n    INNER JOIN schools AS sc ON ss.cds = sc.`CDSCode`\n    WHERE sc.`County` = 'Riverside'\n),\nc_rows AS (\n    SELECT cds, `AvgScrMath`\n    FROM c_cols\n    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 400\n),\nt_join AS (\n    SELECT r.cds, f.`Charter Funding Type`\n    FROM c_rows r\n    INNER JOIN frpm f ON r.cds = f.`CDSCode`\n)\nSELECT `Charter Funding Type`\nFROM t_join;",
             "valid": true,
             "error": null,
-            "result_signature": "5_2_ad2f75c863d6a663aa24640b14b1d91e",
-            "result_row_count": 8
+            "result_signature": "5_1_edd69257e4540f1f3f5d6a43a73e8f1e",
+            "result_row_count": 61
           }
         ],
         "result_buckets": {
-          "5_2_ad2f75c863d6a663aa24640b14b1d91e": 5
+          "5_1_edd69257e4540f1f3f5d6a43a73e8f1e": 5
+        },
+        "valid_count": 5,
+        "error_reason": null
+      }
+    ]
+  },
+  "40": {
+    "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n)\nSELECT `Phone`\nFROM t_final;",
+    "stats": {
+      "timing": {
+        "total_s": 95.59469199180603,
+        "cte_gen_s": 76.59586215019226,
+        "sql_gen_s": 14.893793106079102,
+        "db_exec_s": 3.7015557289123535
+      },
+      "reward": 1.0,
+      "sql_bucket_count": 5,
+      "valid_count": 5,
+      "gold_match": true,
+      "gold_sql": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.District = 'Fresno Unified' AND T1.AvgScrRead IS NOT NULL ORDER BY T1.AvgScrRead ASC LIMIT 1"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n)\nSELECT * FROM t_join;",
+          "WITH t_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n)\nSELECT * FROM t_agg;",
+          "WITH t_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n)\nSELECT * FROM t_final;",
+          "WITH final_answer AS (\n    SELECT `Phone`\n    FROM t_final\n)\nSELECT * FROM final_answer;",
+          "<END>"
+        ],
+        "cte_bucket_counts": [
+          5,
+          5,
+          5,
+          5,
+          2,
+          5,
+          5
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n)\nSELECT `Phone`\nFROM t_final;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n)\nSELECT `Phone`\nFROM t_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_fab5fe89b64c76fd341d43c695cfbe07",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n),\nfinal_answer AS (\n    SELECT `Phone`\n    FROM t_final\n)\nSELECT `Phone` FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_fab5fe89b64c76fd341d43c695cfbe07",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n),\nfinal_answer AS (\n    SELECT `Phone`\n    FROM t_final\n)\nSELECT `Phone` FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_fab5fe89b64c76fd341d43c695cfbe07",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n),\nfinal_answer AS (\n    SELECT `Phone`\n    FROM t_final\n)\nSELECT `Phone` FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_fab5fe89b64c76fd341d43c695cfbe07",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT ss.cds, ss.`AvgScrRead`, s.`Phone`\n    FROM satscores AS ss\n    INNER JOIN schools AS s ON ss.cds = s.`CDSCode`\n    WHERE s.`District` = 'Fresno Unified'\n),\nc_rows AS (\n    SELECT cds, `AvgScrRead`\n    FROM c_cols\n    WHERE `AvgScrRead` IS NOT NULL\n),\nt_join AS (\n    SELECT r.cds, r.`AvgScrRead`, s.`Phone`\n    FROM c_rows r\n    INNER JOIN schools s ON r.cds = s.`CDSCode`\n),\nt_agg AS (\n    SELECT cds, MIN(`AvgScrRead`) AS min_avg_scr_read\n    FROM t_join\n    GROUP BY cds\n),\nt_final AS (\n    SELECT t.cds, t.`Phone`\n    FROM t_agg a\n    INNER JOIN t_join t ON a.cds = t.cds\n    WHERE a.min_avg_scr_read = (\n        SELECT MIN(min_avg_scr_read)\n        FROM t_agg\n    )\n),\nfinal_answer AS (\n    SELECT `Phone`\n    FROM t_final\n)\nSELECT `Phone` FROM final_answer;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_fab5fe89b64c76fd341d43c695cfbe07",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_1_fab5fe89b64c76fd341d43c695cfbe07": 5
+        },
+        "valid_count": 5,
+        "error_reason": null
+      }
+    ]
+  },
+  "93": {
+    "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+    "stats": {
+      "timing": {
+        "total_s": 68.14879012107849,
+        "cte_gen_s": 48.7577269077301,
+        "sql_gen_s": 14.39950156211853,
+        "db_exec_s": 4.8934080600738525
+      },
+      "reward": 1.0,
+      "sql_bucket_count": 5,
+      "valid_count": 5,
+      "gold_match": true,
+      "gold_sql": "SELECT COUNT(T1.client_id) FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.gender = 'M' AND T2.A3 = 'north Bohemia' AND T2.A11 > 8000"
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 1.0,
+        "cte_path": [
+          "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n)\nSELECT * FROM c_cols;",
+          "WITH c_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n)\nSELECT * FROM c_rows;",
+          "WITH t_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n)\nSELECT * FROM t_join;",
+          "WITH t_rows AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 = 'North Bohemia'\n)\nSELECT * FROM t_rows;",
+          "WITH c_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n)\nSELECT * FROM c_fuzzy;",
+          "WITH c_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT * FROM c_final;"
+        ],
+        "cte_bucket_counts": [
+          5,
+          5,
+          4,
+          5,
+          2,
+          5
+        ],
+        "cte_depths": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "sql_bucket_count": 5,
+        "sql_total_variants": 5,
+        "selected_sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+        "all_sql_variants": [
+          {
+            "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_dfe1c17a47a574808ac9c41fb5bf556a",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_dfe1c17a47a574808ac9c41fb5bf556a",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_dfe1c17a47a574808ac9c41fb5bf556a",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer FROM c_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_dfe1c17a47a574808ac9c41fb5bf556a",
+            "result_row_count": 1
+          },
+          {
+            "sql": "WITH c_cols AS (\n    SELECT c.client_id, c.gender, c.district_id, d.A11\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_rows AS (\n    SELECT client_id, gender, district_id, A11\n    FROM c_cols\n    WHERE gender = 'M' AND A11 > 8000\n),\nt_join AS (\n    SELECT c.client_id, c.district_id, d.A3\n    FROM c_rows c\n    JOIN district d ON c.district_id = d.district_id\n),\nc_fuzzy AS (\n    SELECT client_id\n    FROM t_join\n    WHERE A3 LIKE '%North Bohemia%' \n       OR A3 LIKE 'North Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n       OR A3 LIKE 'North% Bohemia%'\n       OR A3 LIKE '%North% Bohemia%'\n),\nc_final AS (\n    SELECT COUNT(*) AS answer\n    FROM c_fuzzy\n)\nSELECT answer\nFROM c_final;",
+            "valid": true,
+            "error": null,
+            "result_signature": "1_1_dfe1c17a47a574808ac9c41fb5bf556a",
+            "result_row_count": 1
+          }
+        ],
+        "result_buckets": {
+          "1_1_dfe1c17a47a574808ac9c41fb5bf556a": 5
         },
         "valid_count": 5,
         "error_reason": null

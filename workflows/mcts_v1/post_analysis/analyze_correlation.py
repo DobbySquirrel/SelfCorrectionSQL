@@ -245,9 +245,9 @@ def create_visualizations(df, output_dir):
     print(f"可视化图表已保存到: {output_dir}")
 
 def main():
-    acc_file = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/11_17_acc.json'
-    timing_file = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/11_17_timing.json'
-    output_dir = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/correlation_analysis'
+    acc_file = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/11_17_acc.json'
+    timing_file = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/11_17_timing.json'
+    output_dir = '/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/correlation_analysis'
     
     # 加载数据
     df = load_data(acc_file, timing_file)

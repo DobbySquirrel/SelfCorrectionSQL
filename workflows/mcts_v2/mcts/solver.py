@@ -1089,3 +1089,15 @@ class CoCTEMCTSSolver:
         for t in PROBE_TEMPLATES_JSON:
             txt += f"- ID: {t['id']}\n  Desc: {t['description']}\n  Params: {t['parameters']}\n"
         return txt
+
+
+# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/run_all_strategies.py \
+#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
+#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout.txt \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout.json \
+#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5 \
+#   --max_cte_nodes 5 \
+#   --max_depth 8 \
+#   --num_sql_variants 5 \
+#   --multi_base_urls "http://localhost:8010/v1,http://localhost:8012/v1,http://localhost:8009/v1"

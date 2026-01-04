@@ -310,7 +310,7 @@ def find_regression_cases(new_file, old_file1, old_file2, n=None):
             print("-" * 80)
         
         # 保存到文件
-        output_file = "/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/regression_cases.json"
+        output_file = "/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/regression_cases.json"
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(regression_cases, f, ensure_ascii=False, indent=2)
         print(f"\n回归案例已保存到: {output_file}")

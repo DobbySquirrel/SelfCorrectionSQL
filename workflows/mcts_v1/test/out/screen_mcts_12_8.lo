@@ -1,31 +1,0 @@
-[K[A[A[A[01;32mshenshuyu@ta[00m:[01;34m~/SQL_tool_multiAgent[00m$ nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_mcts.py   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --qids "40,43,76"   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_sql1216.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result1216.json   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1" > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result_12_16_1.log 2>&1 &[A[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cmax_workers 10   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/12_17_wo_schemaFilter.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/12_17_wo_schemaFilter_stat.json   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json   --parallel_workers 15   --multi_base_urls "http://localhost:8011/v1,http://localhost:8009/v1,http://localhost:8012/v1,http://localhost:8010/v1"   --max_cte_nodes 10  > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result_12_17_wo_schema.log 2>&1[A[A[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --qids "40,43,76"   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_sql1216.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result1216.json   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1"[39P > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result_12_16_1.log 2>&1 &
-[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[A[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Ckill 1895872[K
-[K
-[K
-[K
-[K[A[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K[K[K[K[K[K[K[K[K[K[K[K4158225.test_mct[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[Kpython /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v2/test_api.py
-[?2004l
-============================================================
-🚀 Level 1: Raw Connectivity Test
-============================================================
-URL: http://localhost:8000/v1
-Model: deepseek-coder
-2025-12-28 13:53:52,401 - INFO - Retrying request to /chat/completions in 0.477067 seconds
-2025-12-28 13:53:52,881 - INFO - Retrying request to /chat/completions in 0.815627 seconds
-❌ Failed: Connection error.
-
-⛔ Critical: Raw connection failed. Check your vLLM/Service.
-[7]   Done                    nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_mcts.py --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json --qids "40,43,76" --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_sql1216.txt --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result1216.json --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1" > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/test_q81_287_479_result_12_16_1.log 2>&1
-[?2004h[01;32mshenshuyu@ta[00m:[01;34m~/SQL_tool_multiAgent[00m$ python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v2/test_api.py
-[?2004l
-============================================================
-🚀 Level 1: Raw Connectivity Test
-============================================================
-URL: http://localhost:8000/v1
-Model: deepseek-coder
-2025-12-28 13:54:21,183 - INFO - Retrying request to /chat/completions in 0.440597 seconds
-2025-12-28 13:54:21,673 - INFO - Retrying request to /chat/completions in 0.868251 seconds
-❌ Failed: Connection error.
-
-⛔ Critical: Raw connection failed. Check your vLLM/Service.
-[?2004h[01;32mshenshuyu@ta[00m:[01;34m~/SQL_tool_multiAgent[00m$ 

@@ -18,7 +18,7 @@ CUDA_VISIBLE_DEVICES=2 python -m vllm.entrypoints.openai.api_server \
   --gpu-memory-utilization 0.8 \
   --disable-custom-all-reduce
 
-# python /home/shenshuyu/SQL_tool_multiAgent/evaluation/TXTjson.py --input_txt /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/b.txt --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json --output_json /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/b.json
+# python /home/shenshuyu/SQL_tool_multiAgent/evaluation/TXTjson.py --input_txt /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/b.txt --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json --output_json /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/b.json
 
 跑排列组合表
 python test/test_baseline/baseline_sql_generator_table_permutation.py \
@@ -37,21 +37,21 @@ python test/test_baseline/run_templerature_reversed.py --ppl_file data/subset_pp
 
 跑mcts
 
-python workflows/mcts/test/test_mcts_workflow.py     --ppl_file data/subset_ppl_dev_python.json     --sql_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.txt     --json_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.json     --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json     --start 0     --max_workers 20  
+python workflows/mcts_v1/test/test_mcts_workflow.py     --ppl_file data/subset_ppl_dev_python.json     --sql_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.txt     --json_out /home/shenshuyu/SQL_tool_multiAgent/test/test_baseline/out/mcts/results1031.json     --sub_sampled_json /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json     --start 0     --max_workers 20  
 
 
 
-python workflows/mcts/test/test_ab_entropy_backprop.py \
+python workflows/mcts_v1/test/test_ab_entropy_backprop.py \
     --ppl_file data/subset_ppl_dev_python.json \
-    --sql_out_a workflows/mcts/test/out/ab_baseline.txt \
-    --sql_out_b workflows/mcts/test/out/ab_entropy.txt \
-    --json_out  workflows/mcts/test/out/ab_results.json
+    --sql_out_a workflows/mcts_v1/test/out/ab_baseline.txt \
+    --sql_out_b workflows/mcts_v1/test/out/ab_entropy.txt \
+    --json_out  workflows/mcts_v1/test/out/ab_results.json
 
 
-python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/test_bc_parallel_rollout_backup11_5.py \
+python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_bc_parallel_rollout_backup11_5.py \
   --ppl_file data/subset_ppl_dev_python.json \
   --index <index_of_qid_1040_in_that_file> \
-  --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts/test/out/single_1040_timing.json \
+  --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/single_1040_timing.json \
   --parallel_workers 1
 
 

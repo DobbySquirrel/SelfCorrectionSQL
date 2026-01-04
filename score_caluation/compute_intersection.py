@@ -15,7 +15,7 @@ def load_json(file_path):
 
 def main():
     parser = argparse.ArgumentParser(description='计算多种SQL生成方法的交集准确率')
-    parser.add_argument('--straightforward_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/Alpha-SQL-2.2.4/results/matched_sqls_formatted.json', help='straightforward方法的预测结果路径')
+    parser.add_argument('--straightforward_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_25_single_rollout.json', help='straightforward方法的预测结果路径')
     parser.add_argument('--ground_truth_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/data/', help='ground truth路径')
     parser.add_argument('--data_mode', type=str, default='sub_sampled_dev_gold.sql', help='数据模式')
     parser.add_argument('--db_root_path',   type=str, default='/home/shenshuyu/RSL_SQL/RSL-SQL/database/dev_databases/', help='数据库根路径')
