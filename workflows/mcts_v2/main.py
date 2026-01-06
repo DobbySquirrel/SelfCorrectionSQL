@@ -56,7 +56,7 @@ def run_single_strategy(sample: dict, strategy: str, multi_base_urls: list = Non
     """使用固定策略运行单个样本"""
     db_name = sample["db"]
     question = sample["question"]
-    evidence = sample.get("evidence", "")
+    evidence = sample.get("evidence", "") 
 
     # 构建 LLM 配置
     # 使用轮询方式选择 base_url，实现负载均衡
@@ -183,7 +183,7 @@ def run_once(sample: dict, multi_base_urls: list = None, total_max_rollouts: int
         "error": best_result.get("error"),
         "selected_strategy": best_result.get("strategy"),
         "all_strategies": best_result.get("all_strategies", {})
-    }
+        }
 
 # ==========================================
 # 保留你原来的 Gold 验证逻辑 (因为写得很好)

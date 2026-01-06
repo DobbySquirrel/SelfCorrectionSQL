@@ -11,7 +11,6 @@ MCTS Workflow主控制器
 7. 选择最优完整SQL
 """
 
-import autogen
 import re
 import hashlib, json
 import concurrent.futures
@@ -29,9 +28,7 @@ from .agents.sql_executor import SQLExecutor
 from .agents.statistics_analyzer import StatisticsAnalyzer
 from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_exec_helpers import execute_sqls_parallel
-from .utils.schema_dynamic_manager import SchemaDynamicManager, load_relationships_map, build_schema_from_dev_tables
-from .utils.schema_filter import build_filtered_schema_ddl, extract_table_ddl, parse_column_definitions, extract_tables_and_columns_from_sql as sqlglot_extract
-from .utils.foreign_key_filter import get_filtered_foreign_keys_text
+from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
 from core.database_connector import DatabaseConnector
 from utils.agent_helpers import AgentHelpers
 import time as _time_for_timing
@@ -39,7 +36,7 @@ import time as _time_for_timing
 class MCTSWorkflow:
     """MCTS工作流主控制器"""
     
-    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None):
+    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None, strategy_mode: Optional[str] = None):
         """
         初始化MCTS工作流
         
@@ -47,6 +44,7 @@ class MCTSWorkflow:
             llm_config: LLM配置
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数（默认根据实际需求动态计算）
+            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
@@ -111,40 +109,13 @@ class MCTSWorkflow:
             'rollout_count': 0,
         }
         
-        # Schema动态管理配置（已废弃，使用新的基于rollout的schema选择策略）
-        self.enable_dynamic_expansion = False  # 是否启用动态扩充
-        self.enable_dynamic_pruning = False  # 是否启用动态剪枝（默认关闭，因为可能影响后续rollout）
         
-        # 新的基于rollout的schema选择策略
-        self.enable_rollout_based_schema_selection = False  # 启用基于rollout的schema选择
         
-        # 关系信息配置
-        self.enable_relationships_map = False  # 是否加载和使用关系信息（relationships.json）
-        
-        # 加载关系信息（如果启用）
-        if self.enable_relationships_map:
-            self._relationships_map = self._load_relationships_map()
-            # 将关系映射传递给CTE生成器
-            if hasattr(self.cte_generator, 'relationships_map'):
-                self.cte_generator.relationships_map = self._relationships_map
+        # 策略模式配置
+        if strategy_mode:
+            self.strategy_mode: StrategyMode = strategy_mode  # type: ignore
         else:
-            self._relationships_map = {}
-            # 将空的关系映射传递给CTE生成器
-            if hasattr(self.cte_generator, 'relationships_map'):
-                self.cte_generator.relationships_map = {}
-        
-        # 初始化Schema动态管理器（用于动态扩充和剪枝）
-        self.schema_manager = SchemaDynamicManager(
-            relationships_map=self._relationships_map,
-            strike_threshold=3  # 表出现3次但从未被选中则剔除
-        )
-        
-        # 保存原始schema（在solve中设置）
-        self._original_schema: Optional[str] = None
-        
-        # 初始化schema选择器agent（用于LLM筛选schema）
-        self._schema_selector_agent = None
-        self._schema_selector_user_proxy = None
+            self.strategy_mode: StrategyMode = GLOBAL_STRATEGY_CONFIG.mode  # type: ignore
         
     def solve(self, question: str, schema_info: str, additional_context: str = "", 
               original_schema: Optional[str] = None, _retry: bool = False) -> Dict[str, Any]:
@@ -163,22 +134,6 @@ class MCTSWorkflow:
         # 重置计时统计
         for k in list(self._timing.keys()):
             self._timing[k] = 0.0 if k.endswith('_s') else 0
-        if original_schema is not None:
-            self._original_schema = original_schema
-        else:
-            full_schema = None
-            try:
-                db_id = self._get_db_id_from_connector()
-                if db_id:
-                    dev_tables_file = "/home/shenshuyu/SQL_tool_multiAgent/data/dev_tables.json"
-                    full_schema = build_schema_from_dev_tables(dev_tables_file, db_id)
-            except Exception as e:
-                print(f"[Schema选择] ⚠️ 从 dev_tables.json 重建完整 schema 失败: {e}")
-            
-            # 如果从 dev_tables.json 成功重建，则使用它作为 original_schema；否则退回 simplified_ddl
-            self._original_schema = full_schema if full_schema else schema_info
-        # 重置schema管理器的统计信息
-        self.schema_manager.reset_statistics()
         
         # 初始化根节点
         root_node = MCTSNode(
@@ -187,6 +142,8 @@ class MCTSWorkflow:
             additional_context=additional_context,
             parent=None
         )
+        # 在根节点存储 picked_strategy（用于 LLM_PICK_ONCE 模式）
+        root_node.picked_strategy = None
         self.mcts_tree.set_root(root_node)
         
         # MCTS主循环：执行多个rollout
@@ -218,25 +175,6 @@ class MCTSWorkflow:
         
         for rollout in range(self.rollouts_per_iteration):
             print(f"\n--- Rollout [{rollout + 1}/{self.rollouts_per_iteration}] ---")
-            
-            # 在每个rollout开始前，基于前一个rollout的结果选择schema
-            if self.enable_rollout_based_schema_selection:
-                selected_schema = self._select_schema_for_rollout(
-                    rollout_id=rollout,
-                    question=question,
-                    evidence=evidence,
-                    rollout_stats_list=rollout_stats_list
-                )
-                
-                # 更新根节点的schema_info，并递归更新所有子节点
-                if selected_schema and self.mcts_tree.root:
-                    old_schema = self.mcts_tree.root.schema_info
-                    self.mcts_tree.root.schema_info = selected_schema
-                    if old_schema != selected_schema:
-                        print(f"[Schema选择] ✅ 已更新根节点schema（Rollout {rollout + 1}）")
-                        # 递归更新所有子节点的schema_info，确保整个树使用新的schema
-                        self._update_all_nodes_schema(self.mcts_tree.root, selected_schema)
-                        print(f"[Schema选择] ✅ 已递归更新所有子节点的schema")
             
             reward, selected_sql, rollout_stats = self._execute_mcts_rollout()
             rollout_stats['rollout_id'] = rollout + 1
@@ -695,50 +633,6 @@ class MCTSWorkflow:
         # 4. Backpropagation: 将奖励回溯更新到路径上的所有节点
         self._mcts_backpropagation(path, reward)
         
-        # 5. 可选的动态剪枝：移除在多个rollout中出现但从未被选中的表
-        if self.enable_dynamic_pruning and self.mcts_tree.root:
-            # 收集路径上使用的所有真实表（排除CTE名称）
-            selected_tables_in_path = set()
-            all_cte_names_in_path = set()
-            
-            # 先收集所有CTE名称
-            for node in path:
-                if node.cte and node.cte != "<END>":
-                    cte_match = re.search(r'WITH\s+(\w+)\s+AS', node.cte, re.IGNORECASE)
-                    if cte_match:
-                        all_cte_names_in_path.add(cte_match.group(1))
-            
-            # 然后提取真实表名（排除CTE名称）
-            for node in path:
-                if node.cte and node.cte != "<END>":
-                    tables = self.schema_manager.extract_tables_from_sql(node.cte)
-                    # 过滤掉CTE名称
-                    real_tables = {t for t in tables if t not in all_cte_names_in_path}
-                    selected_tables_in_path.update(real_tables)
-            
-            if selected_tables_in_path:
-                print(f"[动态剪枝] 路径上使用的真实表: {sorted(selected_tables_in_path)}")
-                # 对根节点的schema进行动态剪枝
-                original_root_schema = self.mcts_tree.root.schema_info
-                pruned_schema = self.schema_manager.dynamic_pruning(
-                    original_root_schema,
-                    selected_tables_in_path
-                )
-                
-                # 如果schema被剪枝，更新根节点的schema（会影响后续rollout）
-                if pruned_schema != original_root_schema:
-                    removed_tables = self.schema_manager._extract_tables_from_schema(original_root_schema) - \
-                                   self.schema_manager._extract_tables_from_schema(pruned_schema)
-                    if removed_tables:
-                        print(f"[动态剪枝] ✅ Rollout后移除了 {len(removed_tables)} 个未使用的表: {sorted(removed_tables)}")
-                        self.mcts_tree.root.schema_info = pruned_schema
-                    else:
-                        print(f"[动态剪枝] ℹ️  schema未变化（没有表被移除）")
-                else:
-                    print(f"[动态剪枝] ℹ️  schema未变化（所有表都被使用或strike阈值未达到）")
-            else:
-                print(f"[动态剪枝] ℹ️  路径上未使用任何真实表（可能只使用了CTE）")
-        
         self._timing['rollout_s'] += (_time_for_timing.time() - rollout_start_ts)
         self._timing['rollout_count'] += 1
         
@@ -886,70 +780,82 @@ class MCTSWorkflow:
                     continue
                 else:
                     # 这个节点标记成"已展开"，却没有children（可能之前生成CTE失败/全是非法）
-                    print(f"[扩展] 节点深度={current.depth} 已展开但无子节点，重置展开标志并重新生成 CTE")
                     current.is_expanded = False
                     # 再继续走到下面的"生成CTE逻辑"
                     continue
             
-            # 并行场景：检查节点是否正在被其他线程扩展
-            # 使用锁确保原子检查和设置
-            with self.mcts_tree.lock:
-                if current.is_expanding or current.is_expanded:
-                    # 其他线程正在扩展或已扩展，等待或跳过
-                    if current.is_expanding:
-                        # 等待其他线程完成扩展
-                        # 优化：添加实际等待时间（虽然只有一个rollout，但保留此逻辑以防未来并行）
-                        wait_count = 0
-                        max_wait = 10
-                        wait_interval = 0.1  # 每次等待0.1秒
-                        while current.is_expanding and wait_count < max_wait:
-                            wait_count += 1
-                            # 释放锁，等待一段时间后重新获取锁检查
-                            # 注意：这里需要在锁外等待，否则会死锁
-                            pass  # 由于只有一个rollout，这里实际上不会等待
-                        # 等待后，如果是展开状态，尝试继续
-                        if current.is_expanded:
-                            current.is_expanding = False
-                            continue
-                    else:
-                        # 已扩展，跳过
-                        current.is_expanding = False
-                        continue
-                
-                # 原子标记为"扩展中"
-                current.is_expanding = True
+            # 检查节点是否已扩展（rollout是串行执行的，不需要并行检查）
+            if current.is_expanded:
+                # 已扩展，跳过
+                continue
             
-            try:
-                # 1) 生成多个CTE变体（计时：CTE 生成）
+            # 1) 生成多个CTE变体（计时：CTE 生成）
 
-                _cte_t0 = _time_for_timing.time()
-                cte_variants = self._generate_cte_variants(current)
-                self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
-                # 2) 去重并统计执行结果桶
-                unique_cte_variants, failed_info = self._deduplicate_cte_variants(cte_variants, current)
-                print(f"[扩展] 生成了 {len(cte_variants)} 个CTE变体，去重后: {len(unique_cte_variants)}")
-                
-                # 保存当前节点生成的所有CTE桶信息（用于后续计算信息熵）
-                # 格式：每个桶包含 {'cte': str, 'count': int, 'result_signature': str}
-                current_node_buckets = []
-                for info in unique_cte_variants:
-                    cte_text = info.get('cte', '')
-                    count = info.get('count', 0)
-                    exec_res = info.get('execution_result', {})
-                    # 生成结果签名（用于标识桶）
-                    if exec_res:
-                        result_signature = MCTSUtils.create_result_signature(exec_res)
-                    else:
-                        result_signature = "<END>" if cte_text == "<END>" else "unknown"
-                    current_node_buckets.append({
-                        'cte': cte_text,
-                        'count': count,
-                        'result_signature': result_signature
-                    })
-                # 保存到节点的execution_results中
-                if not hasattr(current, 'execution_results'):
-                    current.execution_results = {}
-                current.execution_results['all_cte_buckets'] = current_node_buckets
+            _cte_t0 = _time_for_timing.time()
+            cte_variants = self._generate_cte_variants(current)
+            self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
+            
+            # 处理 LLM_PICK_ONCE 模式的策略提取和清洗（仅在根节点且未选择策略时）
+            if self.strategy_mode == "LLM_PICK_ONCE" and current.depth == 0:
+                root_node = self.mcts_tree.root if self.mcts_tree else None
+                if root_node and not getattr(root_node, 'picked_strategy', None):
+                    new_variants = []
+                    for c in cte_variants:
+                        s, cleaned = self._extract_strategy_and_clean_cte(c)
+                        if s in ("S1", "S2", "S3", "S4") and not getattr(root_node, 'picked_strategy', None):
+                            root_node.picked_strategy = s
+                        new_variants.append(cleaned)
+                    cte_variants = new_variants
+            
+            # 2) 去重并统计执行结果桶
+            unique_cte_variants, failed_info = self._deduplicate_cte_variants(cte_variants, current)
+            
+            # 保存当前节点生成的所有CTE桶信息（用于后续计算信息熵）
+            # 格式：每个桶包含 {'cte': str, 'count': int, 'result_signature': str}
+            current_node_buckets = []
+            for info in unique_cte_variants:
+                cte_text = info.get('cte', '')
+                count = info.get('count', 0)
+                exec_res = info.get('execution_result', {})
+                # 生成结果签名（用于标识桶）
+                if exec_res:
+                    result_signature = MCTSUtils.create_result_signature(exec_res)
+                else:
+                    result_signature = "<END>" if cte_text == "<END>" else "unknown"
+                current_node_buckets.append({
+                    'cte': cte_text,
+                    'count': count,
+                    'result_signature': result_signature
+                })
+            # 保存到节点的execution_results中
+            if not hasattr(current, 'execution_results'):
+                current.execution_results = {}
+            current.execution_results['all_cte_buckets'] = current_node_buckets
+            
+            # 检测前序CTE是否返回空结果（用于判断是否提示了模糊匹配）
+            parent_has_empty_result = False
+            if current.parent and hasattr(current.parent, 'execution_results'):
+                parent_exec_res = current.parent.execution_results.get('cte_result', {})
+                if parent_exec_res.get('valid', False):
+                    parent_query_result = parent_exec_res.get('query_result', [])
+                    try:
+                        parent_query_result = MCTSUtils.safe_to_dict(parent_query_result)
+                    except Exception:
+                        parent_query_result = []
+                    if not isinstance(parent_query_result, list):
+                        try:
+                            parent_query_result = list(parent_query_result)
+                        except Exception:
+                            parent_query_result = []
+                    parent_has_empty_result = (not parent_query_result or len(parent_query_result) == 0)
+            
+            all_cte_scores = []  # 记录所有CTE的评分（即使被剪枝）
+            
+            if not unique_cte_variants:
+                # 无可用变体，检查是否已经重试过
+                if not hasattr(current, '_cte_retry_count'):
+                    current._cte_retry_count = 0
+                    current._failed_cte_attempts = []  # 记录失败的CTE尝试（包含CTE和错误信息）
                 
                 # 检测前序CTE是否返回空结果（用于判断是否提示了模糊匹配）
                 parent_has_empty_result = False
@@ -968,143 +874,8 @@ class MCTSWorkflow:
                                 parent_query_result = []
                         parent_has_empty_result = (not parent_query_result or len(parent_query_result) == 0)
                 
-                all_cte_scores = []  # 记录所有CTE的评分（即使被剪枝）
-                
-                # 打印去重后的CTE内容
-                for idx, info in enumerate(unique_cte_variants, 1):
-                    cte_text = info.get('cte', '')
-                    count = info.get('count', 0)
-                    exec_res = info.get('execution_result', {})
-                    if cte_text == "<END>":
-                        print(f"  [{idx}] <END> (出现{count}次)")
-                    else:
-                        valid = exec_res.get('valid', False) if exec_res else False
-                        if valid:
-                            query_result = exec_res.get('query_result', [])
-                            try:
-                                query_result = MCTSUtils.safe_to_dict(query_result)
-                            except Exception:
-                                query_result = []
-                            if not isinstance(query_result, list):
-                                try:
-                                    query_result = list(query_result)
-                                except Exception:
-                                    query_result = []
-                            result_count = len(query_result) if query_result else 0
-                            status = f"✅ 有效，返回{result_count}行" if result_count > 0 else "⚠️ 有效但结果为空"
-                        else:
-                            error = exec_res.get('error', '未知错误') if exec_res else '未知错误'
-                            status = f"❌ 失败: {error}"
-                        print(f"  [{idx}] CTE (出现{count}次, {status}):")
-                        print(f"      {cte_text}")
-                        
-                        # 如果前序CTE返回空结果（提示了模糊匹配），打印详细的CTE和执行结果
-                        if parent_has_empty_result:
-                            # 检查CTE是否包含模糊匹配函数
-                            has_fuzzy_match = ('levenshtein' in cte_text.lower() or 
-                                             'similarity' in cte_text.lower() or 
-                                             'pg_trgm' in cte_text.lower() or
-                                             ' % ' in cte_text)
-                            
-                            if has_fuzzy_match:
-                                print(f"      🔍 [模糊匹配CTE] 检测到使用了模糊匹配函数")
-                            
-                            print(f"      完整CTE内容:")
-                            print(f"      {cte_text}")
-                            # 打印执行结果
-                            if valid and query_result:
-                                print(f"      📊 执行结果（前{min(10, result_count)}行）:")
-                                for row_idx, row in enumerate(query_result[:10], 1):
-                                    if isinstance(row, dict):
-                                        # 如果是字符串类型，用单引号括起来
-                                        formatted_items = []
-                                        for k, v in row.items():
-                                            if isinstance(v, str):
-                                                formatted_items.append(f"{k}='{v}'")
-                                            else:
-                                                formatted_items.append(f"{k}={v}")
-                                        row_str = ", ".join(formatted_items)
-                                    else:
-                                        row_str = str(row)
-                                    print(f"        行{row_idx}: {row_str}")
-                                if result_count > 10:
-                                    print(f"        ... (还有 {result_count - 10} 行未显示)")
-                            elif valid and not query_result:
-                                print(f"      📊 执行结果: 空结果集")
-                            elif not valid:
-                                error = exec_res.get('error', '未知错误') if exec_res else '未知错误'
-                                print(f"      📊 执行错误: {error}")
-                            print(f"      {'-'*100}")
-                
-                # 统计所有CTE变体的状态
-                total_variants = len(cte_variants)
-                successful_count = 0
-                empty_count = 0
-                end_count = 0
-                for info in unique_cte_variants:
-                    cte_text = info.get('cte', '')
-                    if cte_text == "<END>":
-                        end_count += info.get('count', 1)
-                        continue
-                    exec_res = info.get('execution_result', {})
-                    if exec_res and exec_res.get('valid', False):
-                        qr = exec_res.get('query_result', [])
-                        try:
-                            qr = MCTSUtils.safe_to_dict(qr)
-                        except Exception:
-                            qr = []
-                        if not isinstance(qr, list):
-                            try:
-                                qr = list(qr)
-                            except Exception:
-                                qr = []
-                        if qr and len(qr) > 0:
-                            successful_count += info.get('count', 1)
-                        else:
-                            empty_count += info.get('count', 1)
-                
-                # 计算失败数量：总变体数 - 成功数 - 空结果数 - <END>数
-                # 注意：failed_info 只收集了最多3个（用于重试提示），所以不能直接用 len(failed_info)
-                failed_count = total_variants - successful_count - empty_count - end_count
-                
-                # 打印统计信息
-                if total_variants > len(unique_cte_variants) or failed_count > 0 or empty_count > 0 or end_count > 0:
-                    print(f"\n  📊 [CTE变体统计] 共 {total_variants} 个变体:")
-                    if successful_count > 0:
-                        print(f"      ✅ 有效结果: {successful_count} 个")
-                    if empty_count > 0:
-                        print(f"      ⚠️ 空结果: {empty_count} 个")
-                    if end_count > 0:
-                        print(f"      🏁 <END>: {end_count} 个")
-                    if failed_count > 0:
-                        print(f"      ❌ 执行失败: {failed_count} 个")
-                
-
-                if not unique_cte_variants:
-                    # 无可用变体，检查是否已经重试过
-                    if not hasattr(current, '_cte_retry_count'):
-                        current._cte_retry_count = 0
-                        current._failed_cte_attempts = []  # 记录失败的CTE尝试（包含CTE和错误信息）
-                    
-                    # 检测前序CTE是否返回空结果（用于判断是否提示了模糊匹配）
-                    parent_has_empty_result = False
-                    if current.parent and hasattr(current.parent, 'execution_results'):
-                        parent_exec_res = current.parent.execution_results.get('cte_result', {})
-                        if parent_exec_res.get('valid', False):
-                            parent_query_result = parent_exec_res.get('query_result', [])
-                            try:
-                                parent_query_result = MCTSUtils.safe_to_dict(parent_query_result)
-                            except Exception:
-                                parent_query_result = []
-                            if not isinstance(parent_query_result, list):
-                                try:
-                                    parent_query_result = list(parent_query_result)
-                                except Exception:
-                                    parent_query_result = []
-                            parent_has_empty_result = (not parent_query_result or len(parent_query_result) == 0)
-                    
-                    # 记录本次失败的CTE和执行错误（从去重函数返回的失败信息中获取）
-                    if failed_info:
+                # 记录本次失败的CTE和执行错误（从去重函数返回的失败信息中获取）
+                if failed_info:
                         # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
                         existing_errors = {
                             item.get('error', '').strip() 
@@ -1133,77 +904,15 @@ class MCTSWorkflow:
                                             for d_idx, d_item in enumerate(deduplicated_failed_info):
                                                 if d_item.get('error', '').strip() == error:
                                                     deduplicated_failed_info[d_idx] = failed_item
-                                                    break
+                                                    break   
                                         break
                             else:
                                 # 如果错误信息不存在，直接添加
                                 current._failed_cte_attempts.append(failed_item)
                                 existing_errors.add(error)
                                 deduplicated_failed_info.append(failed_item)
-                        print(f"[扩展] 记录 {len(deduplicated_failed_info)} 个失败的CTE尝试（基于错误信息去重，原始{len(failed_info)}个）")
                         
-                        # 如果前序CTE返回空结果（提示了模糊匹配），打印失败的CTE详情
-                        if parent_has_empty_result:
-                            print(f"      ⚠️ [提示模糊匹配后的失败CTE] 所有生成的CTE都执行失败:")
-                            for idx, failed_item in enumerate(deduplicated_failed_info[:3], 1):
-                                failed_cte = failed_item.get('cte', '')
-                                failed_error = failed_item.get('error', '未知错误')
-                                
-                                # 检查是否使用了模糊匹配函数
-                                has_fuzzy_match = ('levenshtein' in failed_cte.lower() or 
-                                                 'similarity' in failed_cte.lower() or 
-                                                 'pg_trgm' in failed_cte.lower() or
-                                                 ' % ' in failed_cte)
-                                
-                                if has_fuzzy_match:
-                                    print(f"      [{idx}] 🔍 [模糊匹配CTE] 使用了模糊匹配函数但执行失败")
-                                else:
-                                    print(f"      [{idx}] ⚠️ [未使用模糊匹配] 执行失败")
-                                
-                                print(f"          CTE内容:")
-                                print(f"          {failed_cte}")
-                                print(f"          执行错误: {failed_error}")
-                                print(f"          {'-'*100}")
-                    elif cte_variants:
-                        # 如果没有失败信息但生成了CTE，可能是其他原因（如全部为空结果）
-                        current._failed_cte_attempts.extend([
-                            {'cte': cte, 'error': '执行成功但结果为空（被过滤）'} 
-                            for cte in cte_variants[:3]
-                        ])
-                        print(f"[扩展] 记录 {len(cte_variants)} 个失败的CTE尝试（结果为空，用于重试提示）")
-                        
-                        # 如果前序CTE返回空结果（提示了模糊匹配），打印空结果的CTE详情
-                        if parent_has_empty_result:
-                            print(f"      ⚠️ [提示模糊匹配后的CTE] 所有生成的CTE都返回空结果:")
-                            for idx, cte in enumerate(cte_variants[:3], 1):
-                                # 检查是否使用了模糊匹配函数
-                                has_fuzzy_match = ('levenshtein' in cte.lower() or 
-                                                 'similarity' in cte.lower() or 
-                                                 'pg_trgm' in cte.lower() or
-                                                 ' % ' in cte)
-                                
-                                if has_fuzzy_match:
-                                    print(f"      [{idx}] 🔍 [模糊匹配CTE] 使用了模糊匹配函数但返回空结果")
-                                else:
-                                    print(f"      [{idx}] ⚠️ [未使用模糊匹配] 返回空结果")
-                                
-                                print(f"          CTE内容:")
-                                print(f"          {cte}")
-                                print(f"          执行结果: 空结果集")
-                                print(f"          {'-'*100}")
-                    
-                    if current._cte_retry_count < 1:  # 最多重试1次
-                        current._cte_retry_count += 1
-                        print(f"[扩展] CTE生成返回0个变体，进行第 {current._cte_retry_count} 次重试...")
-                        # 不标记为已展开，继续循环重试（会传递失败信息）
-                        with self.mcts_tree.lock:
-                            current.is_expanding = False
-                        continue
-                    else:
-                        # 重试后仍然失败，但允许继续扩展：创建一个失败节点，保存错误信息
-                        print(f"[扩展] CTE生成重试后仍返回0个变体，创建失败节点并继续扩展")
-                        
-                        # 打印重试后失败的CTE详情（对重试后的失败信息也进行去重）
+                        # 处理重试后的失败信息（对重试后的失败信息也进行去重）
                         deduplicated_failed_info_retry = []  # 在外部定义，供后续使用
                         if failed_info:
                             # 对重试后的失败信息进行去重：基于错误信息去重，对于相同的错误信息，只保留一个代表性的CTE（最短的）
@@ -1233,28 +942,6 @@ class MCTSWorkflow:
                                     # 如果错误信息不存在，直接添加
                                     deduplicated_failed_info_retry.append(failed_item)
                                     existing_errors_retry.add(error)
-                            
-                            print(f"      ⚠️ [重试后失败] 重试后所有生成的CTE都执行失败（去重后{len(deduplicated_failed_info_retry)}个，原始{len(failed_info)}个）:")
-                            for idx, failed_item in enumerate(deduplicated_failed_info_retry[:3], 1):
-                                failed_cte = failed_item.get('cte', '')
-                                failed_error = failed_item.get('error', '未知错误')
-                                
-                                # 检查是否使用了模糊匹配函数
-                                has_fuzzy_match = ('levenshtein' in failed_cte.lower() or 
-                                                 'similarity' in failed_cte.lower() or 
-                                                 'pg_trgm' in failed_cte.lower() or
-                                                 ' % ' in failed_cte)
-                                
-                                if has_fuzzy_match:
-                                    print(f"      [{idx}] 🔍 [模糊匹配CTE] 使用了模糊匹配函数但执行失败")
-                                else:
-                                    print(f"      [{idx}] ⚠️ [未使用模糊匹配] 执行失败")
-                                
-                                print(f"          CTE内容:")
-                                print(f"          {failed_cte}")
-                                print(f"          执行错误: {failed_error}")
-                                print(f"          {'-'*100}")
-                            
                             # 将重试后的失败信息也添加到当前节点的_failed_cte_attempts中（如果还没有添加）
                             # 注意：重试后的失败信息应该已经在新的循环中通过第583-603行的逻辑被记录了
                             # 但为了保险起见，这里也添加一次（会去重）
@@ -1270,30 +957,10 @@ class MCTSWorkflow:
                                     if error and combination not in existing_combinations_in_current:
                                         current._failed_cte_attempts.append(failed_item)
                                         existing_combinations_in_current.add(combination)
-                        elif cte_variants:
-                            print(f"      ⚠️ [重试后失败] 重试后所有生成的CTE都返回空结果:")
-                            for idx, cte in enumerate(cte_variants[:3], 1):
-                                # 检查是否使用了模糊匹配函数
-                                has_fuzzy_match = ('levenshtein' in cte.lower() or 
-                                                 'similarity' in cte.lower() or 
-                                                 'pg_trgm' in cte.lower() or
-                                                 ' % ' in cte)
-                                
-                                if has_fuzzy_match:
-                                    print(f"      [{idx}] 🔍 [模糊匹配CTE] 使用了模糊匹配函数但返回空结果")
-                                else:
-                                    print(f"      [{idx}] ⚠️ [未使用模糊匹配] 返回空结果")
-                                
-                                print(f"          CTE内容:")
-                                print(f"          {cte}")
-                                print(f"          执行结果: 空结果集")
-                                print(f"          {'-'*100}")
-                        
                         # 创建失败节点，保存错误信息
                         with self.mcts_tree.lock:
-                            # 再次检查是否已被其他线程扩展
+                            # 再次检查是否已扩展（rollout是串行执行的，不需要并行检查）
                             if current.is_expanded:
-                                current.is_expanding = False
                                 continue
                             
                             # 按照错误信息分桶，为每种错误类型创建失败节点
@@ -1374,158 +1041,126 @@ class MCTSWorkflow:
                                 current.add_child(failed_child)
                                 created_failed_nodes.append(failed_child)
                             
-                            # 打印创建的失败节点信息
-                            if len(created_failed_nodes) > 1:
-                                print(f"[扩展] 按照错误类型创建了 {len(created_failed_nodes)} 个失败节点:")
-                                for idx, failed_node in enumerate(created_failed_nodes, 1):
-                                    error_type = failed_node.execution_results.get('error_type', '未知错误')
-                                    failed_count = len(failed_node._failed_cte_attempts)
-                                    print(f"  失败节点 #{idx}: {error_type} ({failed_count}个失败尝试)")
-                            
                             current.is_expanded = True
-                            current.is_expanding = False
                         
                         # 选择第一个失败节点继续扩展（如果有多个失败节点，后续可以通过UCB选择不同的错误路径）
                         if created_failed_nodes:
                             failed_child = created_failed_nodes[0]  # 选择第一个失败节点
                             added_nodes.append(failed_child)
                             current = failed_child
-                            if len(created_failed_nodes) > 1:
-                                print(f"[扩展] 已创建 {len(created_failed_nodes)} 个失败节点，选择第一个继续扩展（深度={current.depth}）")
-                            else:
-                                print(f"[扩展] 已创建失败节点，继续扩展（深度={current.depth}）")
                         # 继续while循环，尝试在失败节点上生成新的CTE
                         continue
 
-                # 3) 仅为"有效且非空"的变体创建子节点；<END> 根据策略保留
-                # 如果成功生成了CTE变体，重置重试计数和失败记录
-                if hasattr(current, '_cte_retry_count'):
-                    current._cte_retry_count = 0
-                if hasattr(current, '_failed_cte_attempts'):
-                    current._failed_cte_attempts = []  # 清空失败记录
+            # 3) 仅为"有效且非空"的变体创建子节点；<END> 根据策略保留
+            # 如果成功生成了CTE变体，重置重试计数和失败记录
+            if hasattr(current, '_cte_retry_count'):
+                current._cte_retry_count = 0
+            if hasattr(current, '_failed_cte_attempts'):
+                current._failed_cte_attempts = []  # 清空失败记录
+            
+            # 优化：将排序和评估移到锁外，减少锁持有时间
+            created_map = {}  # cte文本 -> 子节点
+            first_step = (len(added_nodes) == 0)
                 
-                # 优化：将排序和评估移到锁外，减少锁持有时间
-                created_map = {}  # cte文本 -> 子节点
-                first_step = (len(added_nodes) == 0)
-                
-                # 在锁外准备子节点数据（不再使用优先级排序，直接遍历）
-                children_to_create = []  # 准备创建的子节点信息 [(child, cte_text, info), ...]
-                for info in unique_cte_variants:
-                    cte_text = info['cte']
-                    exec_res = info.get('execution_result')
-                    # 判定是否有效且非空
-                    is_valid_nonempty = False
-                    if exec_res and exec_res.get('valid', False):
-                        qr = exec_res.get('query_result', [])
+            # 在锁外准备子节点数据（不再使用优先级排序，直接遍历）
+            children_to_create = []  # 准备创建的子节点信息 [(child, cte_text, info), ...]
+            for info in unique_cte_variants:
+                cte_text = info['cte']
+                exec_res = info.get('execution_result')
+                # 判定是否有效且非空
+                is_valid_nonempty = False
+                if exec_res and exec_res.get('valid', False):
+                    qr = exec_res.get('query_result', [])
+                    try:
+                        qr = MCTSUtils.safe_to_dict(qr)
+                    except Exception:
+                        qr = []
+                    if not isinstance(qr, list):
                         try:
-                            qr = MCTSUtils.safe_to_dict(qr)
+                            qr = list(qr)
                         except Exception:
                             qr = []
-                        if not isinstance(qr, list):
-                            try:
-                                qr = list(qr)
-                            except Exception:
-                                qr = []
-                        is_valid_nonempty = bool(qr)
+                    is_valid_nonempty = bool(qr)
 
-                    # 在锁外创建节点对象（不添加到树中）
-                    # 使用根节点的最新schema_info，而不是当前节点的（确保使用LLM选择的schema）
-                    root_schema = self.mcts_tree.root.schema_info if self.mcts_tree.root else current.schema_info
-                    
-                    if cte_text == "<END>":
-                        child = MCTSNode(
-                            question=current.question,
-                            schema_info=root_schema,  # 使用根节点的最新schema
-                            additional_context=current.additional_context,
-                            parent=None  # 暂时不设置parent，在锁内添加时再设置
-                        )
-                        child.cte = "<END>"
-                        child.is_terminal = True
-                        children_to_create.append((child, cte_text, info, None))
-                    elif is_valid_nonempty:
-                        child = MCTSNode(
-                            question=current.question,
-                            schema_info=root_schema,  # 使用根节点的最新schema
-                            additional_context=current.additional_context,
-                            parent=None
-                        )
-                        child.cte = cte_text
-                        child.execution_results['cte_result'] = exec_res
-                        child.execution_results['bucket_count'] = info.get('count', 0)
-                        child.execution_results['bucket_variants'] = info.get('variants', [])
-                        children_to_create.append((child, cte_text, info, None))
-                    elif exec_res and exec_res.get('valid', False):
-                        # 允许基于"有效但结果为空"的候选创建子节点
-                        has_where = self._has_where_clause(cte_text)
-                        
-                        if not has_where:
-                            # 没有WHERE子句，即使结果为空也不触发模糊匹配，直接跳过
-                            print(f"[扩展] ⚠️ CTE结果为空但没有WHERE子句，直接跳过（不创建子节点）")
-                            continue
-                        
-                        # 有WHERE子句且结果为空，创建子节点
-                        child = MCTSNode(
-                            question=current.question,
-                            schema_info=root_schema,  # 使用根节点的最新schema
-                            additional_context=current.additional_context,
-                            parent=None
-                        )
-                        child.cte = cte_text
-                        child.execution_results['cte_result'] = exec_res
-                        child.execution_results['bucket_count'] = info.get('count', 0)
-                        child.execution_results['bucket_variants'] = info.get('variants', [])
-                        child.execution_results['is_empty_result'] = True
-                        
-                        # 检查父节点是否也是空结果节点
-                        parent_is_empty = False
-                        if current.parent and hasattr(current.parent, 'execution_results'):
-                            parent_is_empty = current.parent.execution_results.get('is_empty_result', False)
-                        
-                        # 跟踪连续空结果的次数
-                        if parent_is_empty:
-                            parent_consecutive_empty = getattr(current.parent, 'consecutive_empty_count', 0)
-                            if parent_consecutive_empty >= 2:
-                                child.consecutive_empty_count = 3
-                                child.is_terminal = True
-                                print(f"[扩展] ⚠️ 连续三次空结果（都触发了模糊匹配提示），停止扩展此路径")
-                            else:
-                                child.consecutive_empty_count = 2
-                                print(f"[扩展] ⚠️ 连续两次空结果（都触发了模糊匹配提示），允许继续扩展但会提示检查其他列")
-                        else:
-                            child.consecutive_empty_count = 1
-                        
-                        children_to_create.append((child, cte_text, info, None))
-                    # else: 执行失败/超时：不创建子节点，直接过滤掉
-
+                # 在锁外创建节点对象（不添加到树中）
+                # 使用根节点的最新schema_info，而不是当前节点的（确保使用LLM选择的schema）
+                root_schema = self.mcts_tree.root.schema_info if self.mcts_tree.root else current.schema_info
                 
-                # 只在锁内批量添加子节点和更新状态（最小化锁持有时间）
-                with self.mcts_tree.lock:
-                    # 再次检查是否已被其他线程扩展
-                    if current.is_expanded:
-                        current.is_expanding = False
+                if cte_text == "<END>":
+                    child = MCTSNode(
+                        question=current.question,
+                        schema_info=root_schema,  # 使用根节点的最新schema
+                        additional_context=current.additional_context,
+                        parent=None  # 暂时不设置parent，在锁内添加时再设置
+                    )
+                    child.cte = "<END>"
+                    child.is_terminal = True
+                    children_to_create.append((child, cte_text, info, None))
+                elif is_valid_nonempty:
+                    child = MCTSNode(
+                        question=current.question,
+                        schema_info=root_schema,  # 使用根节点的最新schema
+                        additional_context=current.additional_context,
+                        parent=None
+                    )
+                    child.cte = cte_text
+                    child.execution_results['cte_result'] = exec_res
+                    child.execution_results['bucket_count'] = info.get('count', 0)
+                    child.execution_results['bucket_variants'] = info.get('variants', [])
+                    children_to_create.append((child, cte_text, info, None))
+                elif exec_res and exec_res.get('valid', False):
+                    # 允许基于"有效但结果为空"的候选创建子节点
+                    has_where = self._has_where_clause(cte_text)
+                    
+                    if not has_where:
+                        # 没有WHERE子句，即使结果为空也不触发模糊匹配，直接跳过
                         continue
                     
-                    # 批量添加所有准备好的子节点
-                    for child, cte_text, info, _ in children_to_create:
-                        child.parent = current  # 设置parent
-                        current.add_child(child)  # 这会自动设置child.depth
-                        created_map[cte_text] = child
-                        
-                        # 打印日志
-                        if cte_text == "<END>":
-                            pass  # <END>节点不需要打印
-                        elif child.execution_results.get('is_empty_result', False):
-                            print(f"[扩展] 创建空结果子节点 #{getattr(child, 'node_id', '?')} (深度={child.depth}): Q值={child.q_value:.3f}")
-                        else:
-                            print(f"[扩展] 创建子节点 #{getattr(child, 'node_id', '?')} (深度={child.depth}): Q值={child.q_value:.3f}")
+                    # 有WHERE子句且结果为空，创建子节点
+                    child = MCTSNode(
+                        question=current.question,
+                        schema_info=root_schema,  # 使用根节点的最新schema
+                        additional_context=current.additional_context,
+                        parent=None
+                    )
+                    child.cte = cte_text
+                    child.execution_results['cte_result'] = exec_res
+                    child.execution_results['bucket_count'] = info.get('count', 0)
+                    child.execution_results['bucket_variants'] = info.get('variants', [])
+                    child.execution_results['is_empty_result'] = True
                     
-                    current.is_expanded = True
-                    current.is_expanding = False  # 清除扩展中标志
-            finally:
-                # 确保即使出错也清除 is_expanding 标志
-                with self.mcts_tree.lock:
-                    if hasattr(current, 'is_expanding'):
-                        current.is_expanding = False
+                    # 检查父节点是否也是空结果节点
+                    parent_is_empty = False
+                    if current.parent and hasattr(current.parent, 'execution_results'):
+                        parent_is_empty = current.parent.execution_results.get('is_empty_result', False)
+                    
+                    # 跟踪连续空结果的次数
+                    if parent_is_empty:
+                        parent_consecutive_empty = getattr(current.parent, 'consecutive_empty_count', 0)
+                        if parent_consecutive_empty >= 2:
+                            child.consecutive_empty_count = 3
+                            child.is_terminal = True
+                        else:
+                            child.consecutive_empty_count = 2
+                    else:
+                        child.consecutive_empty_count = 1
+                    
+                    children_to_create.append((child, cte_text, info, None))
+                # else: 执行失败/超时：不创建子节点，直接过滤掉
+
+            # 只在锁内批量添加子节点和更新状态（最小化锁持有时间）
+            with self.mcts_tree.lock:
+                # 再次检查是否已扩展（rollout是串行执行的，不需要并行检查）
+                if current.is_expanded:
+                    continue
+                
+                # 批量添加所有准备好的子节点
+                for child, cte_text, info, _ in children_to_create:
+                    child.parent = current  # 设置parent
+                    current.add_child(child)  # 这会自动设置child.depth
+                    created_map[cte_text] = child
+                
+                current.is_expanded = True
 
             # 4) 使用自一致性（桶计数）选择最佳子节点
             # 获取所有已创建的子节点
@@ -1590,11 +1225,9 @@ class MCTSWorkflow:
                 if nonempty_nonzero_children:
                     # 如果有非空且非单0的CTE，从中选择
                     candidates = nonempty_nonzero_children
-                    print(f"[扩展] 从 {len(nonempty_nonzero_children)} 个非空且非单0的CTE中选择（bucket_count={max_bucket_count}）")
                 else:
                     # 如果没有非空且非单0的CTE，从所有平票的CTE中选择
                     candidates = tied_children
-                    print(f"[扩展] 没有非空且非单0的CTE，从所有平票CTE中选择（bucket_count={max_bucket_count}）")
                 
                 if len(candidates) > 1:
                     # 平票时，综合考虑多个因素：
@@ -1642,17 +1275,12 @@ class MCTSWorkflow:
                         )
                     
                     next_child = max(candidates, key=get_tiebreak_score)
-                    print(f"[扩展] 使用自一致性（桶计数）选择子节点: node#{getattr(next_child, 'node_id', '?')}, "
-                          f"bucket_count={max_bucket_count} (自一致性，平票时综合考虑非空/非单0/LIKE/深度/路径/Q值)")
                 else:
                     next_child = candidates[0]
-                    print(f"[扩展] 使用自一致性（桶计数）选择子节点: node#{getattr(next_child, 'node_id', '?')}, "
-                          f"bucket_count={max_bucket_count}")
             
             # 若没有非 <END> 可选，且策略允许选择 <END>，则选择 <END>
             if next_child is None and allow_choose_end and end_child is not None:
                 next_child = end_child
-                print(f"[扩展] 选择 <END> 节点")
 
             if next_child is None:
                 # 没有可继续的有效子节点，则停止在此
@@ -1660,67 +1288,6 @@ class MCTSWorkflow:
                     # 第一步且没有非<END>的有效子节点，直接终止此次扩展
                     current.is_expanded = True
                 break
-
-            # 动态扩充：当选中某个表时，自动添加其邻居表到schema
-            if self.enable_dynamic_expansion and next_child.cte and next_child.cte != "<END>":
-                # 收集路径上所有CTE名称（用于排除）
-                all_cte_names = set()
-                path_node = next_child
-                while path_node is not None:
-                    if path_node.cte and path_node.cte != "<END>":
-                        # 从CTE中提取CTE名称
-                        cte_match = re.search(r'WITH\s+(\w+)\s+AS', path_node.cte, re.IGNORECASE)
-                        if cte_match:
-                            all_cte_names.add(cte_match.group(1))
-                    path_node = path_node.parent
-                
-                # 从CTE中提取选中的表（排除所有CTE名称）
-                selected_tables = self.schema_manager.extract_tables_from_sql(next_child.cte)
-                # 进一步过滤：排除所有路径上的CTE名称
-                selected_tables = {t for t in selected_tables if t not in all_cte_names}
-                
-                if selected_tables:
-                    print(f"[动态扩充] 节点 #{getattr(next_child, 'node_id', '?')} 选中的真实表: {sorted(selected_tables)}")
-                    if self._original_schema:
-                        # 检查当前schema中已有的表
-                        existing_tables_in_schema = self.schema_manager._extract_tables_from_schema(next_child.schema_info)
-                        print(f"[动态扩充] 当前schema中的表: {sorted(existing_tables_in_schema)}")
-                        
-                        # 检查邻居表
-                        all_neighbors = set()
-                        for table in selected_tables:
-                            neighbors = self.schema_manager.get_neighbor_tables(table)
-                            if neighbors:
-                                print(f"[动态扩充] 表 {table} 的邻居表: {sorted(neighbors)}")
-                                all_neighbors.update(neighbors)
-                        
-                        # 过滤掉已经在schema中的邻居表
-                        neighbors_to_add = all_neighbors - existing_tables_in_schema
-                        if neighbors_to_add:
-                            print(f"[动态扩充] 需要添加的邻居表: {sorted(neighbors_to_add)}")
-                            
-                            # 应用动态扩充
-                            expanded_schema = self.schema_manager.dynamic_expansion(
-                                next_child.schema_info,
-                                selected_tables,
-                                original_schema=self._original_schema
-                            )
-                            # 更新子节点的schema_info
-                            if expanded_schema != next_child.schema_info:
-                                next_child.schema_info = expanded_schema
-                                added_tables = self.schema_manager._extract_tables_from_schema(expanded_schema) - existing_tables_in_schema
-                                if added_tables:
-                                    print(f"[动态扩充] ✅ 为节点 #{getattr(next_child, 'node_id', '?')} 添加了 {len(added_tables)} 个邻居表: {sorted(added_tables)}")
-                                else:
-                                    print(f"[动态扩充] ℹ️  未添加新表（邻居表可能已在schema中）")
-                            else:
-                                print(f"[动态扩充] ℹ️  schema未变化（可能没有邻居表或邻居表已在schema中）")
-                        else:
-                            print(f"[动态扩充] ℹ️  所有邻居表已在schema中，无需添加")
-                    else:
-                        print(f"[动态扩充] ⚠️  _original_schema未设置，无法进行动态扩充")
-                else:
-                    print(f"[动态扩充] ⚠️  未能从CTE中提取真实表名（可能只使用了CTE）")
 
             added_nodes.append(next_child)
             current = next_child
@@ -1743,12 +1310,6 @@ class MCTSWorkflow:
         # 2. 达到最大深度但未到达<END>（超过深度限制）
         if not leaf_node.is_terminal and leaf_node.depth < self.max_depth:
             return 0.0, None, {'sql_bucket_count': 0, 'sql_total_variants': 0}
-        
-        # 判断是到达END还是超过深度
-        if leaf_node.is_terminal:
-            print(f"[模拟] 到达<END>，开始基于整条链生成多个SQL变体...")
-        else:
-            print(f"[模拟] 达到最大深度({leaf_node.depth})，开始基于当前链生成多个SQL变体...")
         
         # 生成多个SQL（通过temperature和表随机化增加多样性）
         _sqlgen_t0 = _time_for_timing.time()
@@ -2201,227 +1762,6 @@ class MCTSWorkflow:
                     return True
         return False
     
-    def _load_relationships_map(self) -> Dict[str, Dict[str, Any]]:
-        """
-        加载 relationships.json 并构建关系映射
-        
-        Returns:
-            关系映射字典，格式: {f"{table1}<->{table2}": {'type': '1:N', ...}, ...}
-        """
-        relationships_file = Path(__file__).parent.parent / "mcts" / "data" / "relationships.json"
-        if not relationships_file.exists():
-            print(f"[关系检查] ⚠️ relationships.json 文件不存在: {relationships_file}")
-            return {}
-        
-        try:
-            with open(relationships_file, 'r', encoding='utf-8') as f:
-                all_relationships = json.load(f)
-            
-            # 从 db_connector 获取数据库ID
-            db_id = self._get_db_id_from_connector()
-            if not db_id:
-                return {}
-            
-            # 获取当前数据库的关系信息
-            db_relationships = all_relationships.get(db_id, {})
-            relationships_list = db_relationships.get('relationships', [])
-            
-            # 构建关系映射：{f"{table1}<->{table2}": {'type': '1:N', ...}}
-            relationships_map = {}
-            for rel in relationships_list:
-                table1 = rel.get('table1', '').strip().strip('`')
-                table2 = rel.get('table2', '').strip().strip('`')
-                rel_type = rel.get('relationship_type', '')
-                
-                if table1 and table2:
-                    # 规范化表名（小的在前）
-                    key = f"{min(table1, table2)}<->{max(table1, table2)}"
-                    relationships_map[key] = {
-                        'type': rel_type,
-                        'table1': table1,
-                        'table2': table2,
-                        'col1': rel.get('col1', ''),
-                        'col2': rel.get('col2', ''),
-                        'description': rel.get('description', '')
-                    }
-            
-            print(f"[关系检查] ✅ 加载了 {len(relationships_map)} 个表关系（数据库: {db_id}）")
-            return relationships_map
-        except Exception as e:
-            print(f"[关系检查] ⚠️ 加载关系信息失败: {e}")
-            return {}
-    
-    def _get_db_id_from_connector(self) -> Optional[str]:
-        """从 db_connector 中提取数据库ID"""
-        try:
-            db_path = getattr(self.db_connector, 'db_path', None)
-            if db_path:
-                # db_path 格式通常是: /path/to/{db_id}/{db_id}.sqlite
-                path_parts = Path(db_path).parts
-                if len(path_parts) >= 2:
-                    # 取倒数第二级目录作为 db_id
-                    db_id = path_parts[-2]
-                    return db_id
-        except Exception as e:
-            print(f"[关系检查] ⚠️ 提取数据库ID失败: {e}")
-        return None
-    
-    def _extract_tables_from_sql(self, sql: str) -> Set[str]:
-        """
-        从SQL中提取所有表名 (修复版：排除关键字)
-        
-        Args:
-            sql: SQL语句
-            
-        Returns:
-            表名集合
-        """
-        if not sql:
-            return set()
-        
-        tables = set()
-        
-        # 定义需要忽略的 SQL 关键字
-        KEYWORDS = {
-            'SELECT', 'FROM', 'JOIN', 'ON', 'WHERE', 'GROUP', 'ORDER', 'BY', 
-            'HAVING', 'LIMIT', 'AS', 'AND', 'OR', 'LEFT', 'RIGHT', 'INNER', 
-            'OUTER', 'FULL', 'UNION', 'INTERSECT', 'EXCEPT', 'DISTINCT',
-            'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'IS', 'NULL', 'NOT',
-            'IN', 'EXISTS', 'LIKE', 'BETWEEN', 'WITH'
-        }
-        
-        # 简单的清洗，移除换行
-        sql_clean = sql.replace('\n', ' ')
-        
-        # 1. 提取 FROM 后的表
-        # 匹配 FROM table_name [AS alias] [WHERE/JOIN/...]
-        from_matches = re.finditer(r'FROM\s+([^\s(),;]+)', sql_clean, re.IGNORECASE)
-        for match in from_matches:
-            table = match.group(1).strip().strip('`')
-            # 移除可能的AS别名
-            table = re.sub(r'\s+AS\s+\w+$', '', table, flags=re.IGNORECASE).strip()
-            # 过滤关键字
-            if table and table.upper() not in KEYWORDS:
-                tables.add(table)
-        
-        # 2. 提取 JOIN 后的表
-        join_matches = re.finditer(r'JOIN\s+([^\s(),;]+)', sql_clean, re.IGNORECASE)
-        for match in join_matches:
-            table = match.group(1).strip().strip('`')
-            # 移除可能的AS别名
-            table = re.sub(r'\s+AS\s+\w+$', '', table, flags=re.IGNORECASE).strip()
-            # 过滤关键字
-            if table and table.upper() not in KEYWORDS:
-                tables.add(table)
-        
-        return tables
-    
-    def verify_cte_execution(self, cte_sql: str, relationships_map: Dict[str, Dict[str, Any]]) -> Tuple[bool, str]:
-        """
-        在 CTE 生成后立即调用此函数进行关系检查
-        
-        Args:
-            cte_sql: CTE SQL语句（完整的可执行SQL，包含WITH和SELECT）
-            relationships_map: 关系映射字典
-            
-        Returns:
-            (is_valid: bool, feedback: str)
-        """
-        print(f"[关系检查] 🔍 开始检查CTE关系...")
-        
-        # 1. 执行 CTE (加上 LIMIT 防止卡死，或者只查 COUNT)
-        # 注意：cte_sql 已经是完整的可执行SQL（包含WITH和SELECT）
-        try:
-            # 将原SQL包装成COUNT查询
-            # 如果原SQL已经有LIMIT，先移除
-            sql_clean = re.sub(r'\s+LIMIT\s+\d+', '', cte_sql, flags=re.IGNORECASE)
-            # 提取最后一个CTE名称（用于COUNT查询）
-            # 查找最后一个 SELECT * FROM cte_name 中的 cte_name
-            last_from_match = re.search(r'SELECT\s+\*?\s+FROM\s+(\w+)', sql_clean, re.IGNORECASE)
-            if last_from_match:
-                last_cte_name = last_from_match.group(1)
-                count_sql = f"{sql_clean.rsplit('SELECT', 1)[0]}SELECT COUNT(*) FROM {last_cte_name}"
-            else:
-                # 如果找不到，直接包装整个SQL
-                count_sql = f"WITH check_cte AS ({sql_clean}) SELECT COUNT(*) FROM check_cte"
-            
-            res, error = self.db_connector.execute_query(count_sql)
-            if error:
-                print(f"[关系检查] ❌ SQL执行错误: {error}")
-                return False, f"SQL Execution Error: {error}"
-            
-            row_count = res.iloc[0, 0] if res is not None and len(res) > 0 else 0
-            print(f"[关系检查] 📊 CTE返回行数: {row_count}")
-        except Exception as e:
-            print(f"[关系检查] ❌ 执行失败: {e}")
-            return False, f"Execution failed: {e}"
-        
-        # 检查扇出 (Fan-out Check) - 利用 relationships.json
-        # 注意：空结果检查已在其他地方处理，这里只专注于关系检查
-        # 解析 SQL 涉及的表
-        tables = self._extract_tables_from_sql(cte_sql)
-        print(f"[关系检查] 📋 检测到的表: {sorted(tables)}")
-        
-        if len(tables) < 2:
-            # 单个表，无需检查关系
-            print(f"[关系检查] ✅ 单个表，无需检查关系")
-            return True, "Pass"
-        
-        # 遍历涉及的每一对表，看是否存在 1:N 关系
-        fan_out_warnings = []
-        checked_relationships = []
-        for t1 in tables:
-            for t2 in tables:
-                if t1 >= t2:  # 避免重复检查
-                    continue
-                
-                rel_key = f"{min(t1, t2)}<->{max(t1, t2)}"
-                
-                if rel_key in relationships_map:
-                    rel_info = relationships_map[rel_key]
-                    rel_type = rel_info.get('type', '')
-                    checked_relationships.append(f"{t1} <-> {t2}: {rel_type}")
-                    
-                    # 检查是否发生了不合理的行膨胀（1:N 关系）
-                    if rel_type in ['1:N', 'N:1']:
-                        # 检查SQL中是否有GROUP BY来防止扇出
-                        has_group_by = re.search(r'\bGROUP\s+BY\b', cte_sql, re.IGNORECASE) is not None
-                        # 检查是否有DISTINCT
-                        has_distinct = re.search(r'\bDISTINCT\b', cte_sql, re.IGNORECASE) is not None
-                        if not has_group_by and not has_distinct:
-                            warning_msg = f"Potential fan-out detected: {rel_type} relationship between {t1} and {t2}. Consider using GROUP BY or DISTINCT to prevent row explosion."
-                            fan_out_warnings.append(warning_msg)
-                            print(f"[关系检查] ⚠️ 扇出警告: {warning_msg}")
-        
-        if checked_relationships:
-            print(f"[关系检查] 🔗 检查的关系: {', '.join(checked_relationships)}")
-        
-        if fan_out_warnings:
-            result_msg = f"Pass with warnings: {'; '.join(fan_out_warnings)}"
-            print(f"[关系检查] ✅ 检查完成（有警告）: {result_msg}")
-            return True, result_msg
-        
-        print(f"[关系检查] ✅ 检查通过: 未发现扇出问题")
-        return True, "Pass"
-    
-    def _extract_error_type(self, feedback: str) -> str:
-        """
-        从反馈信息中提取错误类型
-        
-        Args:
-            feedback: 反馈信息
-            
-        Returns:
-            错误类型字符串
-        """
-        feedback_lower = feedback.lower()
-        if "fan-out" in feedback_lower or "1:n" in feedback_lower or "n:1" in feedback_lower:
-            return "Fan-out (1:N Relationship)"
-        elif "cartesian" in feedback_lower or "explosive" in feedback_lower:
-            return "Cartesian Product"
-        else:
-            return "Unknown Error"
-    
     def _deduplicate_cte_variants(self, cte_variants: List[str], node: MCTSNode) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
         """
         对CTE变体进行去重/分桶
@@ -2577,41 +1917,6 @@ class MCTSWorkflow:
         if total_buckets == 0:
             print(f"[去重统计] ⚠️ 所有CTE都执行失败或被过滤，没有可用的CTE桶")
         
-        # 对每个桶的CTE执行关系检查
-        if self._relationships_map:
-            print(f"[关系检查] 🔄 开始对 {len(buckets)} 个CTE桶执行关系检查...")
-            checked_count = 0
-            skipped_count = 0
-            for bucket_key, bucket_info in buckets.items():
-                if bucket_key == "<END>":
-                    continue
-                
-                cte_text = bucket_info.get('cte', '')
-                exec_sql = exec_sql_map.get(cte_text, '')
-                
-                if exec_sql:
-                    checked_count += 1
-                    print(f"\n[关系检查] 📦 检查桶 #{checked_count} (bucket_key: {bucket_key[:50]}...)")
-                    # 执行关系检查
-                    is_valid, feedback = self.verify_cte_execution(exec_sql, self._relationships_map)
-                    
-                    # 将检查结果添加到 execution_result 中
-                    if 'execution_result' not in bucket_info or bucket_info['execution_result'] is None:
-                        bucket_info['execution_result'] = {}
-                    
-                    bucket_info['execution_result']['relationship_check'] = {
-                        'is_valid': is_valid,
-                        'feedback': feedback,
-                        'error_type': None if is_valid else self._extract_error_type(feedback)
-                    }
-                    print(f"[关系检查] 💾 已将检查结果保存到 execution_result['relationship_check']")
-                else:
-                    skipped_count += 1
-                    print(f"[关系检查] ⚠️ 跳过桶 (bucket_key: {bucket_key[:50]}...)，原因: 无exec_sql")
-            print(f"[关系检查] ✅ 完成关系检查，共检查了 {checked_count} 个CTE桶，跳过 {skipped_count} 个\n")
-        else:
-            print(f"[关系检查] ⚠️ 未加载关系映射，跳过关系检查")
- 
         overall_cost = _time_for_timing.time() - overall_start
         return list(buckets.values()), failed_info
     
@@ -2637,6 +1942,28 @@ class MCTSWorkflow:
     
     def _generate_cte_variants(self, node: MCTSNode) -> List[str]:
         """生成多个CTE变体（根据配置选择串行或并行）"""
+        # 获取策略相关参数
+        # 从根节点获取 picked_strategy（如果已选择）
+        root_node = self.mcts_tree.root if self.mcts_tree else None
+        picked_strategy = getattr(root_node, 'picked_strategy', None) if root_node else None
+        depth = node.depth
+        
+        # 生成策略注入文本
+        strategy_text = build_strategy_injection_text(
+            mode=self.strategy_mode,
+            picked_strategy=picked_strategy,
+            depth=depth
+        )
+        
+        # 临时修改节点的 additional_context（注入策略文本）
+        original_additional_context = node.additional_context
+        if strategy_text:
+            extra_blocks = []
+            if original_additional_context:
+                extra_blocks.append(original_additional_context)
+            extra_blocks.append(strategy_text)
+            node.additional_context = "\n\n".join(extra_blocks)
+        
         # 从当前节点及其父节点链中收集所有失败信息
         failed_attempts = []
         current = node
@@ -2708,9 +2035,34 @@ class MCTSWorkflow:
             failed_attempts=failed_attempts  # 传递失败信息
         )
         
+        # 恢复节点的 original_additional_context（避免影响后续使用）
+        node.additional_context = original_additional_context
+        
         return result
     
    
+    def _extract_strategy_and_clean_cte(self, cte: str) -> Tuple[Optional[str], str]:
+        """
+        从CTE文本中提取策略并清洗
+        
+        Args:
+            cte: CTE文本，可能包含第一行的策略注释
+        
+        Returns:
+            (策略字符串或None, 清洗后的CTE文本)
+        """
+        if not cte:
+            return None, cte
+        
+        lines = cte.strip().splitlines()
+        if lines and lines[0].strip().startswith("-- STRATEGY:"):
+            first = lines[0].strip()
+            s = first.replace("-- STRATEGY:", "").strip()
+            cleaned = "\n".join(lines[1:]).strip()
+            return s, cleaned
+        
+        return None, cte
+    
     def _get_final_statistics(self) -> Dict[str, Any]:
         """获取最终统计信息"""
         tree_stats = self.mcts_tree.get_final_statistics()
@@ -2825,8 +2177,7 @@ class MCTSWorkflow:
     
     def set_mcts_parameters(self, rollouts_per_iteration: int = None, 
                            max_cte_nodes_per_iteration: int = None, exploration_constant: float = None, 
-                           sql_timeout_s: float = None, enable_dynamic_expansion: bool = None,
-                           enable_dynamic_pruning: bool = None, strike_threshold: int = None):
+                           sql_timeout_s: float = None, strike_threshold: int = None):
         """
         设置MCTS超参数
         
@@ -2835,8 +2186,6 @@ class MCTSWorkflow:
             max_cte_nodes_per_iteration: 每次迭代生成的CTE变体数量
             exploration_constant: UCB探索常数
             sql_timeout_s: SQL执行超时时间（秒）
-            enable_dynamic_expansion: 是否启用动态扩充（默认True）
-            enable_dynamic_pruning: 是否启用动态剪枝（默认False）
             strike_threshold: 动态剪枝的strike阈值（默认3）
         """
         if rollouts_per_iteration is not None:
@@ -2847,535 +2196,4 @@ class MCTSWorkflow:
             self.exploration_constant = exploration_constant
         if sql_timeout_s is not None:
             self.sql_timeout_s = sql_timeout_s
-        if enable_dynamic_expansion is not None:
-            self.enable_dynamic_expansion = enable_dynamic_expansion
-        if enable_dynamic_pruning is not None:
-            self.enable_dynamic_pruning = enable_dynamic_pruning
-        if strike_threshold is not None:
-            self.schema_manager.strike_threshold = strike_threshold
     
-    def _setup_schema_selector_agent(self):
-        """初始化schema选择器agent"""
-        if self._schema_selector_agent is None:
-            with self.cte_generator._agent_lock:  # 复用CTE生成器的锁
-                self._schema_selector_agent = autogen.AssistantAgent(
-                    name="SchemaSelector",
-                    llm_config=self.llm_config,
-                    system_message=self._get_schema_selector_system_message()
-                )
-                self._schema_selector_user_proxy = autogen.UserProxyAgent(
-                    name="SchemaSelectorUserProxy",
-                    human_input_mode="NEVER",
-                    max_consecutive_auto_reply=0,
-                    code_execution_config=False
-                )
-    
-    def _get_schema_selector_system_message(self) -> str:
-        """获取schema选择器的系统消息"""
-        return """你是一个专业的数据库schema选择器。
-        
-**任务**: 根据自然语言问题、evidence和候选表/列信息，从候选集中挑选出最相关的表和列和外键。
-        
-**输入信息**:
-- 自然语言问题 (question)
-- 证据信息 (evidence)
-- 候选表和列信息 (candidate_tables_and_columns)，格式为:
-  - # table_name(`col1`, `col2`, ...)
-  - foreign_key:# 行，描述表之间的外键关系
-        
-**输出要求**:
-1. **只能从候选schema中选择表和列，不能虚构或修改任何表名和列名**
-2. 表名和列名必须与候选schema中完全一致（包括大小写、空格、反引号）
-3. 只输出你认为与问题最相关的表和列
-4. 如果某个表完全不相关，可以删掉整行；如果某个表只需要部分列，可以删掉不相关的列
-5. 如果有外键关系与保留下来的表相关，请保留对应的 `foreign_key:#` 和相关行
-6. 严格使用与输入相同的schema格式
-7. 直接输出schema代码，不要输出解释或推理过程
-        
-**重要提示**:
-- ❌ 禁止虚构不存在的列名（例如：如果候选schema中没有某个列，就不能在输出中添加它）
-- ❌ 禁止修改列名（例如：不能把 `Low Grade` 改成 `lowest_grade` 或 `low_grade`）
-- ❌ 禁止选择与问题无关的表（例如：问题不涉及SAT分数时，不要选择 satscores 表）
-- ✅ 必须保留所有与问题直接相关的表（例如：问题问"lowest grade"时，必须保留包含 `Low Grade` 列的表）
-        
-**输出格式示例（注意：这是最终格式，不是 CREATE TABLE）**:
-```sql
-# table1(`col1`, `col2`, `col3`)
-# table2(`colA`, `colB`)
-foreign_key:#
-# table1(col1) references table2(colA)
-```
-"""
-    def _extract_tables_and_columns_from_sql(self, sql: str) -> Tuple[Set[str], Dict[str, Set[str]]]:
-        """
-        从SQL中提取涉及的表和列
-        
-        Args:
-            sql: SQL语句
-            
-        Returns:
-            (表集合, {表名: 列集合})
-        """
-        # 提取表（排除CTE名称）
-        tables = self.schema_manager.extract_tables_from_sql(sql)
-        
-        # 提取CTE名称（用于过滤）
-        cte_names = set()
-        cte_pattern = r'WITH\s+(\w+)\s+AS\s*\('
-        cte_matches = re.finditer(cte_pattern, sql, re.IGNORECASE | re.DOTALL)
-        for match in cte_matches:
-            cte_name = match.group(1).strip()
-            cte_names.add(cte_name)
-        
-        # 提取列信息
-        columns_by_table: Dict[str, Set[str]] = {table: set() for table in tables}
-        
-        # 方法1: 使用sqlglot提取所有列名（包括不带表名前缀的）
-        try:
-            parsed = sqlglot.parse_one(sql, read="sqlite")
-            for column in parsed.find_all(sqlglot.exp.Column):
-                col_name = column.alias_or_name
-                # 检查列是否有表名前缀
-                if column.table:
-                    table_name = column.table
-                    # 确保table_name是真实表（不是CTE名称或别名）
-                    if table_name in tables and table_name not in cte_names:
-                        columns_by_table[table_name].add(col_name)
-                else:
-                    # 如果列没有表名前缀，尝试根据schema推断
-                    # 简单策略：将列添加到所有可能包含它的表
-                    for table_name in tables:
-                        if table_name not in cte_names:
-                            # 查询schema看这个表是否有这个列
-                            table_has_column = self._check_table_has_column(table_name, col_name)
-                            if table_has_column:
-                                columns_by_table[table_name].add(col_name)
-        except Exception as e:
-            # 如果sqlglot解析失败，回退到正则表达式方法
-            print(f"[Schema选择] ⚠️ sqlglot解析失败，回退到正则表达式: {e}")
-            
-        # 方法2（回退或补充）: 匹配 table.column 或 `table`.`column` 格式
-        pattern1 = r'`([^`]+)`\.`([^`]+)`'
-        matches1 = re.finditer(pattern1, sql, re.IGNORECASE)
-        for match in matches1:
-            table_name = match.group(1).strip()
-            column_name = match.group(2).strip()
-            # 确保table_name是真实表（不是CTE名称）
-            if table_name in tables and table_name not in cte_names:
-                columns_by_table[table_name].add(column_name)
-                
-        return tables, columns_by_table
-    
-    def _check_table_has_column(self, table_name: str, column_name: str) -> bool:
-        """
-        检查表是否包含指定的列（通过查询schema）
-        
-        Args:
-            table_name: 表名
-            column_name: 列名
-            
-        Returns:
-            True如果表包含该列，否则False
-        """
-        try:
-            # 从原始schema中提取表的DDL
-            original_schema = self.schema_manager.original_schema if hasattr(self.schema_manager, 'original_schema') else ""
-            if not original_schema:
-                return False
-                
-            table_ddl = extract_table_ddl(original_schema, table_name)
-            if not table_ddl:
-                return False
-            
-            # 解析列定义
-            all_columns = parse_column_definitions(table_ddl)
-            # column_name可能是小写或大小写混合，需要不区分大小写比较
-            column_name_lower = column_name.lower()
-            return column_name_lower in all_columns
-        except Exception:
-            return False
-    
-    def _collect_involved_schema_from_previous_rollouts(self, rollout_stats_list: List[Dict[str, Any]]) -> Tuple[Set[str], Dict[str, Set[str]]]:
-        """
-        收集前一个rollout的所有成功SQL中涉及的表和列
-        
-        Args:
-            rollout_stats_list: 所有rollout的统计信息列表
-            
-        Returns:
-            (涉及的表集合, {表名: 列集合})
-        """
-        all_tables = set()
-        all_columns_by_table: Dict[str, Set[str]] = {}
-        
-        print(f"[Schema选择] 开始收集前{len(rollout_stats_list)}个rollout的schema信息...")
-        
-        for idx, rollout_stats in enumerate(rollout_stats_list):
-            rollout_id = rollout_stats.get('rollout_id', idx)
-            is_quick_path = rollout_stats.get('is_quick_path', False)
-            print(f"[Schema选择]  检查Rollout {rollout_id} ({'快速路径' if is_quick_path else '正常rollout'})...")
-            
-            # 获取所有执行成功的SQL（包括空集和非空集）
-            all_sql_variants = rollout_stats.get('all_sql_variants', [])
-            print(f"[Schema选择]    找到 {len(all_sql_variants)} 个SQL变体")
-            
-            valid_sql_count = 0
-            for sql_idx, sql_variant in enumerate(all_sql_variants):
-                # 检查SQL是否执行成功
-                # all_sql_variants的结构: {'sql': str, 'valid': bool, 'error': str, 'result_signature': str, 'result_row_count': int}
-                sql = sql_variant.get('sql', '')
-                is_valid = sql_variant.get('valid', False)
-                error = sql_variant.get('error', None)
-                result_row_count = sql_variant.get('result_row_count', 0)
-                result_signature = sql_variant.get('result_signature', None)
-                
-                # 打印SQL和详细信息用于调试
-                print(f"[Schema选择]      SQL变体 #{sql_idx+1} 详细信息:")
-                print(f"[Schema选择]        SQL: {sql[:200] if sql else '空'}...")
-                print(f"[Schema选择]        valid: {is_valid}")
-                print(f"[Schema选择]        result_row_count: {result_row_count}")
-                print(f"[Schema选择]        result_signature: {result_signature}")
-                print(f"[Schema选择]        error: {error if error else 'None'}")
-                
-                # 判断SQL是否有效（valid=True表示执行成功，包括空结果）
-                if is_valid and sql:
-                    valid_sql_count += 1
-                    tables, columns_by_table = self._extract_tables_and_columns_from_sql(sql)
-                    
-                    result_type = f"成功 (结果行数: {result_row_count})"
-                    print(f"[Schema选择]      ✅ SQL变体 #{sql_idx+1}: {result_type}")
-                    print(f"[Schema选择]        提取到表: {sorted(tables) if tables else '无'}")
-                    if columns_by_table:
-                        for table, cols in columns_by_table.items():
-                            print(f"[Schema选择]        表 {table} 的列: {sorted(cols) if cols else '无'}")
-                    else:
-                        print(f"[Schema选择]        ⚠️ 未提取到列信息")
-                    
-                    all_tables.update(tables)
-                    
-                    # 合并列信息
-                    for table, columns in columns_by_table.items():
-                        if table not in all_columns_by_table:
-                            all_columns_by_table[table] = set()
-                        all_columns_by_table[table].update(columns)
-                else:
-                    if sql:
-                        if not is_valid:
-                            result_type = f"执行失败: {error[:100] if error else '未知错误'}"
-                        else:
-                            result_type = "SQL为空"
-                        print(f"[Schema选择]      ❌ SQL变体 #{sql_idx+1}: {result_type} (跳过)")
-                    else:
-                        print(f"[Schema选择]      ❌ SQL变体 #{sql_idx+1}: SQL为空 (跳过)")
-            
-            print(f"[Schema选择]    Rollout {rollout_id} 有效SQL数: {valid_sql_count}/{len(all_sql_variants)}")
-        
-        print(f"[Schema选择] 收集完成: 共提取到 {len(all_tables)} 个表")
-        if all_tables:
-            print(f"[Schema选择]   表列表: {sorted(all_tables)}")
-        if all_columns_by_table:
-            print(f"[Schema选择]   列信息:")
-            for table, cols in all_columns_by_table.items():
-                print(f"[Schema选择]     {table}: {sorted(cols)}")
-        
-        return all_tables, all_columns_by_table
-    
-    def _get_neighbor_tables(self, tables: Set[str]) -> Set[str]:
-        """
-        获取涉及表的所有邻接表
-        
-        Args:
-            tables: 涉及的表集合
-            
-        Returns:
-            邻接表集合
-        """
-        neighbor_tables = set()
-        for table in tables:
-            neighbors = self.schema_manager.get_neighbor_tables(table)
-            neighbor_tables.update(neighbors)
-        
-        # 排除已经在involved_tables中的表
-        neighbor_tables = neighbor_tables - tables
-        return neighbor_tables
-    
-    def _build_candidate_schema_ddl(self, candidate_tables: Set[str], 
-                                    columns_by_table: Dict[str, Set[str]],
-                                    original_schema: str,
-                                    involved_tables: Set[str] = None,
-                                    neighbor_tables: Set[str] = None) -> str:
-        """
-        从原始schema中提取候选表的DDL（可以过滤列）
-        
-        Args:
-            candidate_tables: 候选表集合
-            columns_by_table: 每个表涉及的列集合（对于involved_tables，只保留这些列；对于neighbor_tables，保留所有列）
-            original_schema: 原始完整schema
-            involved_tables: 上一轮涉及的表（只保留提到的列）
-            neighbor_tables: 邻接表（保留所有列）
-            
-        Returns:
-            候选表的schema字符串（格式：# table_name(`col1`, `col2`, ...)）
-        """
-        if involved_tables is None:
-            involved_tables = set()
-        if neighbor_tables is None:
-            neighbor_tables = set()
-        
-        schema_lines = []
-        
-        for table_name in sorted(candidate_tables):
-            # 提取表的完整DDL
-            table_ddl = extract_table_ddl(original_schema, table_name)
-            if not table_ddl:
-                continue
-            
-            # 使用 schema_filter.parse_column_definitions 解析列定义，避免手写复杂解析逻辑
-            # 注意：parse_column_definitions 返回 {列名(小写): 列定义字符串}
-            all_columns = parse_column_definitions(table_ddl)
-            if not all_columns:
-                continue
-
-            # 从列定义字符串中恢复“原始列名”（带反引号、允许空格）
-            original_col_names: dict[str, str] = {}
-            for col_name_lower, col_def in all_columns.items():
-                # 优先从反引号中提取完整列名：`Low Grade`、`School Name` 等
-                m = re.search(r'`([^`]+)`', col_def)
-                if m:
-                    original_name = m.group(1)
-                else:
-                    # 否则退化为第一个 token（无空格列名）
-                    m2 = re.match(r'\s*([^\s,\(]+)', col_def)
-                    original_name = m2.group(1) if m2 else col_name_lower
-                original_col_names[col_name_lower] = original_name
-
-            # 判断是 involved 表还是 neighbor 表
-            is_involved = table_name in involved_tables
-
-            if is_involved and table_name in columns_by_table and columns_by_table[table_name]:
-                # 对于 involved 表，只保留上一轮 SQL 提到的列
-                required_columns = {col.lower() for col in columns_by_table[table_name]}  # ✅ 已经小写了
-                
-                filtered_columns: List[str] = []
-                for col_lower, orig_name in original_col_names.items():  # col_lower已经是小写
-                    # 直接比较小写列名
-                    if col_lower in required_columns:  # ✅ 这里应该能匹配上
-                        filtered_columns.append(f"`{orig_name}`")
-                
-                if filtered_columns:
-                    schema_lines.append(f"# {table_name}({', '.join(filtered_columns)})")
-                else:
-                    # 如果过滤后没有列，可能需要添加一些诊断信息
-                    print(f"[警告] 表 {table_name} 过滤后没有列，但原表有 {len(original_col_names)} 列")
-                    print(f"[警告] required_columns: {required_columns}")
-                    print(f"[警告] original_col_names 的键: {list(original_col_names.keys())}")
-            else:
-                # 对于 neighbor 表，保留所有列
-                column_names = [f"`{orig_name}`" for orig_name in original_col_names.values()]
-                if column_names:
-                    schema_lines.append(f"# {table_name}({', '.join(column_names)})")
-        
-        # 从 dev_tables.json 加载并筛选 foreign_key（参考 RSL-SQL 的做法）
-        # 只保留两端表都在候选表集中的 foreign_key
-        try:
-            db_id = self._get_db_id_from_connector()
-            if db_id:
-                dev_tables_file = "/home/shenshuyu/SQL_tool_multiAgent/data/dev_tables.json"
-                fk_text = get_filtered_foreign_keys_text(
-                    dev_tables_file=dev_tables_file,
-                    db_id=db_id,
-                    candidate_tables=candidate_tables
-                )
-                if fk_text:
-                    schema_lines.append(fk_text)
-        except Exception as e:
-            # 如果获取 foreign_key 失败，不影响主流程，只打印警告
-            print(f"[Schema选择] ⚠️ 获取foreign_key失败: {e}")
-        
-        return '\n'.join(schema_lines) if schema_lines else ""
-    
-    def _select_schema_with_llm(self, question: str, evidence: str, 
-                                candidate_schema_ddl: str) -> str:
-        """
-        使用LLM从候选schema中挑选出最相关的表和列
-        
-        Args:
-            question: 自然语言问题
-            evidence: 证据信息
-            candidate_schema_ddl: 候选schema的DDL
-            
-        Returns:
-            筛选后的schema DDL
-        """
-        if not candidate_schema_ddl:
-            return ""
-        
-        self._setup_schema_selector_agent()
-        
-        prompt = f"""根据以下信息，从候选schema中挑选出最相关的表和列：
-
-**问题**: {question}
-
-**证据**: {evidence}
-
-**候选Schema**:
-```sql
-{candidate_schema_ddl}
-```
-
-**重要**: 
-1. 只能从上面的候选Schema中选择，不能虚构或修改任何表名和列名
-2. 表名和列名必须与候选Schema中完全一致（包括反引号、空格、大小写）
-3. 仔细分析问题需要哪些表，不要遗漏关键的表
-
-请输出你认为最相关的表、列、外键，严格遵循格式: # table_name(`col1`, `col2`, ...)，不要输出解释。
-
-/no_think"""
-        
-        # 运行两次 LLM，选择 schema 文本长度最长的一次
-        best_schema = ""
-        best_len = -1
-        
-        for attempt in range(2):
-            try:
-                self._schema_selector_user_proxy.initiate_chat(
-                    self._schema_selector_agent,
-                    message=prompt,
-                    max_turns=1
-                )
-                
-                # 获取最后一条消息
-                last_message = self._schema_selector_user_proxy.last_message(self._schema_selector_agent)
-                if last_message:
-                    # 处理不同格式的消息
-                    content = ""
-                    if isinstance(last_message, dict):
-                        content = last_message.get('content', '')
-                    elif hasattr(last_message, 'content'):
-                        content = last_message.content
-                    else:
-                        content = str(last_message)
-                    
-                    # 提取 ```sql ... ``` 代码块中的内容
-                    sql_match = re.search(r'```sql\s*(.*?)\s*```', content, re.DOTALL)
-                    if sql_match:
-                        schema_text = sql_match.group(1).strip()
-                    else:
-                        # 如果没有代码块，就直接用全文（schema_selector 已经被约束输出 #table(...) 形式）
-                        schema_text = content.strip()
-                    
-                    # 记录长度最长的那一次
-                    cur_len = len(schema_text)
-                    if cur_len > best_len:
-                        best_len = cur_len
-                        best_schema = schema_text
-            except Exception as e:
-                print(f"[Schema选择] ⚠️ 第 {attempt+1} 次 LLM筛选失败: {e}")
-                continue
-        
-        if best_schema:
-            return best_schema
-        
-        # 如果两次都没拿到有效结果，退回原始候选schema
-        print("[Schema选择] ⚠️ LLM未返回有效结果，使用原始候选schema")
-        return candidate_schema_ddl
-    
-    def _select_schema_for_rollout(self, rollout_id: int, question: str, evidence: str,
-                                   rollout_stats_list: List[Dict[str, Any]]) -> str:
-        """
-        为当前rollout选择schema
-        
-        Args:
-            rollout_id: 当前rollout的ID（0表示第一个rollout，使用simplified_ddl）
-            question: 自然语言问题
-            evidence: 证据信息
-            rollout_stats_list: 之前所有rollout的统计信息列表
-            
-        Returns:
-            选择的schema DDL
-        """
-        # 第一个rollout：如果rollout_stats_list中有快速路径的结果，则基于快速路径结果选择schema
-        # 否则使用simplified_ddl（quick_sql对应的schema）
-        if rollout_id == 0:
-            # 检查是否有快速路径的结果
-            has_quick_path = False
-            if rollout_stats_list:
-                for stats in rollout_stats_list:
-                    if stats.get('is_quick_path', False):
-                        has_quick_path = True
-                        break
-            
-            if has_quick_path:
-                print("[Schema选择] Rollout 1: 基于快速路径结果选择schema")
-                # 继续执行后续逻辑，基于快速路径结果选择schema
-            else:
-                print("[Schema选择] Rollout 0: 使用simplified_ddl（快速路径）")
-                return self.mcts_tree.root.schema_info if self.mcts_tree.root else ""
-        
-        # 后续rollout基于前一个rollout的结果选择schema
-        print(f"[Schema选择] ========== Rollout {rollout_id}: 开始选择schema ==========")
-        print(f"[Schema选择] 基于前{rollout_id}个rollout的结果选择schema")
-        print(f"[Schema选择] rollout_stats_list长度: {len(rollout_stats_list)}")
-        
-        # 1. 收集证据：收集上一轮所有执行成功的SQL中涉及的T_involved和C_involved
-        involved_tables, columns_by_table = self._collect_involved_schema_from_previous_rollouts(rollout_stats_list)
-        print(f"[Schema选择] ========== 收集结果 ==========")
-        print(f"[Schema选择] 涉及的表: {sorted(involved_tables) if involved_tables else '[]'}")
-        print(f"[Schema选择] 涉及的表数量: {len(involved_tables)}")
-        
-        if not involved_tables:
-            print("[Schema选择] ⚠️ 未找到涉及的表，使用原始schema")
-            print("[Schema选择] 可能的原因:")
-            print("[Schema选择]   1. 之前的rollout没有执行成功的SQL")
-            print("[Schema选择]   2. SQL中没有涉及真实表（可能只使用了CTE）")
-            print("[Schema选择]   3. SQL提取逻辑有问题")
-            return self.mcts_tree.root.schema_info if self.mcts_tree.root else ""
-        
-        # 2. 强制扩展：计算T_involved中所有表的邻接表T_neighbors
-        print(f"[Schema选择] ========== 计算邻接表 ==========")
-        neighbor_tables = self._get_neighbor_tables(involved_tables)
-        print(f"[Schema选择] 邻接表: {sorted(neighbor_tables) if neighbor_tables else '[]'}")
-        print(f"[Schema选择] 邻接表数量: {len(neighbor_tables)}")
-        
-        # 3. 构建候选集：T_candidate = T_involved ∪ T_neighbors
-        print(f"[Schema选择] ========== 构建候选集 ==========")
-        candidate_tables = involved_tables | neighbor_tables
-        print(f"[Schema选择] 候选表总数: {len(candidate_tables)}")
-        if candidate_tables:
-            print(f"[Schema选择] 候选表列表: {sorted(candidate_tables)}")
-        
-        # 4. 从原始schema中提取候选表的DDL
-        print(f"[Schema选择] ========== 构建候选Schema DDL ==========")
-        original_schema = self._original_schema or (self.mcts_tree.root.schema_info if self.mcts_tree.root else "")
-        print(f"[Schema选择] 原始schema长度: {len(original_schema) if original_schema else 0} 字符")
-        
-        candidate_schema_ddl = self._build_candidate_schema_ddl(
-            candidate_tables, 
-            columns_by_table, 
-            original_schema,
-            involved_tables=involved_tables,
-            neighbor_tables=neighbor_tables
-        )
-        print(f"[Schema选择] 候选schema DDL长度: {len(candidate_schema_ddl) if candidate_schema_ddl else 0} 字符")
-        
-        if not candidate_schema_ddl:
-            print("[Schema选择] ⚠️ 无法构建候选schema，使用原始schema")
-            return original_schema
-        
-        # 5. LLM筛选：Prompt LLM从T_candidate中挑选出最相关的表和列
-        print(f"[Schema选择] ========== LLM筛选 ==========")
-        if self.enable_rollout_based_schema_selection:
-            # 统计候选schema中的表数量（格式为 # table_name(`col1`, ...)，排除foreign_key行）
-            # 表定义行的特征：# table_name(`col` 或 # table_name(col
-            # foreign_key行的特征：# table_name(col) references
-            table_lines = [line for line in candidate_schema_ddl.split('\n') if line.strip().startswith('# ')]
-            table_count = sum(1 for line in table_lines if 'references' not in line.lower())
-            print(f"[Schema选择] 启用LLM筛选，候选schema包含 {table_count} 个表")
-            selected_schema = self._select_schema_with_llm(question, evidence, candidate_schema_ddl)
-            print(f"[Schema选择] ========== Schema选择完成 ==========")
-            return selected_schema
-        else:
-            # 如果不启用LLM筛选，直接返回候选schema
-            print(f"[Schema选择] 未启用LLM筛选，直接返回候选schema")
-            print(f"[Schema选择] ========== Schema选择完成 ==========")
-            return candidate_schema_ddl
