@@ -57,7 +57,7 @@ python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_bc_parall
 
 
 
-
+EXAMPLE
 --- 测试完整MCTS工作流 ---
 
 ################################################################################

@@ -23,7 +23,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from workflows.mcts_v1.mcts_workflow import MCTSWorkflow
 from core.database_connector import DatabaseConnector
-from utils.model_utils import get_llm_config, pick_model
+from workflows.mcts_v1.utils.model_utils import get_llm_config, pick_model
 import logging
 logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
 
@@ -37,7 +37,7 @@ def build_db_connector(db_name: str) -> DatabaseConnector:
 
 
 def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str] = None, 
-             mcts_config: dict = None) -> dict:
+             mcts_config: dict = None, strategy_mode: Optional[str] = None) -> dict:
     db_name = sample["db"]
     question = sample["question"]
     schema_info = sample["simplified_ddl"]
@@ -73,7 +73,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
         llm_config = get_llm_config(temperature=0.7, auto_select=True)
 
     # 使用parallel_workers参数设置MCTS内部的max_workers
-    w = MCTSWorkflow(llm_config, db, max_workers=parallel_workers)
+    w = MCTSWorkflow(llm_config, db, max_workers=parallel_workers, strategy_mode=strategy_mode)
     
     # 应用MCTS配置（如果提供）
     if mcts_config:
@@ -114,14 +114,14 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
 
 def process_single_task(args_tuple):
     """处理单个任务的包装函数，用于并行执行"""
-    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config = args_tuple
+    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode = args_tuple
     try:
         qid = str(sample.get('question_id', idx))
         print(f"\n{'='*80}")
         print(f">>> 样本#{idx} (question_id={qid}) | DB={sample['db']}")
         print(f"{'='*80}")
 
-        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, mcts_config=mcts_config)
+        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, mcts_config=mcts_config, strategy_mode=strategy_mode)
 
 
         # 与gold SQL对比（如果提供）
@@ -384,6 +384,8 @@ def main():
     parser.add_argument("--max_workers", type=int, default=1, help="并行处理多个问题的工作线程数（默认1）")
     parser.add_argument("--multi_base_urls", type=str, default=None, help="多个模型端点URL，用逗号分隔，例如：'http://localhost:8009/v1,http://localhost:8010/v1'")
     parser.add_argument("--max_cte_nodes", type=int, default=15, help="每次扩展节点时生成的CTE变体数量（默认15）")
+    parser.add_argument("--strategy_mode", type=str, default=None, 
+                       help="策略模式：FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     args = parser.parse_args()
     
     # MCTS配置：不使用MASTER（LLM打分），max_depth=8
@@ -466,7 +468,7 @@ def main():
     tasks = []
     for idx in indices:
         sample = load_sample(args.ppl_file, idx)
-        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config))
+        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode))
     
     # 统一使用并行处理模式（max_workers=1时也是并行处理，只是单线程）
     print(f"\n处理 {len(tasks)} 个样本（{args.max_workers} 个worker）...")
@@ -608,3 +610,24 @@ if __name__ == "__main__":
 #     --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
 #     --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1,http://localhost:8011/v1" \
 #     > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_result.log 2>&1 &
+
+
+# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
+#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy_result.json \
+#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5 \
+#   --strategy_mode NONE \
+#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
+#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy.log 2>&1 &
+
+# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
+#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
+#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy_result.json \
+#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5 \
+#   --strategy_mode LLM_PICK_ONCE \
+#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
+#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &

@@ -174,16 +174,56 @@ class SimpleRolloutWorkflow:
             cte_variants = self._generate_cte_variants(current_context, probe_results_text=probe_results_text)
             self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
             
-            # 处理 LLM_PICK_ONCE 模式的策略提取和清洗
+            # 处理 LLM_PICK_ONCE 模式的策略选择（仅在根节点且未选择策略时）
+            # 先单独选择策略（JSON格式），然后再生成CTE
             if self.strategy_mode == "LLM_PICK_ONCE" and current_context['depth'] == 0 and not current_context.get("picked_strategy"):
-                new_variants = []
-                for c in cte_variants:
-                    s, cleaned = self._extract_strategy_and_clean_cte(c)
-                    if s in ("S1", "S2", "S3", "S4") and not current_context.get("picked_strategy"):
-                        current_context["picked_strategy"] = s
-                        print(f"[策略选择] LLM选择了策略: {s}")
-                    new_variants.append(cleaned)
-                cte_variants = new_variants
+                # 单独调用LLM选择策略（JSON格式）
+                print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
+                from .agents.strategy import build_strategy_selection_prompt, extract_strategy_from_json
+                
+                strategy_prompt = build_strategy_selection_prompt(
+                    question=current_context['question'],
+                    schema_info=current_context['schema_info'],
+                    additional_context=current_context.get('additional_context', '')
+                )
+                
+                print(f"[策略选择] Strategy Selection Prompt:")
+                print(f"{'='*80}")
+                print(strategy_prompt)
+                print(f"{'='*80}")
+                
+                # 调用LLM选择策略
+                strategy_messages = [
+                    {
+                        "role": "system",
+                        "content": "You are a strategy selection assistant. Your task is to analyze the SQL generation task and select the most appropriate strategy."
+                    },
+                    {
+                        "role": "user",
+                        "content": strategy_prompt
+                    }
+                ]
+                
+                # 使用CTE生成器的agent来调用（复用LLM配置）
+                strategy_response = self.cte_generator.cte_agent.generate_reply(strategy_messages)
+                
+                print(f"\n[策略选择] LLM响应:")
+                print(f"{'='*80}")
+                print(strategy_response)
+                print(f"{'='*80}")
+                
+                # 从JSON响应中提取策略
+                picked_strategy = extract_strategy_from_json(strategy_response)
+                
+                if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
+                    current_context["picked_strategy"] = picked_strategy
+                    print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                else:
+                    print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
+                    current_context["picked_strategy"] = "S2"
+                    picked_strategy = "S2"
+                
+                print(f"[策略选择] ========== 策略选择完成 ==========\n")
             
             if not cte_variants:
                 print(f"[CTE生成] 未生成任何CTE变体，停止扩展")
@@ -374,8 +414,12 @@ class SimpleRolloutWorkflow:
         """
         从CTE文本中提取策略并清洗
         
+        支持两种格式：
+        1. 新格式: <S1> ... ```sql ... ```
+        2. 旧格式: -- STRATEGY: S1 ... (向后兼容)
+        
         Args:
-            cte: CTE文本，可能包含第一行的策略注释
+            cte: CTE文本，可能包含策略标签和SQL代码块
         
         Returns:
             (策略字符串或None, 清洗后的CTE文本)
@@ -383,11 +427,36 @@ class SimpleRolloutWorkflow:
         if not cte:
             return None, cte
         
-        lines = cte.strip().splitlines()
+        cte = cte.strip()
+        
+        # 尝试解析新格式: <S1> ... ```sql ... ```
+        import re
+        strategy_pattern = r'<(S[1-4])>'
+        match = re.search(strategy_pattern, cte, re.IGNORECASE)
+        if match:
+            strategy = match.group(1).upper()
+            # 提取SQL代码块内容
+            sql_block_pattern = r'```sql\s*(.*?)\s*```'
+            sql_match = re.search(sql_block_pattern, cte, re.DOTALL | re.IGNORECASE)
+            if sql_match:
+                cleaned_cte = sql_match.group(1).strip()
+            else:
+                # 如果没有代码块，尝试提取 <S1> 之后的内容
+                cleaned_cte = cte[match.end():].strip()
+                # 移除可能的代码块标记
+                cleaned_cte = re.sub(r'^```sql\s*', '', cleaned_cte, flags=re.IGNORECASE)
+                cleaned_cte = re.sub(r'\s*```$', '', cleaned_cte, flags=re.IGNORECASE)
+            return strategy, cleaned_cte
+        
+        # 向后兼容旧格式: -- STRATEGY: S1
+        lines = cte.splitlines()
         if lines and lines[0].strip().startswith("-- STRATEGY:"):
             first = lines[0].strip()
             s = first.replace("-- STRATEGY:", "").strip()
             cleaned = "\n".join(lines[1:]).strip()
+            # 移除可能的代码块标记
+            cleaned = re.sub(r'^```sql\s*', '', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'\s*```$', '', cleaned, flags=re.IGNORECASE)
             return s, cleaned
         
         return None, cte

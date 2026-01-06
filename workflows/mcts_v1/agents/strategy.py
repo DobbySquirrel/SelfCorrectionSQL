@@ -105,20 +105,33 @@ You MUST follow strategy {s} for this rollout. Do NOT switch.
     if mode == "LLM_PICK_ONCE":
         if depth == 0 and not picked_strategy:
             # depth=0 时需要所有策略说明，因为模型要选择
+            # 注意：这个函数返回的文本会用于策略选择阶段，不是CTE生成阶段
             return f"""
 [GLOBAL STRATEGY MODE: LLM_PICK_ONCE]
-First, choose ONE strategy from S1/S2/S3/S4 for THIS rollout.
-Then generate the next CTE.
+**STRATEGY SELECTION REQUIRED** (Root Node)
 
-Output format requirement (very important):
-- First line MUST be exactly: -- STRATEGY: S1|S2|S3|S4
-- Second line onward: the CTE text OR <END>
+You MUST select ONE strategy from S1, S2, S3, or S4 based on the question and schema.
+Analyze the question and choose the most appropriate strategy:
+- S1 (Entity-First): Use when you need to verify entity/value constraints first
+- S2 (Relation-First): Use when join paths are uncertain
+- S3 (Proactive): Use when schema is ambiguous or knowledge is thin
+- S4 (Reactive): Use when schema is clear and you can try quickly
+
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4).
+
+Example JSON format:
+```json
+{{
+  "thought": "I choose S1 because...",
+  "strategy": "S1"
+}}
+```
 
 {_FULL_STRATEGY_HANDBOOK}
 """
         else:
             # depth>0 时只需要已选择策略的说明
-            s = picked_strategy or fixed_strategy or "S4"
+            s = picked_strategy or fixed_strategy or "S2"
             strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
             return f"""
 [GLOBAL STRATEGY MODE: LLM_PICK_ONCE]
@@ -133,4 +146,115 @@ You have already chosen strategy {s} for this rollout. You MUST follow it. Do NO
 
     # fallback
     return ""
+
+
+def build_strategy_selection_prompt(question: str, schema_info: str, additional_context: str = "") -> str:
+    """
+    构建策略选择的prompt（单独调用，JSON格式输出）
+    
+    Args:
+        question: 自然语言问题
+        schema_info: 数据库schema信息
+        additional_context: 额外上下文
+        
+    Returns:
+        策略选择的prompt文本
+    """
+    return f"""# STRATEGY SELECTION TASK
+
+You need to select ONE strategy from S1, S2, S3, or S4 for solving the following SQL generation task.
+
+**Question**: {question}
+
+**Database Schema**:
+{schema_info}
+
+{f"**Additional Context**: {additional_context}" if additional_context else ""}
+
+**Available Strategies**:
+
+{_FULL_STRATEGY_HANDBOOK}
+
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4).
+
+Example JSON format:
+```json
+{{
+  "thought": "I choose S1 because the question requires filtering by specific values that need verification first.",
+  "strategy": "S1"
+}}
+```
+
+**Output Requirements**:
+- Output MUST be valid JSON wrapped in ```json code block
+- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", or "S4"
+- Include a "thought" field explaining your choice
+"""
+
+
+def extract_strategy_from_json(response: str) -> Optional[str]:
+    """
+    从JSON响应中提取策略
+    
+    Args:
+        response: LLM的JSON响应
+        
+    Returns:
+        策略字符串 (S1/S2/S3/S4) 或 None
+    """
+    import json
+    import re
+    
+    try:
+        # 1. 优先提取 ```json 代码块中的内容
+        json_str = None
+        json_block_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+        if json_block_match:
+            json_str = json_block_match.group(1).strip()
+        else:
+            # 尝试提取普通代码块
+            code_block_match = re.search(r'```\s*(.*?)\s*```', response, re.DOTALL)
+            if code_block_match:
+                potential_json = code_block_match.group(1).strip()
+                if potential_json.strip().startswith('{'):
+                    json_str = potential_json
+        
+        # 2. 如果代码块提取失败，尝试从文本中提取JSON对象
+        if not json_str:
+            brace_count = 0
+            start_idx = -1
+            for i in range(len(response) - 1, -1, -1):
+                if response[i] == '}':
+                    if brace_count == 0:
+                        start_idx = i
+                    brace_count += 1
+                elif response[i] == '{':
+                    brace_count -= 1
+                    if brace_count == 0 and start_idx != -1:
+                        json_str = response[i:start_idx + 1]
+                        break
+        
+        if not json_str:
+            return None
+        
+        # 3. 解析JSON
+        json_str = json_str.strip()
+        data = json.loads(json_str)
+        
+        # 4. 提取策略字段
+        strategy_str = data.get("strategy", "").upper().strip()
+        
+        # 5. 验证策略
+        valid_strategies = ["S1", "S2", "S3", "S4"]
+        if strategy_str in valid_strategies:
+            return strategy_str
+        
+        return None
+        
+    except json.JSONDecodeError as e:
+        print(f"[策略提取] JSON解析失败: {e}")
+        return None
+    except Exception as e:
+        print(f"[策略提取] 提取策略时出错: {e}")
+        return None
 

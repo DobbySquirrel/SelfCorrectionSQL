@@ -17,7 +17,6 @@ import random
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any, Set
 from pathlib import Path
-import sqlglot
 from .core.mcts_tree import MCTSTree
 from .core.mcts_node import MCTSNode
 from .agents.cte_generator import CTEGenerator
@@ -25,9 +24,9 @@ from .agents.complete_sql_generator import CompleteSQLGenerator
 from .agents.sql_executor import SQLExecutor
 from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_exec_helpers import execute_sqls_parallel
-from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
+from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode, build_strategy_selection_prompt, extract_strategy_from_json
 from core.database_connector import DatabaseConnector
-from utils.agent_helpers import AgentHelpers
+from .utils.agent_helpers import AgentHelpers
 import time as _time_for_timing
 
 class MCTSWorkflow:
@@ -719,23 +718,68 @@ class MCTSWorkflow:
                 # 已扩展，跳过
                 continue
             
+            # 处理 LLM_PICK_ONCE 模式的策略选择（仅在根节点且未选择策略时）
+            # 先单独选择策略（JSON格式），然后再生成CTE
+            if self.strategy_mode == "LLM_PICK_ONCE" and current.depth == 0:
+                root_node = self.mcts_tree.root if self.mcts_tree else None
+                if root_node and not getattr(root_node, 'picked_strategy', None):
+                    # 单独调用LLM选择策略（JSON格式）
+                    print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
+                    from .agents.strategy import build_strategy_selection_prompt, extract_strategy_from_json
+                    
+                    strategy_prompt = build_strategy_selection_prompt(
+                        question=current.question,
+                        schema_info=current.schema_info,
+                        additional_context=current.additional_context
+                    )
+                    
+                    print(f"[策略选择] Strategy Selection Prompt:")
+                    print(f"{'='*80}")
+                    print(strategy_prompt)
+                    print(f"{'='*80}")
+                    
+                    # 调用LLM选择策略
+                    strategy_messages = [
+                        {
+                            "role": "system",
+                            "content": "You are a strategy selection assistant. Your task is to analyze the SQL generation task and select the most appropriate strategy."
+                        },
+                        {
+                            "role": "user",
+                            "content": strategy_prompt
+                        }
+                    ]
+                    
+                    # 使用CTE生成器的agent来调用（复用LLM配置）
+                    strategy_response = self.cte_generator.cte_agent.generate_reply(strategy_messages)
+                    
+                    print(f"\n[策略选择] LLM响应:")
+                    print(f"{'='*80}")
+                    print(strategy_response)
+                    print(f"{'='*80}")
+                    
+                    # 从JSON响应中提取策略
+                    picked_strategy = extract_strategy_from_json(strategy_response)
+                    
+                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
+                        root_node.picked_strategy = picked_strategy
+                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                    else:
+                        print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
+                        root_node.picked_strategy = "S2"
+                        picked_strategy = "S2"
+                    
+                    print(f"[策略选择] ========== 策略选择完成 ==========\n")
+            
             # 1) 生成多个CTE变体（计时：CTE 生成）
+            # 注意：此时如果已选择策略，会在_generate_cte_variants中使用已选择的策略
 
             _cte_t0 = _time_for_timing.time()
             cte_variants = self._generate_cte_variants(current)
             self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
             
-            # 处理 LLM_PICK_ONCE 模式的策略提取和清洗（仅在根节点且未选择策略时）
-            if self.strategy_mode == "LLM_PICK_ONCE" and current.depth == 0:
-                root_node = self.mcts_tree.root if self.mcts_tree else None
-                if root_node and not getattr(root_node, 'picked_strategy', None):
-                    new_variants = []
-                    for c in cte_variants:
-                        s, cleaned = self._extract_strategy_and_clean_cte(c)
-                        if s in ("S1", "S2", "S3", "S4") and not getattr(root_node, 'picked_strategy', None):
-                            root_node.picked_strategy = s
-                        new_variants.append(cleaned)
-                    cte_variants = new_variants
+            # 注意：不再需要从CTE中提取策略，因为策略已经单独选择
+            # 旧的策略提取逻辑已移除
             
             # 2) 去重并统计执行结果桶
             unique_cte_variants, failed_info = self._deduplicate_cte_variants(cte_variants, current)
@@ -1939,8 +1983,12 @@ class MCTSWorkflow:
         """
         从CTE文本中提取策略并清洗
         
+        支持两种格式：
+        1. 新格式: <S1> ... ```sql ... ```
+        2. 旧格式: -- STRATEGY: S1 ... (向后兼容)
+        
         Args:
-            cte: CTE文本，可能包含第一行的策略注释
+            cte: CTE文本，可能包含策略标签和SQL代码块
         
         Returns:
             (策略字符串或None, 清洗后的CTE文本)
@@ -1948,11 +1996,36 @@ class MCTSWorkflow:
         if not cte:
             return None, cte
         
-        lines = cte.strip().splitlines()
+        cte = cte.strip()
+        
+        # 尝试解析新格式: <S1> ... ```sql ... ```
+        import re
+        strategy_pattern = r'<(S[1-4])>'
+        match = re.search(strategy_pattern, cte, re.IGNORECASE)
+        if match:
+            strategy = match.group(1).upper()
+            # 提取SQL代码块内容
+            sql_block_pattern = r'```sql\s*(.*?)\s*```'
+            sql_match = re.search(sql_block_pattern, cte, re.DOTALL | re.IGNORECASE)
+            if sql_match:
+                cleaned_cte = sql_match.group(1).strip()
+            else:
+                # 如果没有代码块，尝试提取 <S1> 之后的内容
+                cleaned_cte = cte[match.end():].strip()
+                # 移除可能的代码块标记
+                cleaned_cte = re.sub(r'^```sql\s*', '', cleaned_cte, flags=re.IGNORECASE)
+                cleaned_cte = re.sub(r'\s*```$', '', cleaned_cte, flags=re.IGNORECASE)
+            return strategy, cleaned_cte
+        
+        # 向后兼容旧格式: -- STRATEGY: S1
+        lines = cte.splitlines()
         if lines and lines[0].strip().startswith("-- STRATEGY:"):
             first = lines[0].strip()
             s = first.replace("-- STRATEGY:", "").strip()
             cleaned = "\n".join(lines[1:]).strip()
+            # 移除可能的代码块标记
+            cleaned = re.sub(r'^```sql\s*', '', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'\s*```$', '', cleaned, flags=re.IGNORECASE)
             return s, cleaned
         
         return None, cte
