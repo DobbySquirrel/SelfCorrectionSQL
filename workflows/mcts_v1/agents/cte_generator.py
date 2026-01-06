@@ -12,7 +12,6 @@ import random
 import re
 import concurrent.futures
 import threading
-from functools import partial
 from openai import OpenAI
 
 
