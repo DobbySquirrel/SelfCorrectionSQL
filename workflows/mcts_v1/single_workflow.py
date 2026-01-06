@@ -20,7 +20,6 @@ from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONF
 from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_exec_helpers import execute_sqls_parallel
 from core.database_connector import DatabaseConnector
-from .utils.agent_helpers import AgentHelpers
 
 
 class SimpleRolloutWorkflow:
@@ -39,7 +38,6 @@ class SimpleRolloutWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.helpers = AgentHelpers()
         self.max_depth = 8  # CTE链最大深度
         self.max_cte_nodes_per_iteration = 5  # 每次生成的CTE变体数量
         self.num_sql_variants = 5  # 最终生成的SQL变体数量

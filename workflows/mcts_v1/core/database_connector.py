@@ -2,23 +2,56 @@ import sqlite3
 import pandas as pd
 import os
 from typing import Tuple
+from pathlib import Path
+
+# 尝试加载 .env 文件（如果存在）
+try:
+    from dotenv import load_dotenv
+    # 从项目根目录加载 .env 文件
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent.parent  # workflows/mcts_v1/core -> 项目根目录
+    env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    # 如果没有安装 python-dotenv，跳过
+    pass
 
 class DatabaseConnector:
     """数据库连接器，处理数据库连接和查询"""
     
     def __init__(self, db_name):
-        """初始化数据库连接器"""
+        """初始化数据库连接器
+        
+        Args:
+            db_name: 数据库名称或完整路径
+                - 如果是绝对路径且存在，直接使用
+                - 否则从环境变量 DB_ROOT_DIR 或项目相对路径中查找数据库
+        """
         # 检查是否提供了完整路径
         if os.path.isabs(db_name) and os.path.exists(db_name):
             self.db_path = db_name
         else:
-            # 尝试多个可能的数据库路径
-            possible_paths = [
-                f"/home/shenshuyu/SQL_tool/data/dev_databases/{db_name}/{db_name}.sqlite",
-                f"/ssd/shenshuyu/work/bird/dev_20240627/dev_databases/{db_name}/{db_name}.sqlite",
-                f"/home/shenshuyu/SQL_tool/work/bird/dev_20240627/dev_databases/{db_name}/{db_name}.sqlite"
-            ]
+            # 获取数据库根目录（优先使用环境变量）
+            db_root_dir = os.getenv('DB_ROOT_DIR', None)
             
+            # 构建可能的数据库路径列表
+            possible_paths = []
+            
+            # 1. 如果设置了环境变量，优先使用
+            if db_root_dir:
+                possible_paths.append(
+                    os.path.join(db_root_dir, db_name, f"{db_name}.sqlite")
+                )
+            
+            # 2. 尝试项目相对路径（基于当前文件位置）
+            # 假设数据库在项目根目录的 data/dev_databases 下
+            current_file = Path(__file__).resolve()
+            project_root = current_file.parent.parent.parent.parent  # workflows/mcts_v1/core -> 项目根目录
+            relative_path = project_root / "data" / "dev_databases" / db_name / f"{db_name}.sqlite"
+            possible_paths.append(str(relative_path))
+            
+            # 查找第一个存在的路径
             self.db_path = None
             for path in possible_paths:
                 if os.path.exists(path):
@@ -26,8 +59,11 @@ class DatabaseConnector:
                     break
             
             if self.db_path is None:
-                # 如果所有路径都不存在，使用第一个作为默认路径
-                self.db_path = possible_paths[0]
+                # 如果所有路径都不存在，优先使用环境变量或相对路径
+                if db_root_dir:
+                    self.db_path = os.path.join(db_root_dir, db_name, f"{db_name}.sqlite")
+                else:
+                    self.db_path = str(relative_path)
         
         self.connection = None
         

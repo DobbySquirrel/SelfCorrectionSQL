@@ -19,14 +19,15 @@ from typing import Dict, List, Optional, Tuple, Any, Set
 from pathlib import Path
 from .core.mcts_tree import MCTSTree
 from .core.mcts_node import MCTSNode
+from .core.database_connector import DatabaseConnector
 from .agents.cte_generator import CTEGenerator
 from .agents.complete_sql_generator import CompleteSQLGenerator
 from .agents.sql_executor import SQLExecutor
 from .utils.mcts_helpers import MCTSUtils
-from .utils.sql_exec_helpers import execute_sqls_parallel
-from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode, build_strategy_selection_prompt, extract_strategy_from_json
-from core.database_connector import DatabaseConnector
-from .utils.agent_helpers import AgentHelpers
+from .utils.sql_result_processor import SQLResultProcessor
+from .utils.sql_selector import SQLSelector
+from .utils.cte_processor import CTEProcessor
+from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
 import time as _time_for_timing
 
 class MCTSWorkflow:
@@ -44,7 +45,6 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.helpers = AgentHelpers()
         self.rollouts_per_iteration = 6  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         # 基于分析结果优化：超过7层成功率显著下降（r=-0.329）
@@ -102,6 +102,14 @@ class MCTSWorkflow:
             'db_exec_s': 0.0,
             'rollout_count': 0,
         }
+        
+        # 初始化CTE处理器（在超时配置和计时统计设置之后）
+        self.cte_processor = CTEProcessor(
+            sql_executor=self.sql_executor,
+            cte_probe_timeout_s=self.cte_probe_timeout_s,
+            max_workers=self.max_workers,
+            timing_dict=self._timing
+        )
         
         # 策略模式配置
         if strategy_mode:
@@ -178,8 +186,8 @@ class MCTSWorkflow:
             if rollout == 0 and quick_reward >= 1.0:  # 第一个CTE rollout完成后检查
                 print(f"\n[提前终止检查] quick_rollout奖励为1.0，检查与rollout_1的结果一致性...")
                 # 比较quick_rollout和rollout_1的执行结果签名
-                quick_best_sig = self._get_best_result_signature(quick_stats)
-                rollout_1_best_sig = self._get_best_result_signature(rollout_stats)
+                quick_best_sig = MCTSUtils.get_best_result_signature(quick_stats)
+                rollout_1_best_sig = MCTSUtils.get_best_result_signature(rollout_stats)
                 
                 print(f"[提前终止检查] quick_rollout最佳签名: {quick_best_sig[:50] if quick_best_sig else 'None'}...")
                 print(f"[提前终止检查] rollout_1最佳签名:    {rollout_1_best_sig[:50] if rollout_1_best_sig else 'None'}...")
@@ -210,7 +218,7 @@ class MCTSWorkflow:
 
         # 使用奖励优先策略选择最佳 SQL（优先选择最高奖励的rollout的SQL）
         print("\n[Strategy] 使用奖励优先策略选择最佳 SQL（优先选择最高奖励的rollout）")
-        optimal_sql = self._select_sql_by_robust_path(rollout_stats_list=rollout_stats_list)
+        optimal_sql = SQLSelector.select_by_highest_reward(rollout_stats_list)
         
         if not optimal_sql:
             print("[Strategy] ⚠️ 混合策略返回空")
@@ -228,23 +236,6 @@ class MCTSWorkflow:
         """选择节点（UCB1算法）"""
         return self.mcts_tree.select_node(self.exploration_constant)
     
-    def _get_best_result_signature(self, rollout_stats: Dict[str, Any]) -> Optional[str]:
-        """
-        从rollout统计信息中提取最佳结果签名（出现次数最多的签名）
-        
-        Args:
-            rollout_stats: rollout的统计信息字典
-            
-        Returns:
-            最佳结果签名，如果没有有效结果则返回None
-        """
-        result_buckets = rollout_stats.get('result_buckets', {})
-        if not result_buckets:
-            return None
-        
-        # 找到出现次数最多的签名
-        best_signature = max(result_buckets.keys(), key=lambda k: result_buckets[k])
-        return best_signature
     
     def _quick_path_rollout(self, root_node: MCTSNode) -> Tuple[float, Optional[str], Dict[str, Any]]:
         """
@@ -286,32 +277,17 @@ class MCTSWorkflow:
             }
         
         print(f"[快速路径] 生成了 {len(sql_variants)} 个SQL变体")
-        print(f"[快速路径] 正在并行执行 {len(sql_variants)} 个SQL（超时={self.sql_timeout_s}s，最大并行数={self.max_workers}）...")
         
-        # 并行执行所有SQL并收集结果
-        execution_results = []
-        exec_start = _time_for_timing.time()
-        parallel_results = execute_sqls_parallel(self.db_connector, sql_variants, timeout_s=self.sql_timeout_s, max_workers=self.max_workers)
-        exec_elapsed = _time_for_timing.time() - exec_start
+        # 使用工具类执行SQL并处理结果
+        execution_results, exec_elapsed, timeout_count = SQLResultProcessor.execute_and_process_sqls(
+            self.db_connector,
+            sql_variants,
+            self.sql_timeout_s,
+            self.max_workers,
+            context_prefix="[快速路径]"
+        )
         # 记录数据库执行耗时
         self._timing['db_exec_s'] += exec_elapsed
-        
-        timeout_count = 0
-        for (result, error) in parallel_results:
-            if result is not None and not error:
-                execution_results.append({'valid': True, 'query_result': result})
-            else:
-                error_msg = str(error) if error else 'unknown error'
-                execution_results.append({'valid': False, 'error': error_msg})
-                # 检查是否为超时错误
-                error_lower = error_msg.lower()
-                if '超时' in error_msg or 'timeout' in error_lower or 'timed out' in error_lower:
-                    timeout_count += 1
-        
-        if timeout_count > 0:
-            print(f"[快速路径] ⚠️ 警告：{timeout_count}/{len(sql_variants)} 个SQL执行超时（总耗时 {exec_elapsed:.2f}s）")
-        else:
-            print(f"[快速路径] SQL执行完成（总耗时 {exec_elapsed:.2f}s）")
         
         # 计算一致性奖励与分桶
         result_buckets, best_key = MCTSUtils.bucketize_valid_nonempty(execution_results)
@@ -321,16 +297,7 @@ class MCTSWorkflow:
         
         if valid_count == 0:
             # 所有SQL执行失败
-            all_sql_variants = []
-            for idx, (sql, res) in enumerate(zip(sql_variants, execution_results)):
-                sql_info = {
-                    'sql': sql,
-                    'valid': False,
-                    'error': res.get('error', 'unknown error') if res else 'unknown error',
-                    'result_signature': None,
-                    'result_row_count': 0
-                }
-                all_sql_variants.append(sql_info)
+            all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
             
             return 0.0, None, {
                 'sql_bucket_count': 0, 
@@ -348,45 +315,9 @@ class MCTSWorkflow:
                 'leaf_visit_count': 0
             }
         
-        # 建立sql与签名的映射
-        sql_with_signatures: List[Tuple[str, Optional[str]]] = []
-        signature_to_result: Dict[str, Any] = {}
-        signature_to_column_order_sqls: Dict[str, Dict[tuple, List[Tuple[str, Any]]]] = {}
-        signature_to_sql: Dict[str, str] = {}
-        
-        for sql, res in zip(sql_variants, execution_results):
-            if res.get('valid', False):
-                query_result = res.get('query_result', [])
-                try:
-                    query_result = MCTSUtils.safe_to_dict(query_result)
-                except Exception:
-                    query_result = []
-                if not isinstance(query_result, list):
-                    try:
-                        query_result = list(query_result)
-                    except Exception:
-                        query_result = []
-                if query_result and len(query_result) > 0:
-                    key = MCTSUtils.create_result_signature(res)
-                    sql_with_signatures.append((sql, key))
-                    
-                    # 提取列顺序
-                    column_order = tuple(query_result[0].keys()) if query_result and isinstance(query_result[0], dict) else tuple()
-                    
-                    if key not in signature_to_column_order_sqls:
-                        signature_to_column_order_sqls[key] = {}
-                    
-                    if column_order not in signature_to_column_order_sqls[key]:
-                        signature_to_column_order_sqls[key][column_order] = []
-                    signature_to_column_order_sqls[key][column_order].append((sql, query_result))
-                    
-                    if key not in signature_to_result:
-                        signature_to_result[key] = query_result
-                        signature_to_sql[key] = sql
-                else:
-                    sql_with_signatures.append((sql, None))
-            else:
-                sql_with_signatures.append((sql, None))
+        # 建立sql与签名的映射（使用工具类）
+        sql_with_signatures, signature_to_result, signature_to_column_order_sqls, signature_to_sql = \
+            SQLResultProcessor.build_sql_signature_mapping(sql_variants, execution_results)
         
         # 处理平票情况
         if result_buckets:
@@ -409,81 +340,17 @@ class MCTSWorkflow:
                 
                 best_key = min(tied_keys, key=get_tiebreak_score)
         
-        # 计算最高一致性（最频繁结果/总变体）
-        max_consistency = MCTSUtils.calculate_consistency_reward(result_buckets, len(sql_variants))
-        
-        # 自一致性奖励：最高一致性比例
-        reward = max_consistency
-        
-        # 如果最佳结果签名为单个0，则降低奖励（惩罚）
-        if result_buckets and best_key:
-            best_result = None
-            for res in execution_results:
-                if res.get('valid', False):
-                    if MCTSUtils.create_result_signature(res) == best_key:
-                        best_result = res.get('query_result', None)
-                        break
-            
-            if best_result is not None and self._is_single_zero_result(best_result):
-                original_reward = reward
-                reward = reward * 0.5
-                print(f"[快速路径] ⚠️ 警告：最佳结果为单个0，降低奖励 {original_reward:.4f} → {reward:.4f} (惩罚50%)")
-        
-        # 选择本次rollout的代表SQL
-        selected_sql: Optional[str] = None
-        if result_buckets:
-            if best_key in signature_to_column_order_sqls:
-                column_order_sqls = signature_to_column_order_sqls[best_key]
-                
-                # 分离结果为单个0的SQL和非单个0的SQL
-                non_zero_column_order_sqls = {}
-                zero_column_order_sqls = {}
-                
-                for col_order, sqls in column_order_sqls.items():
-                    non_zero_sqls = []
-                    zero_sqls = []
-                    for sql, query_result in sqls:
-                        if self._is_single_zero_result(query_result):
-                            zero_sqls.append((sql, query_result))
-                        else:
-                            non_zero_sqls.append((sql, query_result))
-                    
-                    if non_zero_sqls:
-                        non_zero_column_order_sqls[col_order] = non_zero_sqls
-                    if zero_sqls:
-                        zero_column_order_sqls[col_order] = zero_sqls
-                
-                candidate_column_order_sqls = non_zero_column_order_sqls if non_zero_column_order_sqls else zero_column_order_sqls
-                is_zero_result = not non_zero_column_order_sqls
-                
-                if candidate_column_order_sqls:
-                    column_order_counts = {col_order: len(sqls) for col_order, sqls in candidate_column_order_sqls.items()}
-                    max_count = max(column_order_counts.values()) if column_order_counts else 0
-                    most_common_column_orders = [col_order for col_order, count in column_order_counts.items() if count == max_count]
-                    
-                    if most_common_column_orders:
-                        best_column_order = most_common_column_orders[0]
-                        if best_column_order in candidate_column_order_sqls and candidate_column_order_sqls[best_column_order]:
-                            selected_sql = candidate_column_order_sqls[best_column_order][0][0]
-                            if is_zero_result:
-                                print(f"[快速路径] ⚠️ 警告：从桶中选择列顺序出现次数最多的SQL，但结果为单个0")
-            
-            if selected_sql is None:
-                selected_sql = signature_to_sql.get(best_key, None)
-                if selected_sql is None:
-                    for sql, sig in sql_with_signatures:
-                        if sig == best_key:
-                            selected_sql = sql
-                            break
-        
-        # 如果所有SQL结果都为空，选择第一个有效的SQL
-        if selected_sql is None and sql_variants:
-            for sql, res in zip(sql_variants, execution_results):
-                if res.get('valid', False):
-                    selected_sql = sql
-                    break
-            if selected_sql is None and len(sql_variants) > 0:
-                selected_sql = sql_variants[0]
+        # 计算奖励并选择SQL（使用工具类）
+        reward, selected_sql = SQLResultProcessor.calculate_reward_and_select_sql(
+            sql_variants,
+            execution_results,
+            result_buckets,
+            best_key,
+            signature_to_column_order_sqls,
+            signature_to_sql,
+            sql_with_signatures,
+            context_prefix="[快速路径]"
+        )
         
         # 计算最频繁结果的出现次数
         max_bucket_count = max(result_buckets.values()) if result_buckets else 0
@@ -503,31 +370,8 @@ class MCTSWorkflow:
             print("[快速路径] 一致性最高的数据库执行结果:")
             print(best_result)
         
-        # 构建所有SQL变体的详细信息
-        all_sql_variants = []
-        for idx, (sql, res) in enumerate(zip(sql_variants, execution_results)):
-            sql_info = {
-                'sql': sql,
-                'valid': res.get('valid', False),
-                'error': res.get('error', None) if not res.get('valid', False) else None,
-                'result_signature': None,
-                'result_row_count': 0
-            }
-            if res.get('valid', False):
-                query_result = res.get('query_result', [])
-                try:
-                    query_result = MCTSUtils.safe_to_dict(query_result)
-                except Exception:
-                    query_result = []
-                if not isinstance(query_result, list):
-                    try:
-                        query_result = list(query_result)
-                    except Exception:
-                        query_result = []
-                if query_result and len(query_result) > 0:
-                    sql_info['result_signature'] = MCTSUtils.create_result_signature(res)
-                    sql_info['result_row_count'] = len(query_result)
-            all_sql_variants.append(sql_info)
+        # 构建所有SQL变体的详细信息（使用工具类）
+        all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
         
         sql_stats = {
             'sql_bucket_count': sql_bucket_count,
@@ -781,8 +625,8 @@ class MCTSWorkflow:
             # 注意：不再需要从CTE中提取策略，因为策略已经单独选择
             # 旧的策略提取逻辑已移除
             
-            # 2) 去重并统计执行结果桶
-            unique_cte_variants, failed_info = self._deduplicate_cte_variants(cte_variants, current)
+            # 2) 去重并统计执行结果桶（使用CTE处理器）
+            unique_cte_variants, failed_info = self.cte_processor.deduplicate_cte_variants(cte_variants, current)
             
             # 保存当前节点生成的所有CTE桶信息（用于后续计算信息熵）
             # 格式：每个桶包含 {'cte': str, 'count': int, 'result_signature': str}
@@ -1082,7 +926,7 @@ class MCTSWorkflow:
                     children_to_create.append((child, cte_text, info, None))
                 elif exec_res and exec_res.get('valid', False):
                     # 允许基于"有效但结果为空"的候选创建子节点
-                    has_where = self._has_where_clause(cte_text)
+                    has_where = MCTSUtils.has_where_clause(cte_text)
                     
                     if not has_where:
                         # 没有WHERE子句，即使结果为空也不触发模糊匹配，直接跳过
@@ -1181,7 +1025,7 @@ class MCTSWorkflow:
                     if not qr or len(qr) == 0:
                         return False
                     # 检查是否为单0结果
-                    return not self._is_single_zero_result(qr)
+                    return not MCTSUtils.is_single_zero_result(qr)
                 
                 # 找出所有子节点的 bucket_count
                 children_with_counts = [(ch, get_bucket_count(ch)) for ch in non_end_children]
@@ -1229,7 +1073,7 @@ class MCTSWorkflow:
                         is_like_cte = 'LIKE' in cte_text.upper() or 'fuzzy_match' in cte_text.lower()
                         
                         # 检查是否非单0
-                        is_nonzero = is_valid_nonempty and not self._is_single_zero_result(exec_res.get('query_result', []))
+                        is_nonzero = is_valid_nonempty and not MCTSUtils.is_single_zero_result(exec_res.get('query_result', []))
                         
                         # 综合评分：(非空且非单0, LIKE CTE非空优先, bucket_count>=阈值, 深度惩罚, 路径长度惩罚, Q值)
                         bucket_count = get_bucket_count(child)
@@ -1304,32 +1148,17 @@ class MCTSWorkflow:
             }
         
         print(f"[模拟] 生成了 {len(sql_variants)} 个SQL变体")
-        print(f"[模拟] 正在并行执行 {len(sql_variants)} 个SQL（超时={self.sql_timeout_s}s，最大并行数={self.max_workers}）...")
         
-        # 并行执行所有SQL并收集结果
-        execution_results = []
-        exec_start = _time_for_timing.time()
-        parallel_results = execute_sqls_parallel(self.db_connector, sql_variants, timeout_s=self.sql_timeout_s, max_workers=self.max_workers)
-        exec_elapsed = _time_for_timing.time() - exec_start
+        # 使用工具类执行SQL并处理结果
+        execution_results, exec_elapsed, timeout_count = SQLResultProcessor.execute_and_process_sqls(
+            self.db_connector,
+            sql_variants,
+            self.sql_timeout_s,
+            self.max_workers,
+            context_prefix="[模拟]"
+        )
         # 记录数据库执行耗时
         self._timing['db_exec_s'] += exec_elapsed
-        
-        timeout_count = 0
-        for (result, error) in parallel_results:
-            if result is not None and not error:
-                execution_results.append({'valid': True, 'query_result': result})
-            else:
-                error_msg = str(error) if error else 'unknown error'
-                execution_results.append({'valid': False, 'error': error_msg})
-                # 检查是否为超时错误（数据库连接器返回格式：查询执行超时(XXs)）
-                error_lower = error_msg.lower()
-                if '超时' in error_msg or 'timeout' in error_lower or 'timed out' in error_lower:
-                    timeout_count += 1
-        
-        if timeout_count > 0:
-            print(f"[模拟] ⚠️ 警告：{timeout_count}/{len(sql_variants)} 个SQL执行超时（总耗时 {exec_elapsed:.2f}s）")
-        else:
-            print(f"[模拟] SQL执行完成（总耗时 {exec_elapsed:.2f}s）")
         
         # 计算一致性奖励与分桶（下沉到工具类）
         result_buckets, best_key = MCTSUtils.bucketize_valid_nonempty(execution_results)
@@ -1338,16 +1167,7 @@ class MCTSWorkflow:
         sql_bucket_count = max(result_buckets.values()) if result_buckets else 0
         if valid_count == 0:
             # 所有SQL执行失败，但仍然记录所有SQL变体信息
-            all_sql_variants = []
-            for idx, (sql, res) in enumerate(zip(sql_variants, execution_results)):
-                sql_info = {
-                    'sql': sql,
-                    'valid': False,
-                    'error': res.get('error', 'unknown error') if res else 'unknown error',
-                    'result_signature': None,
-                    'result_row_count': 0
-                }
-                all_sql_variants.append(sql_info)
+            all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
             
             return 0.0, None, {
                 'sql_bucket_count': 0, 
@@ -1358,51 +1178,9 @@ class MCTSWorkflow:
                 'error_reason': f'所有SQL执行失败：{len(sql_variants)}个SQL变体全部执行失败'
             }
 
-        # 建立sql与签名的映射（与execution_results保持顺序一致）
-        # 生成 sql_with_signatures，并排除结果为空的情况（与分桶逻辑保持一致）
-        sql_with_signatures: List[Tuple[str, Optional[str]]] = []
-        signature_to_result: Dict[str, Any] = {}  # 签名 -> 对应的结果样本
-        # 修改：为每个签名维护列顺序到SQL的映射，并统计每个列顺序的出现次数
-        signature_to_column_order_sqls: Dict[str, Dict[tuple, List[Tuple[str, Any]]]] = {}  # 签名 -> {列顺序元组: [(SQL, 查询结果), ...]}
-        # 保留旧的signature_to_sql用于向后兼容（平票时比较）
-        signature_to_sql: Dict[str, str] = {}  # 签名 -> 对应的SQL（第一个遇到的）
-        for sql, res in zip(sql_variants, execution_results):
-            if res.get('valid', False):
-                # 检查结果是否为空（与分桶逻辑保持一致）
-                query_result = res.get('query_result', [])
-                try:
-                    query_result = MCTSUtils.safe_to_dict(query_result)
-                except Exception:
-                    query_result = []
-                if not isinstance(query_result, list):
-                    try:
-                        query_result = list(query_result)
-                    except Exception:
-                        query_result = []
-                if query_result and len(query_result) > 0:
-                    key = MCTSUtils.create_result_signature(res)
-                    sql_with_signatures.append((sql, key))
-                    
-                    # 提取列顺序（从查询结果的第一行获取列名顺序）
-                    column_order = tuple(query_result[0].keys()) if query_result and isinstance(query_result[0], dict) else tuple()
-                    
-                    # 初始化签名对应的列顺序映射
-                    if key not in signature_to_column_order_sqls:
-                        signature_to_column_order_sqls[key] = {}
-                    
-                    # 将SQL和查询结果按列顺序分组
-                    if column_order not in signature_to_column_order_sqls[key]:
-                        signature_to_column_order_sqls[key][column_order] = []
-                    signature_to_column_order_sqls[key][column_order].append((sql, query_result))
-                    
-                    # 保存签名对应的结果和SQL（只保存第一个，用于平票时比较）
-                    if key not in signature_to_result:
-                        signature_to_result[key] = query_result
-                        signature_to_sql[key] = sql
-                else:
-                    sql_with_signatures.append((sql, None))  # 结果为空，不参与选择
-            else:
-                sql_with_signatures.append((sql, None))  # 执行失败，不参与选择
+        # 建立sql与签名的映射（使用工具类）
+        sql_with_signatures, signature_to_result, signature_to_column_order_sqls, signature_to_sql = \
+            SQLResultProcessor.build_sql_signature_mapping(sql_variants, execution_results)
         
         # 如果有平票（多个分桶的count相同），选择"更好"的分桶
         if result_buckets:
@@ -1425,97 +1203,18 @@ class MCTSWorkflow:
                     return (num_rows, num_cols, sql_len)
                 
                 best_key = min(tied_keys, key=get_tiebreak_score)
-        # 计算最高一致性（最频繁结果/总变体）
-        max_consistency = MCTSUtils.calculate_consistency_reward(result_buckets, len(sql_variants))
         
-        # 自一致性奖励：最高一致性比例
-        reward = max_consistency
-        
-        # 如果最佳结果签名为单个0，则降低奖励（惩罚）
-        if result_buckets and best_key:
-            # 从execution_results中找到对应的结果
-            best_result = None
-            for res in execution_results:
-                if res.get('valid', False):
-                    if MCTSUtils.create_result_signature(res) == best_key:
-                        best_result = res.get('query_result', None)
-                        break
-            
-            if best_result is not None and self._is_single_zero_result(best_result):
-                # 单个0结果的惩罚：将奖励降低到原来的50%
-                original_reward = reward
-                reward = reward * 0.5
-                print(f"[模拟] ⚠️ 警告：最佳结果为单个0，降低奖励 {original_reward:.4f} → {reward:.4f} (惩罚50%)")
-
-        # 选择本次rollout的代表SQL：对应max计数的签名（或平票时的最佳签名）
-        # 修改：在桶内选择列顺序出现次数最多的SQL，但优先排除结果为单个0的SQL
-        selected_sql: Optional[str] = None
-        if result_buckets:
-            # 从最佳签名的桶中选择列顺序出现次数最多的SQL
-            if best_key in signature_to_column_order_sqls:
-                column_order_sqls = signature_to_column_order_sqls[best_key]
-                
-                # 分离结果为单个0的SQL和非单个0的SQL
-                non_zero_column_order_sqls = {}  # 非单个0的SQL
-                zero_column_order_sqls = {}  # 单个0的SQL
-                
-                for col_order, sqls in column_order_sqls.items():
-                    non_zero_sqls = []
-                    zero_sqls = []
-                    for sql, query_result in sqls:
-                        if self._is_single_zero_result(query_result):
-                            zero_sqls.append((sql, query_result))
-                        else:
-                            non_zero_sqls.append((sql, query_result))
-                    
-                    if non_zero_sqls:
-                        non_zero_column_order_sqls[col_order] = non_zero_sqls
-                    if zero_sqls:
-                        zero_column_order_sqls[col_order] = zero_sqls
-                
-                # 优先从非单个0的SQL中选择
-                candidate_column_order_sqls = non_zero_column_order_sqls if non_zero_column_order_sqls else zero_column_order_sqls
-                is_zero_result = not non_zero_column_order_sqls
-                
-                if candidate_column_order_sqls:
-                    # 统计每个列顺序的出现次数
-                    column_order_counts = {col_order: len(sqls) for col_order, sqls in candidate_column_order_sqls.items()}
-                    # 找出出现次数最多的列顺序
-                    max_count = max(column_order_counts.values()) if column_order_counts else 0
-                    most_common_column_orders = [col_order for col_order, count in column_order_counts.items() if count == max_count]
-                    
-                    # 如果有多个列顺序出现次数相同，选择第一个（或可以添加其他平票策略）
-                    if most_common_column_orders:
-                        best_column_order = most_common_column_orders[0]
-                        # 从该列顺序对应的SQL列表中选择第一个（它们都有相同的列顺序）
-                        if best_column_order in candidate_column_order_sqls and candidate_column_order_sqls[best_column_order]:
-                            selected_sql = candidate_column_order_sqls[best_column_order][0][0]  # (sql, query_result) -> sql
-                            if is_zero_result:
-                                print(f"[模拟] ⚠️ 警告：从桶中选择列顺序出现次数最多的SQL，但结果为单个0 (列顺序出现{max_count}次，共{len(column_order_counts)}种列顺序)")
-                            else:
-                                print(f"[模拟] 从桶中选择列顺序出现次数最多的SQL (列顺序出现{max_count}次，共{len(column_order_counts)}种列顺序，已排除{sum(len(sqls) for sqls in zero_column_order_sqls.values())}个结果为单个0的SQL)")
-            
-            # 如果上面的逻辑没有找到SQL，回退到原来的逻辑
-            if selected_sql is None:
-                selected_sql = signature_to_sql.get(best_key, None)
-                # 如果还是找不到，回退到原来的逻辑
-                if selected_sql is None:
-                    for sql, sig in sql_with_signatures:
-                        if sig == best_key:
-                            selected_sql = sql
-                            break
-        
-        # 如果所有SQL结果都为空（result_buckets为空），但仍然需要选择一个SQL用于revision
-        # 选择第一个有效的SQL（即使结果为空）
-        if selected_sql is None and sql_variants:
-            # 优先选择执行成功但结果为空的SQL
-            for sql, res in zip(sql_variants, execution_results):
-                if res.get('valid', False):
-                    selected_sql = sql
-                    break
-            # 如果所有SQL都执行失败，至少选择一个SQL用于revision
-            if selected_sql is None and len(sql_variants) > 0:
-                selected_sql = sql_variants[0]
+        # 计算奖励并选择SQL（使用工具类）
+        reward, selected_sql = SQLResultProcessor.calculate_reward_and_select_sql(
+            sql_variants,
+            execution_results,
+            result_buckets,
+            best_key,
+            signature_to_column_order_sqls,
+            signature_to_sql,
+            sql_with_signatures,
+            context_prefix="[模拟]"
+        )
         
         # 计算最频繁结果的出现次数
         max_bucket_count = max(result_buckets.values()) if result_buckets else 0
@@ -1542,31 +1241,8 @@ class MCTSWorkflow:
                 leaf_node.best_simulation_sql = selected_sql
                 leaf_node.best_simulation_reward = reward
         
-        # 构建所有SQL变体的详细信息
-        all_sql_variants = []
-        for idx, (sql, res) in enumerate(zip(sql_variants, execution_results)):
-            sql_info = {
-                'sql': sql,
-                'valid': res.get('valid', False),
-                'error': res.get('error', None) if not res.get('valid', False) else None,
-                'result_signature': None,
-                'result_row_count': 0
-            }
-            if res.get('valid', False):
-                query_result = res.get('query_result', [])
-                try:
-                    query_result = MCTSUtils.safe_to_dict(query_result)
-                except Exception:
-                    query_result = []
-                if not isinstance(query_result, list):
-                    try:
-                        query_result = list(query_result)
-                    except Exception:
-                        query_result = []
-                if query_result and len(query_result) > 0:
-                    sql_info['result_signature'] = MCTSUtils.create_result_signature(res)
-                    sql_info['result_row_count'] = len(query_result)
-            all_sql_variants.append(sql_info)
+        # 构建所有SQL变体的详细信息（使用工具类）
+        all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
         
         sql_stats = {
             'sql_bucket_count': sql_bucket_count,
@@ -1631,252 +1307,7 @@ class MCTSWorkflow:
         cte_result = node.execution_results.get('cte_result', {})
         return not cte_result.get('valid', True)
     
-    def _is_single_zero_result(self, query_result: Any) -> bool:
-        """
-        检查查询结果是否为单个0值
-        
-        Args:
-            query_result: 查询结果（可能是DataFrame、列表或字典）
-            
-        Returns:
-            如果结果是单个0值返回True，否则返回False
-        """
-        try:
-            # 转换为字典列表
-            if isinstance(query_result, list):
-                result_list = query_result
-            else:
-                result_list = MCTSUtils.safe_to_dict(query_result)
-            
-            # 检查是否只有一行
-            if not result_list or len(result_list) != 1:
-                return False
-            
-            # 获取第一行
-            first_row = result_list[0]
-            if not isinstance(first_row, dict):
-                return False
-            
-            # 检查是否只有一个列
-            if len(first_row) != 1:
-                return False
-            
-            # 获取唯一的值
-            value = list(first_row.values())[0]
-            
-            # 检查值是否为0（支持int、float、字符串"0"等）
-            if value is None:
-                return False
-            
-            # 尝试转换为数字
-            try:
-                num_value = float(value)
-                # 检查是否为0（允许小的浮点误差）
-                return abs(num_value) < 1e-10
-            except (ValueError, TypeError):
-                # 如果不能转换为数字，检查字符串是否为"0"
-                return str(value).strip() == "0"
-        except Exception:
-            return False
-
-    def _has_where_clause(self, cte: str) -> bool:
-        """
-        检查CTE中是否包含WHERE子句
-        
-        Args:
-            cte: CTE文本
-            
-        Returns:
-            如果包含WHERE子句返回True，否则返回False
-        """
-        if not cte or cte == "<END>":
-            return False
-
-        # 提取CTE定义部分（去除WITH和CTE名称）
-        match = re.search(r'WITH\s+\w+\s+AS\s*\((.*?)\)', cte, re.DOTALL | re.IGNORECASE)
-        if match:
-            select_part = match.group(1).strip()
-        else:
-            # 如果没有WITH，尝试直接提取SELECT
-            select_part = cte
-        
-        # 检查是否包含WHERE关键字（需要排除字符串中的WHERE）
-        # 使用正则表达式匹配WHERE关键字，但要避免匹配字符串中的WHERE
-        # 简单方法：查找 WHERE 关键字，但要确保不在引号内
-        where_pattern = r'\bWHERE\b'
-        # 检查是否有WHERE关键字（忽略大小写）
-        if re.search(where_pattern, select_part, re.IGNORECASE):
-            # 进一步验证：确保WHERE后面有内容（不是空WHERE）
-            where_match = re.search(r'\bWHERE\s+', select_part, re.IGNORECASE)
-            if where_match:
-                # 找到WHERE后的内容，检查是否有实际条件
-                after_where = select_part[where_match.end():].strip()
-                # 移除可能的注释和空白
-                after_where = re.sub(r'--.*$', '', after_where, flags=re.MULTILINE)  # 移除单行注释
-                after_where = re.sub(r'/\*.*?\*/', '', after_where, flags=re.DOTALL)  # 移除多行注释
-                after_where = after_where.strip()
-                # 如果WHERE后有内容（不是空），返回True
-                if after_where and not after_where.startswith(';') and not after_where.startswith(')'):
-                    return True
-        return False
     
-    def _deduplicate_cte_variants(self, cte_variants: List[str], node: MCTSNode) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
-        """
-        对CTE变体进行去重/分桶
-        
-        Args:
-            cte_variants: CTE变体列表
-            node: 当前节点
-            
-        Returns:
-            (去重后的CTE列表, 失败信息列表)
-            去重后的CTE列表：每个元素包含 {'cte': str, 'execution_result': dict, 'count': int, 'variants': List[str]}
-            失败信息列表：每个元素包含 {'cte': str, 'error': str}，用于重试提示
-        """
-        if not cte_variants:
-            return [], []
-        
-        # 过滤掉 None 值（生成失败的变体）
-        cte_variants = [cte for cte in cte_variants if cte is not None]
-        if not cte_variants:
-            return [], []
-        
-        # 用于存储每个桶的代表CTE、执行结果、数量和所有变体
-        buckets = {}  # {bucket_key: {'cte': str, 'execution_result': dict, 'count': int, 'variants': List[str]}}
-        
-        overall_start = _time_for_timing.time()
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
-        # 先处理 <END>，其余放入并行
-        non_end_ctes = []
-        for cte in cte_variants:
-            if cte == "<END>":
-                if "<END>" not in buckets:
-                    buckets["<END>"] = {
-                        'cte': cte,
-                        'execution_result': None,
-                        'count': 1,
-                        'variants': [cte]
-                    }
-                else:
-                    buckets["<END>"]['count'] += 1
-            else:
-                non_end_ctes.append(cte)
-        
-        def worker(one_cte: str):
-            # 1) 构建可执行SQL
-            exec_sql = self.sql_executor.build_executable_cte_sql(node, one_cte)
-            # 检查是否已经有LIMIT（包括LIMIT 5、LIMIT 10等）
-            has_limit = re.search(r'\bLIMIT\s+\d+', exec_sql, re.IGNORECASE) is not None
-            # 如果没有LIMIT，添加LIMIT 5用于探针执行（快速检测，与prompt中的建议一致）
-            if exec_sql and not has_limit:
-                # 在最后的SELECT语句前添加LIMIT 5
-                if 'SELECT * FROM' in exec_sql.upper():
-                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', r'\1 LIMIT 5\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
-            # 2) 直接执行（不再进行自动修复）
-            # 使用较短的超时时间进行探针执行（快速检测）
-            res = self.sql_executor._execute_single_query(exec_sql, timeout_s=self.cte_probe_timeout_s)
-            cte_used = one_cte
-            # 3) 生成签名key
-            bucket_key = MCTSUtils.create_result_signature(res)
-            # 空结果/失败/超时处理：
-            # - 允许空结果继续扩展，以便在下一层使用模糊匹配（Levenshtein/pg_trgm）
-            # - 只有执行失败/超时才过滤掉
-            if bucket_key == "empty_result":
-                # 空结果允许继续，标记为特殊bucket以便后续处理
-                bucket_key = "empty_result"
-            elif bucket_key.startswith("invalid_"):
-                # 执行失败/超时：返回失败信息
-                error_msg = ""
-                if not res.get('valid', False):
-                    error_msg = res.get('error', '执行失败或超时')
-                else:
-                    error_msg = "执行失败或超时"
-                return cte_used, res, None, {'cte': cte_used, 'error': error_msg}, exec_sql
-            return cte_used, res, bucket_key, None, exec_sql
-
-        # 并行执行所有非 <END> CTE
-        _exec_t0 = _time_for_timing.time()
-        failed_info = []  # 收集失败信息
-        exec_sql_map = {}  # 存储每个CTE对应的可执行SQL，用于关系检查
-        # 统计信息
-        total_executed = 0
-        empty_result_count = 0
-        invalid_count = 0
-        valid_count = 0
-        
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(worker, c) for c in non_end_ctes]
-            for fut in as_completed(futures):
-                total_executed += 1
-                cte_used, cte_result, bucket_key, failed_item, exec_sql = fut.result()
-                # 保存可执行SQL
-                exec_sql_map[cte_used] = exec_sql
-                # 收集所有失败信息（进行去重）
-                if failed_item:
-                    # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
-                    error = failed_item.get('error', '').strip()
-                    cte = failed_item.get('cte', '').strip()
-                    if not error:
-                        error = '未知错误'
-                    
-                    # 检查是否已存在相同的错误信息
-                    if error in {item.get('error', '').strip() for item in failed_info}:
-                        # 如果已存在，比较CTE长度，保留较短的
-                        for idx, existing_item in enumerate(failed_info):
-                            if existing_item.get('error', '').strip() == error:
-                                existing_cte = existing_item.get('cte', '').strip()
-                                # 如果新的CTE更短，替换
-                                if len(cte) < len(existing_cte):
-                                    failed_info[idx] = failed_item
-                                break
-                    else:
-                        # 如果错误信息不存在，直接添加
-                        failed_info.append(failed_item)
-                
-                # 统计bucket_key类型
-                if bucket_key is None:
-                    invalid_count += 1
-                    continue
-                elif bucket_key == "empty_result":
-                    empty_result_count += 1
-                else:
-                    valid_count += 1
-                
-                if bucket_key not in buckets:
-                    buckets[bucket_key] = {
-                        'cte': cte_used,
-                        'execution_result': cte_result,
-                        'count': 1,
-                        'variants': [cte_used]
-                    }
-                else:
-                    buckets[bucket_key]['count'] += 1
-                    buckets[bucket_key]['variants'].append(cte_used)
-                    if len(cte_used) < len(buckets[bucket_key]['cte']):
-                        buckets[bucket_key]['cte'] = cte_used
-                        buckets[bucket_key]['execution_result'] = cte_result
-        
-        # 打印执行统计
-        if total_executed > 0:
-            print(f"[执行统计] 共执行 {total_executed} 个CTE: 有效 {valid_count}, 空结果 {empty_result_count}, 失败 {invalid_count}")
-        # 记录探针 SQL 执行耗时（视为 DB 执行）
-        self._timing['db_exec_s'] += (_time_for_timing.time() - _exec_t0)
-        
-        # 统计桶的类型
-        total_buckets = len(buckets)
-        end_buckets = 1 if "<END>" in buckets else 0
-        empty_result_buckets = sum(1 for k in buckets.keys() if k == "empty_result")
-        invalid_buckets = sum(1 for k in buckets.keys() if k.startswith("invalid_"))
-        valid_buckets = total_buckets - end_buckets - empty_result_buckets - invalid_buckets
-        
-        # 总是打印统计信息（即使buckets为空，也要显示原因）
-        print(f"[去重统计] 总桶数: {total_buckets} (有效: {valid_buckets}, 空结果: {empty_result_buckets}, 失败: {invalid_buckets}, <END>: {end_buckets})")
-        if total_buckets == 0:
-            print(f"[去重统计] ⚠️ 所有CTE都执行失败或被过滤，没有可用的CTE桶")
-        
-        overall_cost = _time_for_timing.time() - overall_start
-        return list(buckets.values()), failed_info
     
     def _generate_cte_variants(self, node: MCTSNode) -> List[str]:
         """生成多个CTE变体（根据配置选择串行或并行）"""
@@ -1979,56 +1410,6 @@ class MCTSWorkflow:
         return result
     
    
-    def _extract_strategy_and_clean_cte(self, cte: str) -> Tuple[Optional[str], str]:
-        """
-        从CTE文本中提取策略并清洗
-        
-        支持两种格式：
-        1. 新格式: <S1> ... ```sql ... ```
-        2. 旧格式: -- STRATEGY: S1 ... (向后兼容)
-        
-        Args:
-            cte: CTE文本，可能包含策略标签和SQL代码块
-        
-        Returns:
-            (策略字符串或None, 清洗后的CTE文本)
-        """
-        if not cte:
-            return None, cte
-        
-        cte = cte.strip()
-        
-        # 尝试解析新格式: <S1> ... ```sql ... ```
-        import re
-        strategy_pattern = r'<(S[1-4])>'
-        match = re.search(strategy_pattern, cte, re.IGNORECASE)
-        if match:
-            strategy = match.group(1).upper()
-            # 提取SQL代码块内容
-            sql_block_pattern = r'```sql\s*(.*?)\s*```'
-            sql_match = re.search(sql_block_pattern, cte, re.DOTALL | re.IGNORECASE)
-            if sql_match:
-                cleaned_cte = sql_match.group(1).strip()
-            else:
-                # 如果没有代码块，尝试提取 <S1> 之后的内容
-                cleaned_cte = cte[match.end():].strip()
-                # 移除可能的代码块标记
-                cleaned_cte = re.sub(r'^```sql\s*', '', cleaned_cte, flags=re.IGNORECASE)
-                cleaned_cte = re.sub(r'\s*```$', '', cleaned_cte, flags=re.IGNORECASE)
-            return strategy, cleaned_cte
-        
-        # 向后兼容旧格式: -- STRATEGY: S1
-        lines = cte.splitlines()
-        if lines and lines[0].strip().startswith("-- STRATEGY:"):
-            first = lines[0].strip()
-            s = first.replace("-- STRATEGY:", "").strip()
-            cleaned = "\n".join(lines[1:]).strip()
-            # 移除可能的代码块标记
-            cleaned = re.sub(r'^```sql\s*', '', cleaned, flags=re.IGNORECASE)
-            cleaned = re.sub(r'\s*```$', '', cleaned, flags=re.IGNORECASE)
-            return s, cleaned
-        
-        return None, cte
     
     def _get_final_statistics(self) -> Dict[str, Any]:
         """获取最终统计信息"""
@@ -2065,70 +1446,6 @@ class MCTSWorkflow:
         return count
     
     
-    def _select_sql_by_robust_path(self, rollout_stats_list: List[Dict[str, Any]] = None) -> str:
-        """
-        策略：选择最高奖励的rollout的SQL
-        
-        选择逻辑：
-        1. 优先选择reward最高的rollout的selected_sql
-        2. 如果reward相同，选择sql_bucket_count最大的
-        3. 如果都相同，选择第一个
-        
-        Args:
-            rollout_stats_list: 所有rollout的统计信息列表，包含reward、sql_bucket_count、selected_sql
-        
-        Returns:
-            最佳 SQL 字符串，如果找不到则返回空字符串
-        """
-        if not rollout_stats_list:
-            print("[Selection] ⚠️ 没有rollout_stats，无法选择SQL")
-            return ""
-        
-        # 使用新策略：最高奖励
-        print("[Selection] 使用策略：选择最高奖励的rollout的SQL")
-        best_rollout = None
-        max_reward = -1.0
-        max_sql_bucket = -1
-        
-        for rollout_stats in rollout_stats_list:
-            reward = rollout_stats.get('reward', 0.0)
-            sql_bucket_count = rollout_stats.get('sql_bucket_count', 0)
-            selected_sql = rollout_stats.get('selected_sql')
-            is_quick_path = rollout_stats.get('is_quick_path', False)
-            
-            # 只考虑有selected_sql的rollout
-            if not selected_sql:
-                continue
-            
-            # 优先选择reward最高的
-            if reward > max_reward:
-                max_reward = reward
-                max_sql_bucket = sql_bucket_count
-                best_rollout = rollout_stats
-            elif reward == max_reward:
-                # reward相同，选择sql_bucket_count最大的
-                if sql_bucket_count > max_sql_bucket:
-                    max_sql_bucket = sql_bucket_count
-                    best_rollout = rollout_stats
-                elif sql_bucket_count == max_sql_bucket:
-                    # reward和sql_bucket_count都相同，优先选择CTE rollout（非快速路径）
-                    current_best_is_quick = best_rollout.get('is_quick_path', False) if best_rollout else False
-                    # 如果当前最佳是quick_path，但这个不是，则替换
-                    if current_best_is_quick and not is_quick_path:
-                        best_rollout = rollout_stats
-                        print(f"[Selection] 💡 相同奖励和一致性下，优先选择CTE rollout而非quick_path")
-        
-        if best_rollout:
-            selected_sql = best_rollout.get('selected_sql')
-            if selected_sql:
-                is_quick_path = best_rollout.get('is_quick_path', False)
-                rollout_id = best_rollout.get('rollout_id', '?')
-                rollout_type = "快速路径" if is_quick_path else f"CTE Rollout {rollout_id}"
-                print(f"[Selection] ✅ 选择最高奖励的rollout的SQL (reward={max_reward:.4f}, sql_bucket_count={max_sql_bucket}, 类型={rollout_type})")
-                return selected_sql.strip()
-        
-        print("[Selection] ❌ 未找到有效的rollout（没有selected_sql），无法选择SQL")
-        return ""
     
     def set_mcts_parameters(self, rollouts_per_iteration: int = None, 
                            max_cte_nodes_per_iteration: int = None, exploration_constant: float = None, 

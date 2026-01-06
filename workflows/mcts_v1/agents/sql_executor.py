@@ -2,7 +2,7 @@
 SQL执行器智能体（轻量实现）
 """
 from typing import Dict, Any, Optional, List, Tuple
-from core.database_connector import DatabaseConnector
+from ..core.database_connector import DatabaseConnector
 import re
 import Levenshtein
 import time

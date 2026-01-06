@@ -29,10 +29,11 @@ logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
 
 
 def build_db_connector(db_name: str) -> DatabaseConnector:
-    db_path = f"/ssd/shenshuyu/work/bird/dev_20240627/dev_databases/{db_name}/{db_name}.sqlite"
-    db_connector = DatabaseConnector(db_path)
+    """构建数据库连接器（使用环境变量或相对路径，不再硬编码绝对路径）"""
+    # 直接传入数据库名称，DatabaseConnector 会自动从环境变量或相对路径查找
+    db_connector = DatabaseConnector(db_name)
     if not db_connector.connect():
-        raise RuntimeError(f"数据库连接失败: {db_path}")
+        raise RuntimeError(f"数据库连接失败: {db_connector.db_path}")
     return db_connector
 
 

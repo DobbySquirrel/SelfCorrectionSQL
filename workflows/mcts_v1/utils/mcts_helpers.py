@@ -4,7 +4,8 @@ MCTS辅助工具
 包含MCTS算法中使用的各种辅助函数
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
+import re
 
 
 class MCTSUtils:
@@ -223,3 +224,164 @@ class MCTSUtils:
         if not union:
             return 1.0
         return len(intersection) / len(union)
+    
+    @staticmethod
+    def is_single_zero_result(query_result: Any) -> bool:
+        """
+        检查查询结果是否为单个0值
+        
+        Args:
+            query_result: 查询结果（可能是DataFrame、列表或字典）
+            
+        Returns:
+            如果结果是单个0值返回True，否则返回False
+        """
+        try:
+            # 转换为字典列表
+            if isinstance(query_result, list):
+                result_list = query_result
+            else:
+                result_list = MCTSUtils.safe_to_dict(query_result)
+            
+            # 检查是否只有一行
+            if not result_list or len(result_list) != 1:
+                return False
+            
+            # 获取第一行
+            first_row = result_list[0]
+            if not isinstance(first_row, dict):
+                return False
+            
+            # 检查是否只有一个列
+            if len(first_row) != 1:
+                return False
+            
+            # 获取唯一的值
+            value = list(first_row.values())[0]
+            
+            # 检查值是否为0（支持int、float、字符串"0"等）
+            if value is None:
+                return False
+            
+            # 尝试转换为数字
+            try:
+                num_value = float(value)
+                # 检查是否为0（允许小的浮点误差）
+                return abs(num_value) < 1e-10
+            except (ValueError, TypeError):
+                # 如果不能转换为数字，检查字符串是否为"0"
+                return str(value).strip() == "0"
+        except Exception:
+            return False
+    
+    @staticmethod
+    def has_where_clause(cte: str) -> bool:
+        """
+        检查CTE中是否包含WHERE子句
+        
+        Args:
+            cte: CTE文本
+            
+        Returns:
+            如果包含WHERE子句返回True，否则返回False
+        """
+        if not cte or cte == "<END>":
+            return False
+
+        # 提取CTE定义部分（去除WITH和CTE名称）
+        match = re.search(r'WITH\s+\w+\s+AS\s*\((.*?)\)', cte, re.DOTALL | re.IGNORECASE)
+        if match:
+            select_part = match.group(1).strip()
+        else:
+            # 如果没有WITH，尝试直接提取SELECT
+            select_part = cte
+        
+        # 检查是否包含WHERE关键字（需要排除字符串中的WHERE）
+        # 使用正则表达式匹配WHERE关键字，但要避免匹配字符串中的WHERE
+        # 简单方法：查找 WHERE 关键字，但要确保不在引号内
+        where_pattern = r'\bWHERE\b'
+        # 检查是否有WHERE关键字（忽略大小写）
+        if re.search(where_pattern, select_part, re.IGNORECASE):
+            # 进一步验证：确保WHERE后面有内容（不是空WHERE）
+            where_match = re.search(r'\bWHERE\s+', select_part, re.IGNORECASE)
+            if where_match:
+                # 找到WHERE后的内容，检查是否有实际条件
+                after_where = select_part[where_match.end():].strip()
+                # 移除可能的注释和空白
+                after_where = re.sub(r'--.*$', '', after_where, flags=re.MULTILINE)  # 移除单行注释
+                after_where = re.sub(r'/\*.*?\*/', '', after_where, flags=re.DOTALL)  # 移除多行注释
+                after_where = after_where.strip()
+                # 如果WHERE后有内容（不是空），返回True
+                if after_where and not after_where.startswith(';') and not after_where.startswith(')'):
+                    return True
+        return False
+    
+    @staticmethod
+    def extract_strategy_and_clean_cte(cte: str) -> Tuple[Optional[str], str]:
+        """
+        从CTE文本中提取策略并清洗
+        
+        支持两种格式：
+        1. 新格式: <S1> ... ```sql ... ```
+        2. 旧格式: -- STRATEGY: S1 ... (向后兼容)
+        
+        Args:
+            cte: CTE文本，可能包含策略标签和SQL代码块
+        
+        Returns:
+            (策略字符串或None, 清洗后的CTE文本)
+        """
+        if not cte:
+            return None, cte
+        
+        cte = cte.strip()
+        
+        # 尝试解析新格式: <S1> ... ```sql ... ```
+        strategy_pattern = r'<(S[1-4])>'
+        match = re.search(strategy_pattern, cte, re.IGNORECASE)
+        if match:
+            strategy = match.group(1).upper()
+            # 提取SQL代码块内容
+            sql_block_pattern = r'```sql\s*(.*?)\s*```'
+            sql_match = re.search(sql_block_pattern, cte, re.DOTALL | re.IGNORECASE)
+            if sql_match:
+                cleaned_cte = sql_match.group(1).strip()
+            else:
+                # 如果没有代码块，尝试提取 <S1> 之后的内容
+                cleaned_cte = cte[match.end():].strip()
+                # 移除可能的代码块标记
+                cleaned_cte = re.sub(r'^```sql\s*', '', cleaned_cte, flags=re.IGNORECASE)
+                cleaned_cte = re.sub(r'\s*```$', '', cleaned_cte, flags=re.IGNORECASE)
+            return strategy, cleaned_cte
+        
+        # 向后兼容旧格式: -- STRATEGY: S1
+        lines = cte.splitlines()
+        if lines and lines[0].strip().startswith("-- STRATEGY:"):
+            first = lines[0].strip()
+            s = first.replace("-- STRATEGY:", "").strip()
+            cleaned = "\n".join(lines[1:]).strip()
+            # 移除可能的代码块标记
+            cleaned = re.sub(r'^```sql\s*', '', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'\s*```$', '', cleaned, flags=re.IGNORECASE)
+            return s, cleaned
+        
+        return None, cte
+    
+    @staticmethod
+    def get_best_result_signature(rollout_stats: Dict[str, Any]) -> Optional[str]:
+        """
+        从rollout统计信息中提取最佳结果签名（出现次数最多的签名）
+        
+        Args:
+            rollout_stats: rollout的统计信息字典
+            
+        Returns:
+            最佳结果签名，如果没有有效结果则返回None
+        """
+        result_buckets = rollout_stats.get('result_buckets', {})
+        if not result_buckets:
+            return None
+        
+        # 找到出现次数最多的签名
+        best_signature = max(result_buckets.keys(), key=lambda k: result_buckets[k])
+        return best_signature
