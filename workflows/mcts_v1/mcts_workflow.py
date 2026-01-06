@@ -12,8 +12,6 @@ MCTS Workflow主控制器
 """
 
 import re
-import hashlib, json
-import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 import numpy as np
@@ -25,7 +23,6 @@ from .core.mcts_node import MCTSNode
 from .agents.cte_generator import CTEGenerator
 from .agents.complete_sql_generator import CompleteSQLGenerator
 from .agents.sql_executor import SQLExecutor
-from .agents.statistics_analyzer import StatisticsAnalyzer
 from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_exec_helpers import execute_sqls_parallel
 from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
@@ -61,8 +58,7 @@ class MCTSWorkflow:
         # 基于分析结果的优化参数
         self.bucket_count_threshold = 4  # bucket_count>=4时成功率显著提高（成功案例平均4.43 vs 失败3.15）
         self.depth_penalty_start = 6  # 深度超过6层时开始应用惩罚
-        self.late_cte_weight_multiplier = 1.2  # 后期CTE（深度>=7）的评分权重倍数
-        
+
         # 从llm_config中提取multi_model_configs（如果存在config_list）
         multi_model_configs = None
         if 'config_list' in llm_config and len(llm_config['config_list']) > 1:
@@ -80,7 +76,6 @@ class MCTSWorkflow:
         self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs)
         self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs)
         self.sql_executor = SQLExecutor(db_connector)
-        self.statistics_analyzer = StatisticsAnalyzer()
         # 设置sql_executor的cte_generator（用于错误恢复）
         self.sql_executor.set_cte_generator(self.cte_generator)
         
@@ -108,8 +103,6 @@ class MCTSWorkflow:
             'db_exec_s': 0.0,
             'rollout_count': 0,
         }
-        
-        
         
         # 策略模式配置
         if strategy_mode:
@@ -546,16 +539,6 @@ class MCTSWorkflow:
             'error_reason': None
         }
         
-        # 如果sql_bucket_count为0，记录原因
-        if sql_bucket_count == 0:
-            if not sql_variants:
-                sql_stats['error_reason'] = 'SQL生成失败：未生成任何SQL变体'
-            elif valid_count == 0:
-                sql_stats['error_reason'] = f'所有SQL执行失败：{len(sql_variants)}个SQL变体全部执行失败'
-            elif not result_buckets:
-                sql_stats['error_reason'] = f'所有SQL返回空结果：{valid_count}个SQL执行成功但结果为空'
-            else:
-                sql_stats['error_reason'] = '未知原因'
         
         # 构建统计信息（快速路径没有CTE，所以相关字段为空）
         rollout_stats = {
@@ -675,36 +658,9 @@ class MCTSWorkflow:
             if not non_terminal_children:
                 break
             
-            # 基于分析结果优化：优先选择bucket_count高的节点（r=0.421，最强预测指标）
-            # 同时考虑深度惩罚和路径长度
-            def get_enhanced_ucb(child):
-                """增强的UCB计算，考虑bucket_count、深度和路径长度"""
-                base_ucb = child.get_ucb1_value(self.exploration_constant)
-                
-                # 1. Bucket Count奖励（最强预测指标，r=0.421）
-                bucket_count = child.execution_results.get('bucket_count', 0)
-                if bucket_count >= self.bucket_count_threshold:
-                    base_ucb *= 1.3  # bucket_count>=4时显著提高优先级
-                elif bucket_count > 0:
-                    base_ucb *= (1.0 + 0.1 * bucket_count)  # 线性奖励
-                
-                # 2. 深度惩罚（深度负相关，r=-0.329）
-                if child.depth > self.depth_penalty_start:
-                    depth_penalty = 0.8 ** (child.depth - self.depth_penalty_start)  # 指数衰减
-                    base_ucb *= depth_penalty
-                
-                # 3. CTE路径长度惩罚（路径长度负相关，r=-0.293）
-                # 对于有CTE的节点，depth = CTE路径长度，所以直接用depth判断
-                if child.depth >= self.max_depth:
-                    base_ucb *= 0.7  # 路径过长时降低优先级
-                elif child.depth > 4:
-                    base_ucb *= (1.0 - 0.05 * (child.depth - 4))  # 线性惩罚
-                
-                return base_ucb
-            
             best_child = max(
                 non_terminal_children,
-                key=get_enhanced_ucb
+                key=lambda child: child.get_ucb1_value(self.exploration_constant)
             )
             
             current_node = best_child
@@ -739,35 +695,9 @@ class MCTSWorkflow:
             if current.is_expanded:
                 if current.children:
                     # 所有孩子都参与 UCB 竞争，包括 terminal
-                    # 使用增强的UCB计算，考虑bucket_count、深度和路径长度
-                    def get_enhanced_ucb_expansion(child):
-                        """扩展阶段的增强UCB计算"""
-                        base_ucb = child.get_ucb1_value(self.exploration_constant)
-                        
-                        # 1. Bucket Count奖励（最强预测指标）
-                        bucket_count = child.execution_results.get('bucket_count', 0)
-                        if bucket_count >= self.bucket_count_threshold:
-                            base_ucb *= 1.3
-                        elif bucket_count > 0:
-                            base_ucb *= (1.0 + 0.1 * bucket_count)
-                        
-                        # 2. 深度惩罚
-                        if child.depth > self.depth_penalty_start:
-                            depth_penalty = 0.8 ** (child.depth - self.depth_penalty_start)
-                            base_ucb *= depth_penalty
-                        
-                        # 3. 路径长度惩罚
-                        # 对于有CTE的节点，depth = CTE路径长度，所以直接用depth判断
-                        if child.depth >= self.max_depth:
-                            base_ucb *= 0.7
-                        elif child.depth > 4:
-                            base_ucb *= (1.0 - 0.05 * (child.depth - 4))
-                        
-                        return base_ucb
-                    
                     next_child = max(
                         current.children,
-                        key=get_enhanced_ucb_expansion
+                        key=lambda child: child.get_ucb1_value(self.exploration_constant)
                     )
                     added_nodes.append(next_child)
                     current = next_child
@@ -1061,8 +991,6 @@ class MCTSWorkflow:
             # 优化：将排序和评估移到锁外，减少锁持有时间
             created_map = {}  # cte文本 -> 子节点
             first_step = (len(added_nodes) == 0)
-                
-            # 在锁外准备子节点数据（不再使用优先级排序，直接遍历）
             children_to_create = []  # 准备创建的子节点信息 [(child, cte_text, info), ...]
             for info in unique_cte_variants:
                 cte_text = info['cte']
@@ -1453,10 +1381,6 @@ class MCTSWorkflow:
                     return (num_rows, num_cols, sql_len)
                 
                 best_key = min(tied_keys, key=get_tiebreak_score)
-        
-        if result_buckets:
-            debug_hist = sorted(result_buckets.items(), key=lambda x: x[1], reverse=True)
-        
         # 计算最高一致性（最频繁结果/总变体）
         max_consistency = MCTSUtils.calculate_consistency_reward(result_buckets, len(sql_variants))
         
@@ -1609,16 +1533,6 @@ class MCTSWorkflow:
             'error_reason': None  # 如果sql_bucket_count为0，记录原因
         }
         
-        # 如果sql_bucket_count为0，记录原因
-        if sql_bucket_count == 0:
-            if not sql_variants:
-                sql_stats['error_reason'] = 'SQL生成失败：未生成任何SQL变体'
-            elif valid_count == 0:
-                sql_stats['error_reason'] = f'所有SQL执行失败：{len(sql_variants)}个SQL变体全部执行失败'
-            elif not result_buckets:
-                sql_stats['error_reason'] = f'所有SQL返回空结果：{valid_count}个SQL执行成功但结果为空'
-            else:
-                sql_stats['error_reason'] = '未知原因'
         
         return reward, selected_sql, sql_stats
     
@@ -1920,26 +1834,6 @@ class MCTSWorkflow:
         overall_cost = _time_for_timing.time() - overall_start
         return list(buckets.values()), failed_info
     
-    def _generate_multiple_sqls_with_random_schema(self, node: MCTSNode, num_variants: int = 4) -> List[str]:
-        """
-        基于CTE生成多次完整SQL，通过并行生成）
-        
-        Args:
-            node: MCTS节点
-            num_variants: 生成变体数量
-            
-        Returns:
-            SQL变体列表
-        """
-        # 使用并行生成方法
-        result = self.complete_sql_generator.generate_multiple_complete_sqls_parallel(
-            node,
-            num_variants=num_variants,
-            max_workers=self.max_workers
-        )
-        return result
-
-    
     def _generate_cte_variants(self, node: MCTSNode) -> List[str]:
         """生成多个CTE变体（根据配置选择串行或并行）"""
         # 获取策略相关参数
@@ -2097,18 +1991,6 @@ class MCTSWorkflow:
             count += self._count_nodes_recursive(child)
         return count
     
-    def _update_all_nodes_schema(self, node: MCTSNode, new_schema: str):
-        """
-        递归更新节点及其所有子节点的schema_info
-        
-        Args:
-            node: 当前节点
-            new_schema: 新的schema DDL
-        """
-        if node:
-            node.schema_info = new_schema
-            for child in node.children:
-                self._update_all_nodes_schema(child, new_schema)
     
     def _select_sql_by_robust_path(self, rollout_stats_list: List[Dict[str, Any]] = None) -> str:
         """
