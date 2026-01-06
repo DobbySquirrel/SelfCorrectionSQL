@@ -85,7 +85,8 @@ def package_sqls(sql_path, db_root_path, mode='gpt', data_mode='dev'):
             sql_ids.append(sql_id)  # 存储JSON中的键作为ID
 
     elif mode == 'gt':
-        sqls = open(sql_path + data_mode)
+        sql_file_path = os.path.join(sql_path, data_mode) if sql_path else data_mode
+        sqls = open(sql_file_path)
         sql_txt = sqls.readlines()
         # sql_txt = [sql.split('\t')[0] for sql in sql_txt]
         for idx, sql_str in enumerate(sql_txt):
