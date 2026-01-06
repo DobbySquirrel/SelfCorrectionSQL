@@ -54,6 +54,13 @@ wget https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip
 unzip dev.zip
 ```
 
+### 本地模型部署
+
+```bash
+CUDA_VISIBLE_DEVICES=2,3 python -m vllm.entrypoints.openai.api_server --model /ssd/shenshuyu/Qwen3-8B  --served-model-name Qwen3-8B --max-model-len=8192 --port 8010 --host 0.0.0.0 --tensor-parallel-size 2
+
+```
+
 ### 项目来源
 
 本项目基于以下仓库：
