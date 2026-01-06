@@ -1,0 +1,16 @@
+# 数据处理
+pandas>=1.5.0
+numpy>=1.20.0
+
+# 进度条
+tqdm>=4.64.0
+
+# 环境变量管理
+python-dotenv>=0.19.0
+
+# LLM API客户端
+openai>=1.0.0
+
+# 字符串相似度计算
+python-Levenshtein>=0.12.0
+

@@ -38,7 +38,6 @@ __pycache__/
 .DS_Store
 Thumbs.db 
 
-data
 results
 **/__pycache__
 **/.ipynb_checkpoints
