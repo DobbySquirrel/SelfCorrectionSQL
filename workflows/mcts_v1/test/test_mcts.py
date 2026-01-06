@@ -22,7 +22,7 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from workflows.mcts_v1.mcts_workflow import MCTSWorkflow
-from core.database_connector import DatabaseConnector
+from workflows.mcts_v1.core.database_connector import DatabaseConnector
 from workflows.mcts_v1.utils.model_utils import get_llm_config, pick_model
 import logging
 logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
