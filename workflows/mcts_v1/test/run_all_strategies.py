@@ -51,10 +51,11 @@ def run_strategy(strategy_mode: str, base_args: dict, base_url: str = None):
         base_path = Path(json_out)
         json_out = str(base_path.parent / f"{base_path.stem}_{strategy_mode.lower()}{base_path.suffix}")
     
-    # 构建命令
+    # 构建命令（使用相对路径，从项目根目录运行）
+    script_path = Path(__file__).parent / "test_single_mcts.py"
     cmd = [
         sys.executable,
-        "/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_single_mcts.py",
+        str(script_path),
         "--ppl_file", base_args['ppl_file'],
         "--strategy_mode", strategy_mode,
     ]

@@ -550,85 +550,56 @@ if __name__ == "__main__":
     main()
 
 
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single.json   --qid 25   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --parallel_workers 5
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set_error.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_04_error.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_04_error.json --parallel_workers 5
-
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6all.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single.json   --qid 25   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --parallel_workers 5 --multi_base_urls "http://localhost:8011/v1,http://localhost:8009/v1"
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py  --max_workers 10 --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6all.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6all_stat.json    --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --parallel_workers 5 --multi_base_urls "http://localhost:8011/v1"
-
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --max_workers 5 --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set_error.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6_night.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6_night_stat.json    --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --parallel_workers 5 --multi_base_urls "http://localhost:8012/v1"
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --max_workers 5 --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set_error.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_5_night.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_5_night_stat.json    --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json  --parallel_workers 5 --multi_base_urls "http://localhost:8012/v1"
-# python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_bc_parallel_rollout_dev.py   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set_error.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/11_27_error.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/11_27_error.json  --parallel_workers 1 --max_workers 4
-
-
-# # - 使用8011和8012两个端口，更大的并行参数
-#nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
+# 使用示例（从项目根目录运行，使用相对路径）
+# 
+# 基本用法：
+# python workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file data/subset_ppl_dev_python.json \
+#   --sql_out workflows/mcts_v1/test/out/test_single.txt \
+#   --json_out workflows/mcts_v1/test/out/test_single.json \
+#   --qid 25 \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5
+#
+# 多模型并行：
+# python workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file data/subset_ppl_dev_python.json \
+#   --sql_out workflows/mcts_v1/test/out/12_6all.txt \
+#   --json_out workflows/mcts_v1/test/out/test_single.json \
+#   --qid 25 \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5 \
+#   --multi_base_urls "http://localhost:8011/v1,http://localhost:8009/v1"
+#
+# 后台运行示例：
+# nohup python workflows/mcts_v1/test/test_mcts.py \
 #   --max_workers 10 \
-#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.json \
-#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --ppl_file data/subset_ppl_dev_python.json \
+#   --sql_out workflows/mcts_v1/test/out/12_11.txt \
+#   --json_out workflows/mcts_v1/test/out/12_11.json \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
 #   --parallel_workers 15 \
 #   --multi_base_urls "http://localhost:8009/v1,http://localhost:8011/v1,http://localhost:8012/v1" \
-#   --max_cte_nodes 15
-#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.log 2>&1 &
-
-# # 实验2（不扩大）- 使用8010端口，适中的并行参数
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
-#   --max_workers 5 \
-#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6_night_small.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6_night_small_stat.json \
-#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
-#   --parallel_workers 10 \
-#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8011/v1,http://localhost:8012/v1" \
-#   --max_cte_nodes 5
-#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_6_night_small.log 2>&1 &
-
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
-#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
+#   --max_cte_nodes 15 \
+#   > workflows/mcts_v1/test/out/12_11.log 2>&1 &
+#
+# 多个问题ID测试：
+# python workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file data/subset_ppl_dev_python.json \
 #   --qids "81,287,479" \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q81_287_479_sql.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q81_287_479_result.json \
-#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --sql_out workflows/mcts_v1/test/out/test_q81_287_479_sql.txt \
+#   --json_out workflows/mcts_v1/test/out/test_q81_287_479_result.json \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
 #   --parallel_workers 5 \
 #   --max_workers 1 \
-#  --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1"
-#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q81_287_479_result.log 2>&1 &
-
-# 单条测试
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py --max_workers 10 --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json --qids "98,347,690,847,864,1158,1268,1527" --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_sql.txt --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_result.json --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1,http://localhost:8011/v1" > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_result.log 2>&1
-
-
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py   --max_workers 10   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.txt   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.json   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json   --parallel_workers 15   --multi_base_urls "http://localhost:8009/v1,http://localhost:8011/v1,http://localhost:8012/v1,http://localhost:8011/v1"   --max_cte_nodes 15 > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/12_11.log 2>&1 &
-
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
-#     --max_workers 10 \
-#     --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#     --qids "98,347,690,847,864,1158,1268,1527" \
-#     --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_sql.txt \
-#     --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_result.json \
-#     --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
-#     --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1,http://localhost:8011/v1" \
-#     > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_q98_347_690_847_864_1158_1268_1527_result.log 2>&1 &
-
-
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
-#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy_result.json \
-#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
+#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1"
+#
+# 策略模式测试：
+# python workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file data/subset_ppl_dev_python.json \
+#   --sql_out workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
+#   --json_out workflows/mcts_v1/test/out/1_6_test_no_strategy_result.json \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
 #   --parallel_workers 5 \
 #   --strategy_mode NONE \
-#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
-#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_no_strategy.log 2>&1 &
-
-# nohup python /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/test_mcts.py \
-#   --ppl_file /home/shenshuyu/SQL_tool_multiAgent/data/subset_ppl_dev_python.json \
-#   --sql_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
-#   --json_out /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy_result.json \
-#   --gold_file /home/shenshuyu/SQL_tool_multiAgent/data/sub_sampled_bird_dev_set.json \
-#   --parallel_workers 5 \
-#   --strategy_mode LLM_PICK_ONCE \
-#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
-#   > /home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &
+#   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1"
