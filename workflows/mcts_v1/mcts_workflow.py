@@ -45,13 +45,13 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration = 6  # 从6增加到10，让visit_count更好地反映节点质量
+        self.rollouts_per_iteration = 8  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 5  # 每次扩展节点时生成的CTE变体数量
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
         # 范围：5-8个，根据rollouts_per_iteration动态调整
-        self.num_sql_variants = 5  # 每个rollout末尾生成的SQL变体数量
+        self.num_sql_variants = 10  # 每个rollout末尾生成的SQL变体数量
         
         # 基于分析结果的优化参数
         self.bucket_count_threshold = 4  # bucket_count>=4时成功率显著提高（成功案例平均4.43 vs 失败3.15）
@@ -89,7 +89,7 @@ class MCTSWorkflow:
         
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
-        self.cte_probe_timeout_s = 10  # CTE探针执行超时（较短，用于快速检测）
+        self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         # 分阶段计时统计
@@ -1221,28 +1221,4 @@ class MCTSWorkflow:
         for child in node.children:
             count += self._count_nodes_recursive(child)
         return count
-    
-    
-    
-    def set_mcts_parameters(self, rollouts_per_iteration: int = None, 
-                           max_cte_nodes_per_iteration: int = None, exploration_constant: float = None, 
-                           sql_timeout_s: float = None, strike_threshold: int = None):
-        """
-        设置MCTS超参数
-        
-        Args:
-            rollouts_per_iteration: 每次迭代的rollout数量
-            max_cte_nodes_per_iteration: 每次迭代生成的CTE变体数量
-            exploration_constant: UCB探索常数
-            sql_timeout_s: SQL执行超时时间（秒）
-            strike_threshold: 动态剪枝的strike阈值（默认3）
-        """
-        if rollouts_per_iteration is not None:
-            self.rollouts_per_iteration = rollouts_per_iteration
-        if max_cte_nodes_per_iteration is not None:
-            self.max_cte_nodes_per_iteration = max_cte_nodes_per_iteration
-        if exploration_constant is not None:
-            self.exploration_constant = exploration_constant
-        if sql_timeout_s is not None:
-            self.sql_timeout_s = sql_timeout_s
     

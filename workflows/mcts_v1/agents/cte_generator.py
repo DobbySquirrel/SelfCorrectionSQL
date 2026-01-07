@@ -1062,33 +1062,12 @@ The following CTEs failed during generation or execution in previous attempts. P
         # 构建用户输入
         # 优先级指导prompt（放在最显眼的位置）
         priority_guidance = """
-### [CRITICAL: INFORMATION PRIORITY HIERARCHY]
+### [CRITICAL: INFORMATION PRIORITY]
 
-**HIGHEST PRIORITY: Execution Results (Facts)**
-   - The **Preceding CTE and Results** section contains **actual execution results** from the database
-   - These are **FACTS** - what the database actually contains
-   - **ALWAYS trust execution results over Evidence/Additional context**
-   - Use the exact values, formats, and column names shown in execution results
-   - Pay special attention to the **Relevant Sample Values** section which shows actual data samples
-
-**LOWER PRIORITY: Evidence/Additional Context (Hints)**
-   - The **Additional context** section contains hints from the question/evidence
-   - These may contain **typos, formatting errors, or incorrect assumptions**
-   - **DO NOT blindly follow Evidence** - verify against execution results first
-   - If Evidence conflicts with execution results, use the values from execution results
-
-### [ACTION REQUIRED]
-
-1. **Scan the Relevant Sample Values** in the Preceding CTE Results section
-2. **Use the exact values** shown in execution results (column names, string formats, spacing, case)
-3. **Override Evidence** when it conflicts with execution results
-4. **Common errors to watch for**:
-   - Spacing variations: values with/without leading/trailing spaces
-   - Case sensitivity: uppercase vs lowercase vs mixed case
-   - Column name mismatches: different columns that might seem similar
-   - Format differences: how values are actually stored vs how they appear in the question
-
-**Remember**: Execution Results = Facts (trust these). Evidence = Hints (verify these).
+**Priority: Execution Results > Evidence**
+   - **Execution Results** (from Preceding CTE) are FACTS - use exact values, formats, column names
+   - **Evidence/Additional Context** are hints - may contain errors, verify against execution results first
+   - If conflicts occur, always trust execution results over evidence
 
 ================================================================================
 
@@ -1108,7 +1087,7 @@ The following CTEs failed during generation or execution in previous attempts. P
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1}
   - Remaining steps: {remaining_steps}. Each step processes data, ensure that information needed for subsequent steps is passed down.
-  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question, or output <END> to finish
+  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question.
 
 """
         

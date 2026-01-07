@@ -86,14 +86,6 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
             w.cte_generator.max_depth = mcts_config['max_depth']
         if 'max_cte_nodes_per_iteration' in mcts_config:
             w.max_cte_nodes_per_iteration = mcts_config['max_cte_nodes_per_iteration']
-        if 'use_master_critic' in mcts_config:
-            w.use_master_critic = mcts_config['use_master_critic']
-        if 'use_ucb_with_average_reward' in mcts_config:
-            w.use_ucb_with_average_reward = mcts_config['use_ucb_with_average_reward']
-        if 'use_late_stage_critic_only' in mcts_config:
-            w.use_late_stage_critic_only = mcts_config['use_late_stage_critic_only']
-        if 'master_pruning_threshold' in mcts_config:
-            w.master_pruning_threshold = mcts_config['master_pruning_threshold']
     
     res = w.solve(
         question=question,
@@ -389,15 +381,11 @@ def main():
                        help="策略模式：FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     args = parser.parse_args()
     
-    # MCTS配置：不使用MASTER（LLM打分），max_depth=8
+    # MCTS配置
     mcts_config = {
-        'rollouts_per_iteration': 8,
-        'max_depth': 8,
         'max_cte_nodes_per_iteration': args.max_cte_nodes,  # 从命令行参数获取
-        'use_master_critic': False,  # 不使用MASTER（LLM打分）
     }
-    print(f"max_depth=8 + max_cte_nodes_per_iteration={args.max_cte_nodes}")
-    
+
     # 解析多模型端点
     multi_base_urls = None
     if args.multi_base_urls:
