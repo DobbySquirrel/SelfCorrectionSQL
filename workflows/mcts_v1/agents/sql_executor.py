@@ -46,7 +46,7 @@ class SQLExecutor:
                 return {'valid': True, 'query_result': df.to_dict(orient='records'), 'error': None}
             
             # 如果执行失败，检查是否是列名错误，添加列名建议
-            error_msg = err if err else "未知错误"
+            error_msg = err if err else "Unknown error"
             enhanced_error = self._enhance_column_error_message(error_msg, schema_info, sql)
             return {'valid': False, 'query_result': [], 'error': enhanced_error}
         except Exception as e:
@@ -521,7 +521,8 @@ class SQLExecutor:
         构建可执行的完整CTE SQL：拼接路径上的所有历史CTE + 当前CTE，保留最后SELECT。
         自动处理<END>与空输入。
         
-        注意：current_cte 就是 node.cte，所以应该从 node.parent 开始遍历，避免重复。
+        注意：current_cte 是新生成的CTE变体，需要从 node 开始遍历（包括 node 本身），
+        因为 node 可能已经包含了前序CTE（如果是在扩展阶段）。
         """
         if not current_cte or current_cte is None:
             print(f"⚠️  build_executable_cte_sql: current_cte 为 None 或空")
@@ -529,16 +530,19 @@ class SQLExecutor:
 
         current_cte_stripped = current_cte.strip()
 
-        # 收集路径上所有历史CTE（从parent开始，因为current_cte就是node.cte）
+        # 收集路径上所有历史CTE（从当前节点开始，向上遍历到根节点）
         cte_sequence: List[str] = []
-        current_node = node.parent if node else None  # 从parent开始，避免重复收集node.cte
+        current_node = node  # 从当前节点开始，因为可能包含前序CTE
         while current_node is not None:
             if getattr(current_node, 'cte', None) and current_node.cte != "" and current_node.cte != "<END>":
                 cte_sequence.insert(0, current_node.cte)
             current_node = current_node.parent
 
+        # 添加新生成的CTE（如果它不是<END>）
         if current_cte_stripped and current_cte_stripped != "<END>":
-            cte_sequence.append(current_cte_stripped)
+            # 检查是否已经在序列中（避免重复）
+            if not any(cte_sequence) or cte_sequence[-1] != current_cte_stripped:
+                cte_sequence.append(current_cte_stripped)
 
         return self.combine_cte_sequence(cte_sequence)
 

@@ -6,6 +6,13 @@ import multiprocessing as mp
 from func_timeout import func_timeout, FunctionTimedOut
 from tqdm import tqdm
 import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+# 加载 .env 文件
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
 
 
 def load_json(dir):
@@ -19,8 +26,26 @@ def result_callback(result):
 
 
 def execute_sql(predicted_sql, ground_truth, db_path):
+    # 检查 db_path 是否有效
+    if not db_path or not isinstance(db_path, str):
+        return {
+            'status': 'error',
+            'error_msg': f'invalid db_path: {db_path}',
+            'correct': 0,
+            'ground_truth_res': None
+        }
+    
+    if not os.path.exists(db_path):
+        return {
+            'status': 'error',
+            'error_msg': f'database file does not exist: {db_path}',
+            'correct': 0,
+            'ground_truth_res': None
+        }
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    ground_truth_res = None
     try:
         cursor.execute(ground_truth)
         ground_truth_res = cursor.fetchall()
@@ -42,6 +67,8 @@ def execute_sql(predicted_sql, ground_truth, db_path):
             'correct': 0,
             'ground_truth_res': ground_truth_res
         }
+    finally:
+        conn.close()
 
 
 def execute_model(predicted_sql, ground_truth, db_place, sql_id, meta_time_out):
@@ -68,7 +95,7 @@ def execute_model(predicted_sql, ground_truth, db_place, sql_id, meta_time_out):
     }
 
 
-def package_sqls(sql_path, db_root_path, mode='gpt', data_mode='dev'):
+def package_sqls(sql_path, db_root_path, mode='gpt', data_mode='dev', diff_json_path=None):
     clean_sqls = []
     db_path_list = []
     sql_ids = []  # 新增：存储SQL的ID
@@ -81,7 +108,7 @@ def package_sqls(sql_path, db_root_path, mode='gpt', data_mode='dev'):
             else:
                 sql, db_name = " ", "financial"
             clean_sqls.append(sql)
-            db_path_list.append(db_root_path + db_name + '/' + db_name + '.sqlite')
+            db_path_list.append(os.path.join(db_root_path, db_name, db_name + '.sqlite'))
             sql_ids.append(sql_id)  # 存储JSON中的键作为ID
 
     elif mode == 'gt':
@@ -89,11 +116,31 @@ def package_sqls(sql_path, db_root_path, mode='gpt', data_mode='dev'):
         sqls = open(sql_file_path)
         sql_txt = sqls.readlines()
         # sql_txt = [sql.split('\t')[0] for sql in sql_txt]
+        
+        # 如果提供了 diff_json_path，从中读取 question_id 作为 sql_ids
+        if diff_json_path and os.path.exists(diff_json_path):
+            try:
+                diff_data = json.load(open(diff_json_path, 'r'))
+                if isinstance(diff_data, list):
+                    # 按顺序提取 question_id
+                    question_ids = [str(item.get('question_id', idx)) for idx, item in enumerate(diff_data)]
+                else:
+                    question_ids = None
+            except Exception as e:
+                print(f"警告：无法从 {diff_json_path} 读取 question_id，将使用索引: {e}")
+                question_ids = None
+        else:
+            question_ids = None
+        
         for idx, sql_str in enumerate(sql_txt):
             sql, db_name = sql_str.strip().split('\t')
             clean_sqls.append(sql)
-            db_path_list.append(db_root_path + db_name + '/' + db_name + '.sqlite')
-            sql_ids.append(str(idx))  # 对于gt模式，仍使用索引作为ID
+            db_path_list.append(os.path.join(db_root_path, db_name, db_name + '.sqlite'))
+            # 如果成功读取了 question_ids，使用它；否则使用索引
+            if question_ids and idx < len(question_ids):
+                sql_ids.append(question_ids[idx])
+            else:
+                sql_ids.append(str(idx))  # 对于gt模式，使用索引作为ID
 
     return clean_sqls, db_path_list, sql_ids  # 返回SQL ID列表
 
@@ -121,7 +168,7 @@ def sort_results(list_of_dicts):
 
 
 
-def analyze_errors(results, diff_json_path, output_path, db_paths=None):
+def analyze_errors(results, diff_json_path, output_path, db_paths=None, sql_ids=None):
     contents = json.load(open(diff_json_path, 'r'))
     
     # 创建一个以question_id为键的字典
@@ -135,7 +182,7 @@ def analyze_errors(results, diff_json_path, output_path, db_paths=None):
     
     # 创建数据库路径字典（如果提供）
     db_path_dict = {}
-    if db_paths:
+    if db_paths and sql_ids:
         for sql_id, db_path in zip(sql_ids, db_paths):
             db_path_dict[sql_id] = db_path
     
@@ -204,7 +251,7 @@ def analyze_errors(results, diff_json_path, output_path, db_paths=None):
     return stats
 
 
-def compute_acc_by_diff(exec_results, diff_json_path, predicted_sql_path):
+def compute_acc_by_diff(exec_results, diff_json_path, predicted_sql_path, db_paths=None, sql_ids=None):
     # 保存完整的执行结果
 
     num_queries = len(exec_results)
@@ -251,7 +298,7 @@ def compute_acc_by_diff(exec_results, diff_json_path, predicted_sql_path):
     count_lists = [len(simple_results), len(moderate_results), len(challenging_results), num_queries]
 
     # 错误分析
-    error_stats = analyze_errors(exec_results, diff_json_path, 'error_analysis.json')
+    error_stats = analyze_errors(exec_results, diff_json_path, 'error_analysis.json', db_paths=db_paths, sql_ids=sql_ids)
     
     return simple_acc * 100, moderate_acc * 100, challenging_acc * 100, all_acc * 100, count_lists, error_stats
 
@@ -277,7 +324,7 @@ if __name__ == '__main__':
     args_parser.add_argument('--predicted_sql_path', type=str, required=True, default='Bird/')
     args_parser.add_argument('--ground_truth_path', type=str, required=True, default='Bird/dev_20240627/')
     args_parser.add_argument('--data_mode', type=str, required=True, default='dev')
-    args_parser.add_argument('--db_root_path', type=str, required=True, default='Bird/dev_20240627/dev_databases/')
+    args_parser.add_argument('--db_root_path', type=str, required=False, default=None)
     args_parser.add_argument('--num_cpus', type=int, default=1)
     args_parser.add_argument('--meta_time_out', type=float, default=30.0)
     args_parser.add_argument('--mode_gt', type=str, default='gt')
@@ -285,6 +332,17 @@ if __name__ == '__main__':
     args_parser.add_argument('--difficulty', type=str, default='simple')
     args_parser.add_argument('--diff_json_path', type=str, default='')
     args = args_parser.parse_args()
+
+    # 如果没有提供 db_root_path，尝试从环境变量读取
+    if args.db_root_path is None:
+        db_root_from_env = os.getenv('DB_ROOT_DIR')
+        if db_root_from_env:
+            args.db_root_path = db_root_from_env
+        else:
+            # 默认使用项目相对路径
+            script_dir = Path(__file__).parent
+            project_root = script_dir.parent
+            args.db_root_path = str(project_root / 'data/dev_databases')
 
     # args.predicted_sql_path = '../predict/'
     # args.ground_truth_path = '../data/'
@@ -300,7 +358,7 @@ if __name__ == '__main__':
                                           data_mode=args.data_mode)
     # generate gt sqls:·
     gt_queries, db_paths_gt, _ = package_sqls(args.ground_truth_path, args.db_root_path, mode='gt',
-                                           data_mode=args.data_mode)
+                                           data_mode=args.data_mode, diff_json_path=args.diff_json_path)
 
     query_pairs = list(zip(pred_queries, gt_queries))
     run_sqls_parallel(query_pairs, db_places=db_paths, sql_ids=sql_ids, num_cpus=args.num_cpus, meta_time_out=args.meta_time_out)
@@ -309,7 +367,7 @@ if __name__ == '__main__':
 
     print('开始计算评估指标')
     simple_acc, moderate_acc, challenging_acc, acc, count_lists, error_stats = \
-        compute_acc_by_diff(exec_result, args.diff_json_path, args.predicted_sql_path)
+        compute_acc_by_diff(exec_result, args.diff_json_path, args.predicted_sql_path, db_paths=db_paths, sql_ids=sql_ids)
     score_lists = [simple_acc, moderate_acc, challenging_acc, acc]
     print_data(score_lists, count_lists, error_stats)
     print('===========================================================================================')

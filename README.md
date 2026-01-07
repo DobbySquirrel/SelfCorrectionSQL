@@ -210,12 +210,14 @@ python score_caluation/compute_intersection.py \
 # 1. 转换 TXT 为 JSON
 python score_caluation/txt2json.py \
   --dev_set data/sub_sampled_bird_dev_set.json \
-  --txt_sqls workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
-  --output workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.json
+  --txt_sqls workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
+  --output workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.json
 
 # 2. 计算准确率
+# 注意：--ground_truth_path 是包含 gold SQL 文件的目录路径
+#      --data_mode 是 gold SQworkflows/mcts_v1/test/out/1_6_test_no_strategy_sql.json供，否则准确率计算会出错）
 python score_caluation/compute_intersection.py \
-  --straightforward_path workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.json \
+  --straightforward_path workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.json \
   --ground_truth_path data \
   --data_mode sub_sampled_dev_gold.sql \
   --diff_json_path data/sub_sampled_bird_dev_set.json

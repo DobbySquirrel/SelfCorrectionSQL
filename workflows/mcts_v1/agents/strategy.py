@@ -57,8 +57,6 @@ _STRATEGY_DESCRIPTIONS = {
 # 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
 _FULL_STRATEGY_HANDBOOK = f"""[STRATEGY HANDBOOK]
 
-{_SHARED_CONSTRAINTS}
-
 {_STRATEGY_DESCRIPTIONS['S1']}
 
 {_STRATEGY_DESCRIPTIONS['S2']}
@@ -107,7 +105,6 @@ You MUST follow strategy {s} for this rollout. Do NOT switch.
             # depth=0 时需要所有策略说明，因为模型要选择
             # 注意：这个函数返回的文本会用于策略选择阶段，不是CTE生成阶段
             return f"""
-[GLOBAL STRATEGY MODE: LLM_PICK_ONCE]
 **STRATEGY SELECTION REQUIRED** (Root Node)
 
 You MUST select ONE strategy from S1, S2, S3, or S4 based on the question and schema.

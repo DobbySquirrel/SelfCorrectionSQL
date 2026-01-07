@@ -2,6 +2,12 @@ import json
 import argparse
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
 
 def load_json(file_path):
     try:
@@ -66,7 +72,23 @@ def main():
         error_analysis_unique_name = os.path.join(save_dir, f"error_analysis_{name}.json")
         
         print(f"Running evaluation for {name}...")
-        os.system(f"python {evaluation_script} --predicted_sql_path {path} --ground_truth_path {args.ground_truth_path} --data_mode {args.data_mode} --db_root_path {args.db_root_path} --diff_json_path {args.diff_json_path}")
+        # 确保环境变量传递给子进程
+        env = os.environ.copy()
+        if args.db_root_path:
+            env['DB_ROOT_DIR'] = args.db_root_path
+        # 使用 subprocess 而不是 os.system，以便传递环境变量
+        import subprocess
+        result = subprocess.run(
+            ['python', evaluation_script,
+             '--predicted_sql_path', path,
+             '--ground_truth_path', args.ground_truth_path,
+             '--data_mode', args.data_mode,
+             '--db_root_path', args.db_root_path,
+             '--diff_json_path', args.diff_json_path],
+            env=env
+        )
+        if result.returncode != 0:
+            print(f"警告: evaluation.py 返回了非零退出码: {result.returncode}")
         
         if os.path.exists(error_analysis_default_output):
             os.system(f"mv {error_analysis_default_output} {error_analysis_unique_name}")

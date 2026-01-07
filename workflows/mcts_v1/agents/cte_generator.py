@@ -266,13 +266,13 @@ WITH final_count AS (
 * **Natural language question**: {node.question}
 * **Database schema**: {node.schema_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
-* **Preceding CTE and Results (Limit执行快速验证)**: 
+* **Preceding CTE and Results (Quick verification with LIMIT)**: 
 {preceding_cte_info}
-* **深度信息**: 
-  - 允许生成的最大步骤数: {self.max_depth}
-  - 当前是第 {current_depth + 1} 步（深度: {current_depth}）
-  - 剩余可生成步骤数: {remaining_steps}
-  - 注意：如果剩余步骤数较少，建议优先考虑生成能直接回答问题的CTE，或输出<END>结束
+* **Depth Information**: 
+  - Maximum allowed steps: {self.max_depth}
+  - Current step: {current_depth + 1} (depth: {current_depth})
+  - Remaining steps: {remaining_steps}
+  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question, or output <END> to finish
 """
         
         # 打印CTE生成的prompt（用于调试）
@@ -840,7 +840,7 @@ LIMIT 5;
                                 is_second_empty = True
         
         for idx, cte_info in enumerate(cte_path, 1):
-            formatted_info.append(f"### 步骤 {idx}:")
+            formatted_info.append(f"### Step {idx}:")
             formatted_info.append(f"```sql\n{cte_info['cte']}\n```")
             
             # 添加执行结果信息
@@ -895,7 +895,7 @@ LIMIT 5;
                     # 限制只展示前20行数据
                     total_rows = len(query_result)
                     query_result_limited = query_result[:20]
-                    formatted_info.append(f"**执行结果**: 成功返回 {total_rows} 行数据")
+                    formatted_info.append(f"**Execution Result**: Successfully returned {total_rows} rows")
                     # 只保留与问题相关的示例数据值，不再打印“结果列”和“实际数据行”
                     if len(query_result_limited) > 0:
                         columns = list(query_result_limited[0].keys())
@@ -942,7 +942,7 @@ LIMIT 5;
                             formatted_info.append("    **Relevant Sample Values**:")
                             formatted_info.extend(relevant_sample_values)
                 else:
-                    formatted_info.append("**执行结果**: 成功执行，返回空结果集")
+                    formatted_info.append("**Execution Result**: Successfully executed, returned empty result set")
                     # 只在最后一个（最近的）前序CTE有WHERE子句且返回空结果时，提示使用模糊匹配
                     if idx == len(cte_path) and last_cte_is_empty and last_cte_has_where:
                         # 使用之前已经检查好的 is_second_empty 变量
@@ -955,8 +955,8 @@ LIMIT 5;
                             print("前序CTE第一次有WHERE子句但返回空结果，提示使用模糊匹配创建新CTE(取新表名)。")
                             formatted_info.append(self._get_fuzzy_match_hint(is_second_empty=False))
             else:
-                error = exec_result.get('error', '未知错误')
-                formatted_info.append(f"**执行结果**: 执行失败 - {error}")
+                error = exec_result.get('error', 'Unknown error')
+                formatted_info.append(f"**Execution Result**: Execution failed - {error}")
             formatted_info.append("")  # 空行分隔
         
         return "\n".join(formatted_info)
@@ -997,7 +997,7 @@ LIMIT 5;
         # 检查前序CTE是否执行失败，如果失败则直接剪枝
         # 但是，如果当前节点是失败节点（is_failed=True），允许继续生成（因为失败节点的目的就是保存错误信息并继续探索）
         is_failed_node = node.execution_results.get('is_failed', False)
-        if preceding_cte_info and "执行失败" in preceding_cte_info and not is_failed_node:
+        if preceding_cte_info and "Execution failed" in preceding_cte_info and not is_failed_node:
             if should_monitor:
                 print("⚠️ 前序CTE执行失败，跳过此路径生成")
             return []
@@ -1007,9 +1007,9 @@ LIMIT 5;
         
         # 格式化已使用的CTE名称提示
         if used_cte_names:
-            used_names_str = f"**已使用的CTE名称（不能再使用）**: {', '.join(used_cte_names)}"
+            used_names_str = f"* **Used CTE Names (Cannot reuse)**: {', '.join(used_cte_names)}"
         else:
-            used_names_str = "**已使用的CTE名称**: 无"
+            used_names_str = "* **Used CTE Names**: None"
         
         # 使用多个temperature值增加多样性
         # 将变体分成多个temperature组：[0.0, 0.3, 0.6, 0.9]
@@ -1033,28 +1033,28 @@ LIMIT 5;
                 if isinstance(item, dict):
                     # 新格式：包含CTE和错误信息
                     cte = item.get('cte', '').strip()
-                    error = item.get('error', '执行失败或超时')
+                    error = item.get('error', 'Execution failed or timeout')
                     # 过滤掉无效的重复命名错误
                     if error and error.lower().find('duplicate with table name') != -1:
                         continue
                     # 如果CTE不为空，显示CTE和错误；如果CTE为空，只显示错误
                     if cte:
-                        failed_items.append(f"```sql\n{cte}\n```\n错误信息: {error}")
+                        failed_items.append(f"```sql\n{cte}\n```\nError: {error}")
                     else:
                         # CTE为空，只显示错误信息（可能是失败节点的汇总错误）
-                        failed_items.append(f"错误信息: {error}")
+                        failed_items.append(f"Error: {error}")
                 else:
                     # 旧格式：只有CTE文本
                     cte_text = str(item).strip()
                     if cte_text:
-                        failed_items.append(f"```sql\n{cte_text}\n```\n错误信息: 执行失败或超时")
+                        failed_items.append(f"```sql\n{cte_text}\n```\nError: Execution failed or timeout")
                     else:
-                        failed_items.append(f"错误信息: 执行失败或超时")
+                        failed_items.append(f"Error: Execution failed or timeout")
             
             failed_list = "\n\n".join(failed_items)
             failed_attempts_section = f"""
-* **之前的失败尝试（请避免生成的CTE）**:
-以下CTE在之前的尝试中生成失败或执行失败，请避免生成类似的CTE：
+* **Previous Failed Attempts (Please avoid generating similar CTEs)**:
+The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
 {failed_list}
 
 """
@@ -1102,13 +1102,13 @@ LIMIT 5;
 
 {priority_guidance}
 
-* **Preceding CTE and Results (Limit执行快速验证)**: {preceding_cte_info}
+* **Preceding CTE and Results (Quick verification with LIMIT)**: {preceding_cte_info}
 * {used_names_str}
-{failed_attempts_section}* **深度信息**: 
-  - 允许生成的最大步骤数: {self.max_depth}
-  - 当前是第 {current_depth + 1} 步
-  - 剩余可生成步骤数: {remaining_steps} 每一步都在处理数据，要确保后续步骤需要的信息都被传递下去.
-  - 注意：如果剩余步骤数较少，建议优先考虑生成能直接回答问题的CTE，或输出<END>结束
+{failed_attempts_section}* **Depth Information**: 
+  - Maximum allowed steps: {self.max_depth}
+  - Current step: {current_depth + 1}
+  - Remaining steps: {remaining_steps}. Each step processes data, ensure that information needed for subsequent steps is passed down.
+  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question, or output <END> to finish
 
 """
         
@@ -1189,32 +1189,6 @@ LIMIT 5;
                         cte = self._extract_cte_from_response(content)
                         if cte:
                             group_ctes.append(cte)
-                        else:
-                            # 调试：记录提取失败的原因
-                            if should_monitor:
-                                print(f"[CTE生成] ⚠️ temperature={temperature}, choice#{idx} 提取失败")
-                                print(f"  响应长度: {len(content)} 字符")
-                                print(f"  完整原始响应（逐行打印，确保不被截断）:")
-                                print(f"  {'='*80}")
-                                # 逐行打印，确保完整输出
-                                for line_num, line in enumerate(content.split('\n'), 1):
-                                    print(f"  [{line_num:4d}] {line}")
-                                print(f"  {'='*80}")
-                                # 检查是否包含WITH
-                                has_with = 'WITH' in content.upper()
-                                has_end = '<END>' in content
-                                print(f"  包含WITH: {has_with}, 包含<END>: {has_end}")
-                                # 尝试查找可能的SQL代码块
-                                if '```' in content:
-                                    print(f"  包含代码块标记: 是")
-                                    # 尝试提取所有代码块
-                                    code_blocks = re.findall(r'```(?:sql)?\s*(.*?)\s*```', content, re.DOTALL)
-                                    if code_blocks:
-                                        print(f"  找到 {len(code_blocks)} 个代码块:")
-                                        for i, block in enumerate(code_blocks, 1):
-                                            print(f"    代码块 {i}: {block[:100]}...")
-                                else:
-                                    print(f"  包含代码块标记: 否")
                     return group_ctes
                 except Exception as e:
                     if should_monitor:
