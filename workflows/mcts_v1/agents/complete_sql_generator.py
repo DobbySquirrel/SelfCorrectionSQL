@@ -256,64 +256,6 @@ class CompleteSQLGenerator:
         
         return "\n".join(formatted_info)
     
-    def generate_complete_sql(self, node, schema_info=None, temperature=0.7) -> str:
-        """
-        基于CTE生成完整SQL
-        
-        Args:
-            node: MCTS节点
-            schema_info: 可选的schema信息（用于随机打乱）
-            temperature: 生成温度
-            
-        Returns:
-            完整的SQL查询
-        """
-        # 每次生成前重新设置agent以应用新的temperature
-        self.setup_agent(temperature)
-        
-        # 通过node.parent向上追溯获取前序CTE信息（包括当前节点的CTE）
-        preceding_cte_info = self._get_preceding_cte_info(node)
-        
-        # 使用传入的schema_info或节点的schema_info
-        used_schema_info = schema_info if schema_info else node.schema_info
-        
-        # 构建用户输入
-        # 如果additional_context不为空，更强调其重要性
-        additional_context_section = ""
-        if node.additional_context and node.additional_context.strip():
-            additional_context_section = f"""
-**⚠️ CRITICAL Additional Context**: 
-{node.additional_context}
-
-Contains essential filtering conditions that MUST be applied, though syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results.
-"""
-        
-        user_input = f"""
-**Natural language question**: {node.question}
-
-**Database schema**: {used_schema_info}
-
-**Existing CTE and Results**: 
-{preceding_cte_info}
-{additional_context_section}
-Please generate a complete SQL query based on the **Natural language question**. /no_think
-"""
-
-        # 使用智能体生成完整SQL
-        messages = [
-            {
-                "role": "user",
-                "content": user_input
-            }
-        ]
-
-        response = self.sql_agent.generate_reply(messages)
-        
-        # 提取SQL代码
-        sql = self._extract_sql_from_response(response)
-
-        return sql
-    
     def generate_multiple_complete_sqls_parallel(self, node, num_variants: int = 3, max_workers: int = 3) -> List[str]:
         """
         使用OpenAI的n参数一次性生成多个完整SQL变体（不需要并行调用）
@@ -340,15 +282,13 @@ Please generate a complete SQL query based on the **Natural language question**.
         
         # 构建用户输入
         user_input = f"""
+Please generate a complete SQL query
 **Natural language question**: {node.question}
 **Database schema**: {node.schema_info}
 **Additional context**: {node.additional_context} (Syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 
 **Existing CTE and Results (Quick verification with LIMIT)**: 
-{preceding_cte_info}
-
-
-Please generate a complete SQL query based on the **Natural language question**: {node.question}. /no_think
+{preceding_cte_info}/no_think
 """
         print(user_input)
         # 从llm_config中提取OpenAI配置
@@ -555,146 +495,4 @@ Please generate a complete SQL query based on the **Natural language question**:
         
         # 如果没找到SQL，返回空字符串
         return ""
-    
-    def generate_revision_sqls(
-        self,
-        question: str,
-        schema_info: str,
-        additional_context: str,
-        error_summary: str,
-        successful_cte_info: str = "None",
-        num_variants: int = 5,
-        llm_config: Dict = None
-    ) -> List[str]:
-        """
-        生成修正后的 SQL（并行生成多个变体）
-        
-        Args:
-            question: 自然语言问题
-            schema_info: 数据库模式信息
-            additional_context: 额外上下文
-            error_summary: 错误信息摘要
-            successful_cte_info: 成功的CTE路径信息（格式化的字符串）
-            num_variants: 生成变体数量
-            llm_config: LLM配置（如果提供，使用此配置；否则使用self.llm_config）
-            
-        Returns:
-            修正后的SQL列表
-        """
-        # 构建 revision prompt
-        successful_cte_section = ""
-        if successful_cte_info and successful_cte_info != "None":
-            successful_cte_section = f"""
-**✅ Successful CTE Paths (Reference for Correct Approach):**
-The following CTE paths were successfully executed and returned valid results. You can use these as reference to understand the correct approach:
-
-{successful_cte_info}
-
-Note: These successful CTE paths show what worked correctly. Use them as guidance, but ensure your final SQL query directly answers the question.
-"""
-        
-        prompt = f"""**Task Description:**
-You are an SQL database expert tasked with correcting a SQL query. A previous attempt to run queries did not yield the correct results, either due to errors in execution or because the result returned was empty or unexpected. Your role is to analyze the errors based on the provided database schema and the details of the failed executions, and then provide a corrected version of the SQL query.
-
-**Procedure:**
-1. Review Database Schema:
-   - Examine the table creation statements to understand the database structure.
-2. Analyze Query Requirements:
-   - Original Question: Consider what information the query is supposed to retrieve.
-   - Additional Context: {additional_context if additional_context else "None"}
-   - Failed SQL Queries and Errors: Review the SQL queries that were previously executed and led to errors or incorrect results.
-   - Successful CTE Paths (if available): Review the CTE paths that were successfully executed to understand the correct approach.
-3. Correct the Query: 
-   - Modify the SQL query to address the identified issues, ensuring it correctly fetches the requested data according to the database schema and query requirements.
-   - If successful CTE paths are provided, use them as reference but ensure your final SQL directly answers the question.
-
-Based on the question, table schemas, the failed queries, the execution errors, and any successful CTE paths, analyze the errors following the procedure, and try to fix the query.
-You cannot modify the database schema or the question, just output the corrected query.
-
-**Database Schema:**
-{schema_info}
-
-**Original Question:**
-{question}
-{successful_cte_section}
-**Failed SQL Queries and Execution Errors:**
-{error_summary}
-
-Please respond with the corrected SQL query in the following format:
-```sql
-
-```
-
-**Important:**
-- Ensure SQL syntax is correct and executable
-- Use exact column names from the schema (with backticks for columns with spaces/special characters)
-- Only use functions available in SQLite
-"""
-        
-        # 打印revision prompt
-        print(f"\n{'='*80}")
-        print(f"[Revision] Prompt (用于生成修正SQL):")
-        print(f"{'='*80}")
-        print(prompt)
-        print(f"{'='*80}\n")
-
-        # 使用提供的llm_config或self.llm_config
-        config_to_use = llm_config if llm_config else self.llm_config
-        
-        # 从llm_config中提取OpenAI配置
-        config = config_to_use.get('config_list', [{}])[0]
-        model = config.get('model')
-        base_url = config.get('base_url')
-        api_key = config.get('api_key')
-        
-        # 构建系统消息
-        system_message = self._get_sql_system_message()
-        
-        try:
-            # 直接使用 n=num_variants 生成修正SQL（不需要多个temperature）
-            from openai import OpenAI
-            import time
-            
-            total_start_time = time.time()
-            print(f"[Revision] 开始生成 {num_variants} 个修正SQL变体...")
-            
-            # 创建OpenAI client
-            # 不设置 timeout，使用默认值（10分钟）或 None（无限制）
-            client = OpenAI(base_url=base_url, api_key=api_key, timeout=None)
-            
-            # 直接使用 n=num_variants 生成
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,  # 使用固定temperature
-                n=num_variants  # 直接生成 num_variants 个响应
-            )
-            
-            # 提取所有SQL
-            results = []
-            for choice in response.choices:
-                content = choice.message.content
-                sql = self._extract_sql_from_response(content)
-                if sql:
-                    results.append(sql)
-            
-            total_elapsed = time.time() - total_start_time
-            print(f"[Revision] 完成！共生成 {len(results)} 个修正SQL变体，总耗时={total_elapsed:.2f}s")
-            return results
-            
-        except Exception as e:
-            print(f"[Revision] 使用n参数生成修正SQL失败: {e}")
-            # 如果失败，回退到单次调用（但只生成一个）
-            try:
-                self.setup_agent(0.6)  # 使用默认temperature
-                messages = [{"role": "user", "content": prompt}]
-                response = self.sql_agent.generate_reply(messages)
-                sql = self._extract_sql_from_response(response)
-                return [sql] if sql else []
-            except Exception as e2:
-                print(f"[Revision] 回退方案也失败: {e2}")
-                return []
   

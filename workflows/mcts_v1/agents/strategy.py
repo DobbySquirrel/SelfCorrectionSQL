@@ -51,12 +51,12 @@ _STRATEGY_DESCRIPTIONS = {
     
     "S4": """S4 Reactive:
 - Try a plausible CTE quickly; keep it simple.
-- Prefer small incremental CTEs; rely on execution feedback (even though you don't have REFINE loop here)."""
+- Prefer small incremental CTEs; rely on execution feedback."""
 }
 
 # 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
-_FULL_STRATEGY_HANDBOOK = f"""[STRATEGY HANDBOOK]
-
+_FULL_STRATEGY_HANDBOOK = f"""
+STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S1']}
 
 {_STRATEGY_DESCRIPTIONS['S2']}

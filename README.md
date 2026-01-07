@@ -126,7 +126,7 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
    --gold_file data/sub_sampled_bird_dev_set.json \
    --parallel_workers 5 \
    --strategy_mode LLM_PICK_ONCE \
-   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
+   --multi_base_urls "http://localhost:8000/v1" \
    > workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &
 ```
 

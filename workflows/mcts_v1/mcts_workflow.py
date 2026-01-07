@@ -52,7 +52,6 @@ class MCTSWorkflow:
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
         # 范围：5-8个，根据rollouts_per_iteration动态调整
         self.num_sql_variants = 10  # 每个rollout末尾生成的SQL变体数量
-        
         # 基于分析结果的优化参数
         self.bucket_count_threshold = 4  # bucket_count>=4时成功率显著提高（成功案例平均4.43 vs 失败3.15）
         self.depth_penalty_start = 6  # 深度超过6层时开始应用惩罚
@@ -1167,10 +1166,7 @@ class MCTSWorkflow:
         
         # 限制失败信息数量，避免prompt过长
         failed_attempts = failed_attempts[:5]  # 最多保留5个失败尝试
-        
-        if failed_attempts:
-            print(f"[扩展] 收集到 {len(failed_attempts)} 个历史失败尝试（来自当前节点及父节点链）")
-        
+           
         # generate_multiple_cte_variants 方法内部已经支持并行生成
         # 统一使用配置的CTE变体数量
         num_cte_variants = self.max_cte_nodes_per_iteration
@@ -1208,17 +1204,3 @@ class MCTSWorkflow:
             pass
         return tree_stats
 
-
-    def _count_nodes(self) -> int:
-            """计算树中的总节点数"""
-            if not self.mcts_tree.root:
-                return 0
-            return self._count_nodes_recursive(self.mcts_tree.root)
-    
-    def _count_nodes_recursive(self, node: MCTSNode) -> int:
-        """递归计算节点数"""
-        count = 1
-        for child in node.children:
-            count += self._count_nodes_recursive(child)
-        return count
-    
