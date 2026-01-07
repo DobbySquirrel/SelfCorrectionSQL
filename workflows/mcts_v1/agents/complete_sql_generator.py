@@ -327,8 +327,8 @@ Please generate a complete SQL query based on the **Natural language question**.
             完整SQL变体列表
         """
         # 使用多个temperature值增加多样性
-        # 将变体分成多个temperature组：[0.0, 0.3, 0.6, 0.9]
-        temperature_groups = [0.0, 0.3, 0.6, 0.9]
+        # 将变体分成多个temperature组：[0.3, 0.6, 0.9] (移除0.0，因为贪婪采样时n必须为1)
+        temperature_groups = [0.3, 0.6, 0.9]
         num_groups = len(temperature_groups)
         
         # 计算每组应该生成多少个变体
@@ -425,7 +425,7 @@ Please generate a complete SQL query based on the **Natural language question**:
                     return []
             
             # 并行执行所有temperature组
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            with ThreadPoolExecutor(max_workers=3) as executor:
                 futures = {}
                 for group_idx, temperature in enumerate(temperature_groups):
                     group_size = variants_per_group + (1 if group_idx < remainder else 0)
