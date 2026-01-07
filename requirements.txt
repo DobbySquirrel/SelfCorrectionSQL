@@ -15,3 +15,8 @@ autogen>=0.9.10
 
 # 字符串相似度计算
 Levenshtein>=0.27.1
+
+
+dotenv
+
+func_timeout

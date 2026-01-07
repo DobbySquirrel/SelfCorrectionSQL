@@ -157,6 +157,86 @@ python workflows/mcts_v1/test/run_all_strategies.py \
    --parallel_workers 5
 ```
 
+#### 简化版单 Rollout 测试（test_single_mcts.py）
+
+`test_single_mcts.py` 是简化版的测试脚本，使用 `SimpleRolloutWorkflow` 进行单次 Rollout，相比完整的 MCTS 工作流更快速、资源消耗更少。
+
+**与 test_mcts.py 的区别**：
+- `test_mcts.py`: 使用完整的 MCTS 算法，多轮迭代和选择
+- `test_single_mcts.py`: 使用简化的单 Rollout 工作流，只进行一次完整的 SQL 生成
+
+**使用示例**：
+
+```bash
+# 单样本测试
+python workflows/mcts_v1/test/test_single_mcts.py \
+  --ppl_file data/subset_ppl_dev_python.json \
+  --sql_out workflows/mcts_v1/test/out/test_single_rollout.txt \
+  --json_out workflows/mcts_v1/test/out/test_single_rollout.json \
+  --qid 25 \
+  --gold_file data/sub_sampled_bird_dev_set.json \
+  --parallel_workers 5 \
+  --multi_base_urls "http://localhost:8000/v1"
+```
+
+**多样本测试**：
+
+```bash
+python workflows/mcts_v1/test/test_single_mcts.py \
+  --ppl_file data/subset_ppl_dev_python.json \
+  --sql_out workflows/mcts_v1/test/out/test_single_rollout_all.txt \
+  --json_out workflows/mcts_v1/test/out/test_single_rollout_all.json \
+  --gold_file data/sub_sampled_bird_dev_set.json \
+  --parallel_workers 5 \
+  --max_workers 10 \
+  --max_cte_nodes 5 \
+  --max_depth 8 \
+  --num_sql_variants 5 \
+  --multi_base_urls "http://localhost:8000/v1"
+```
+
+**完整参数示例（包含所有可选参数）**：
+
+```bash
+# 完整参数运行示例
+python workflows/mcts_v1/test/test_single_mcts.py \
+  --ppl_file data/subset_ppl_dev_python.json \
+  --sql_out workflows/mcts_v1/test/out/test_complete.txt \
+  --json_out workflows/mcts_v1/test/out/test_complete.json \
+  --gold_file data/sub_sampled_bird_dev_set.json \
+  --parallel_workers 5 \
+  --max_workers 10 \
+  --max_cte_nodes 5 \
+  --max_depth 8 \
+  --num_sql_variants 5 \
+  --strategy_mode LLM_PICK_ONCE \
+  --multi_base_urls "http://localhost:8000/v1,http://localhost:8010/v1"
+```
+
+**后台运行示例 1.6**：
+
+```bash
+nohup python workflows/mcts_v1/test/test_single_mcts.py \
+  --ppl_file data/subset_ppl_dev_python.json \
+  --sql_out workflows/mcts_v1/test/out/test_background.txt \
+  --json_out workflows/mcts_v1/test/out/test_background.json \
+  --gold_file data/sub_sampled_bird_dev_set.json \
+  --parallel_workers 5 \
+  --max_workers 40 \
+  --max_cte_nodes 5 \
+  --max_depth 8 \
+  --num_sql_variants 5 \
+  --strategy_mode NONE \
+  --multi_base_urls "http://localhost:8000/v1" \
+  > workflows/mcts_v1/test/out/test_background.log 2>&1 &
+```
+
+**主要参数**：
+- `--max_cte_nodes`: 每次生成的 CTE 变体数量（默认 5）
+- `--max_depth`: CTE 链最大深度（默认 8）
+- `--num_sql_variants`: 最终生成的 SQL 变体数量（默认 5）
+- 其他参数与 `test_mcts.py` 相同
+
 ### MCTS 框架 V2
 
 开发中...
@@ -210,14 +290,14 @@ python score_caluation/compute_intersection.py \
 # 1. 转换 TXT 为 JSON
 python score_caluation/txt2json.py \
   --dev_set data/sub_sampled_bird_dev_set.json \
-  --txt_sqls workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
-  --output workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.json
+  --txt_sqls workflows/mcts_v1/test/out/1_7_test_no_strategy_sql.txt \
+  --output workflows/mcts_v1/test/out/1_7_test_no_strategy_sql.json
 
 # 2. 计算准确率
 # 注意：--ground_truth_path 是包含 gold SQL 文件的目录路径
 #      --data_mode 是 gold SQworkflows/mcts_v1/test/out/1_6_test_no_strategy_sql.json供，否则准确率计算会出错）
 python score_caluation/compute_intersection.py \
-  --straightforward_path workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.json \
+  --straightforward_path workflows/mcts_v1/test/out/1_7_test_no_strategy_sql.json \
   --ground_truth_path data \
   --data_mode sub_sampled_dev_gold.sql \
   --diff_json_path data/sub_sampled_bird_dev_set.json
@@ -242,6 +322,22 @@ python score_caluation/compute_intersection.py \
 - `--multi_base_urls`: 多个模型端点 URL，用逗号分隔
 - `--strategy_mode`: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE）
 - `--max_cte_nodes`: 每次扩展节点时生成的 CTE 变体数量（默认 15）
+
+### test_single_mcts.py 主要参数
+
+- `--ppl_file`: 样本文件路径（JSON 数组）
+- `--sql_out`: SQL 输出文件路径（TXT）
+- `--json_out`: 结果输出文件路径（JSON）
+- `--qid`: 按 question_id 精确定位并只跑该条
+- `--qids`: 多个 question_id，用逗号分隔
+- `--gold_file`: Gold SQL 文件路径（用于验证）
+- `--parallel_workers`: 工作流内部并行工作线程数（默认 5）
+- `--max_workers`: 并行处理多个问题的工作线程数（默认 1）
+- `--multi_base_urls`: 多个模型端点 URL，用逗号分隔
+- `--max_cte_nodes`: 每次生成的 CTE 变体数量（默认 5）
+- `--max_depth`: CTE 链最大深度（默认 8）
+- `--num_sql_variants`: 最终生成的 SQL 变体数量（默认 5）
+- `--strategy_mode`: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE）
 
 ## 🔗 相关链接
 

@@ -21,8 +21,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # If python-dotenv is not installed, skip
+
 from workflows.mcts_v1.single_workflow import SimpleRolloutWorkflow
-from core.database_connector import DatabaseConnector
+from workflows.mcts_v1.core.database_connector import DatabaseConnector
 from workflows.mcts_v1.utils.model_utils import get_llm_config, print_model_info, pick_model
 import logging
 logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
