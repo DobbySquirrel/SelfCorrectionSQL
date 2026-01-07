@@ -1,6 +1,13 @@
 import json
 import argparse
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
 
 def load_json(file_path):
     try:
@@ -14,14 +21,35 @@ def load_json(file_path):
         return None
 
 def main():
+    # 获取项目根目录（score_caluation 的父目录）
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    
     parser = argparse.ArgumentParser(description='计算多种SQL生成方法的交集准确率')
-    parser.add_argument('--straightforward_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/workflows/mcts_v1/test/out/test_single_rollout_llm_pick_once.json', help='straightforward方法的预测结果路径')
-    parser.add_argument('--ground_truth_path', type=str, default='/home/shenshuyu/SQL_tool_multiAgent/data/', help='ground truth路径')
+    parser.add_argument('--straightforward_path', type=str, 
+                        default=str(project_root / 'workflows/mcts_v1/test/out/test_single_rollout_llm_pick_once.json'), 
+                        help='straightforward方法的预测结果路径')
+    parser.add_argument('--ground_truth_path', type=str, 
+                        default=str(project_root / 'data'), 
+                        help='ground truth路径')
     parser.add_argument('--data_mode', type=str, default='sub_sampled_dev_gold.sql', help='数据模式')
-    parser.add_argument('--db_root_path',   type=str, default='/home/shenshuyu/RSL_SQL/RSL-SQL/database/dev_databases/', help='数据库根路径')
-    parser.add_argument('--diff_json_path', type=str, default='/home/shenshuyu/RSL_SQL/RSL-SQL/data/sub_sampled_bird_dev_set.json', help='难度分类JSON路径')
+    parser.add_argument('--db_root_path', type=str, default=None, 
+                        help='数据库根路径（如果未提供，将从环境变量DB_ROOT_DIR读取）')
+    parser.add_argument('--diff_json_path', type=str, 
+                        default=str(project_root / 'data/sub_sampled_bird_dev_set.json'), 
+                        help='难度分类JSON路径')
     args = parser.parse_args()
-    evaluation_script = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/evaluation.py"
+    
+    # 如果没有提供 db_root_path，尝试从环境变量读取
+    if args.db_root_path is None:
+        db_root_from_env = os.getenv('DB_ROOT_DIR')
+        if db_root_from_env:
+            args.db_root_path = db_root_from_env
+        else:
+            # 默认使用项目相对路径
+            args.db_root_path = str(project_root / 'data/dev_databases')
+    
+    evaluation_script = str(script_dir / "evaluation.py")
     
     # 从路径中提取文件名（不含扩展名）作为方法名，并加上_acc后缀
     straightforward_basename = os.path.splitext(os.path.basename(args.straightforward_path))[0]
@@ -40,11 +68,27 @@ def main():
         if name == method_name:
             save_dir = straightforward_dir
         else:
-            save_dir = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/"  # 默认目录
+            save_dir = str(script_dir)  # 默认目录（score_caluation目录）
         error_analysis_unique_name = os.path.join(save_dir, f"error_analysis_{name}.json")
         
         print(f"Running evaluation for {name}...")
-        os.system(f"python {evaluation_script} --predicted_sql_path {path} --ground_truth_path {args.ground_truth_path} --data_mode {args.data_mode} --db_root_path {args.db_root_path} --diff_json_path {args.diff_json_path}")
+        # 确保环境变量传递给子进程
+        env = os.environ.copy()
+        if args.db_root_path:
+            env['DB_ROOT_DIR'] = args.db_root_path
+        # 使用 subprocess 而不是 os.system，以便传递环境变量
+        import subprocess
+        result = subprocess.run(
+            ['python', evaluation_script,
+             '--predicted_sql_path', path,
+             '--ground_truth_path', args.ground_truth_path,
+             '--data_mode', args.data_mode,
+             '--db_root_path', args.db_root_path,
+             '--diff_json_path', args.diff_json_path],
+            env=env
+        )
+        if result.returncode != 0:
+            print(f"警告: evaluation.py 返回了非零退出码: {result.returncode}")
         
         if os.path.exists(error_analysis_default_output):
             os.system(f"mv {error_analysis_default_output} {error_analysis_unique_name}")
@@ -59,7 +103,7 @@ def main():
         if name == method_name:
             load_dir = straightforward_dir
         else:
-            load_dir = "/home/shenshuyu/SQL_tool_multiAgent/score_caluation/"  # 默认目录
+            load_dir = str(script_dir)  # 默认目录（score_caluation目录）
         error_analysis_filename_to_load = os.path.join(load_dir, f"error_analysis_{name}.json")
         all_error_analysis_results[name] = load_json(error_analysis_filename_to_load)
 

@@ -321,9 +321,7 @@ class MCTSUtils:
         """
         从CTE文本中提取策略并清洗
         
-        支持两种格式：
-        1. 新格式: <S1> ... ```sql ... ```
-        2. 旧格式: -- STRATEGY: S1 ... (向后兼容)
+        支持格式: <S1> ... ```sql ... ```
         
         Args:
             cte: CTE文本，可能包含策略标签和SQL代码块
@@ -336,7 +334,7 @@ class MCTSUtils:
         
         cte = cte.strip()
         
-        # 尝试解析新格式: <S1> ... ```sql ... ```
+        # 解析格式: <S1> ... ```sql ... ```
         strategy_pattern = r'<(S[1-4])>'
         match = re.search(strategy_pattern, cte, re.IGNORECASE)
         if match:
@@ -353,17 +351,6 @@ class MCTSUtils:
                 cleaned_cte = re.sub(r'^```sql\s*', '', cleaned_cte, flags=re.IGNORECASE)
                 cleaned_cte = re.sub(r'\s*```$', '', cleaned_cte, flags=re.IGNORECASE)
             return strategy, cleaned_cte
-        
-        # 向后兼容旧格式: -- STRATEGY: S1
-        lines = cte.splitlines()
-        if lines and lines[0].strip().startswith("-- STRATEGY:"):
-            first = lines[0].strip()
-            s = first.replace("-- STRATEGY:", "").strip()
-            cleaned = "\n".join(lines[1:]).strip()
-            # 移除可能的代码块标记
-            cleaned = re.sub(r'^```sql\s*', '', cleaned, flags=re.IGNORECASE)
-            cleaned = re.sub(r'\s*```$', '', cleaned, flags=re.IGNORECASE)
-            return s, cleaned
         
         return None, cte
     

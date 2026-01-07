@@ -344,7 +344,7 @@ Please generate a complete SQL query based on the **Natural language question**.
 **Database schema**: {node.schema_info}
 **Additional context**: {node.additional_context} (Syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 
-**Existing CTE and Results (Limit执行快速验证)**: 
+**Existing CTE and Results (Quick verification with LIMIT)**: 
 {preceding_cte_info}
 
 

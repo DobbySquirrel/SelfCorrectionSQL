@@ -45,14 +45,13 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration = 6  # 从6增加到10，让visit_count更好地反映节点质量
+        self.rollouts_per_iteration = 8  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
-        # 基于分析结果优化：超过7层成功率显著下降（r=-0.329）
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 5  # 每次扩展节点时生成的CTE变体数量
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
         # 范围：5-8个，根据rollouts_per_iteration动态调整
-        self.num_sql_variants = 5  # 每个rollout末尾生成的SQL变体数量
+        self.num_sql_variants = 10  # 每个rollout末尾生成的SQL变体数量
         
         # 基于分析结果的优化参数
         self.bucket_count_threshold = 4  # bucket_count>=4时成功率显著提高（成功案例平均4.43 vs 失败3.15）
@@ -90,7 +89,7 @@ class MCTSWorkflow:
         
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
-        self.cte_probe_timeout_s = 10  # CTE探针执行超时（较短，用于快速检测）
+        self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         # 分阶段计时统计
@@ -149,25 +148,11 @@ class MCTSWorkflow:
         # MCTS主循环：执行多个rollout
         solve_start_ts = _time_for_timing.time()
         
-        # 快速路径：先执行一条深度为1的rollout（直接生成完整SQL，不经过CTE）
-        # 注意：即使快速路径奖励为1，也至少执行一次CTE rollout来验证结果
-        print("\n[快速路径] 执行深度为1的快速rollout（直接生成完整SQL，跳过CTE）...")
-        quick_reward, quick_sql, quick_stats = self._quick_path_rollout(root_node)
-        quick_stats['rollout_id'] = 0  # 标记为快速路径
-        quick_stats['is_quick_path'] = True
-        
-        # 打印快速路径结果，但不直接返回（即使奖励为1.0，也要执行至少一次CTE rollout验证）
-        if quick_reward >= 1.0:
-            print(f"[快速路径] ✅ 快速路径奖励为1.0 (reward={quick_reward:.4f})")
-            print(f"[快速路径] 💡 将执行至少一次CTE rollout来验证结果（防止一致但错误的答案）")
-        else:
-            print(f"[快速路径] ⚠️ 快速路径奖励为 {quick_reward:.4f} < 1.0，继续执行完整MCTS流程")
-        
         # 从根到叶的完整探索过程
         # 包含多个rollout来探索和评估不同的路径
         
         # 串行执行 rollout，收集每个rollout的统计信息
-        rollout_stats_list = [quick_stats]  # 包含快速路径的统计信息
+        rollout_stats_list = []
         high_reward_threshold = 1  # 高奖励阈值，达到此值可提前终止
         
         # 获取evidence信息（从additional_context或question中提取）
@@ -181,37 +166,9 @@ class MCTSWorkflow:
             rollout_stats['is_quick_path'] = False
             rollout_stats_list.append(rollout_stats)
             
-            # 提前终止策略
-            # 条件1: 如果quick_rollout奖励为1，且CTE rollout_1的结果与quick_rollout一致，则选择quick_rollout结果
-            if rollout == 0 and quick_reward >= 1.0:  # 第一个CTE rollout完成后检查
-                print(f"\n[提前终止检查] quick_rollout奖励为1.0，检查与rollout_1的结果一致性...")
-                # 比较quick_rollout和rollout_1的执行结果签名
-                quick_best_sig = MCTSUtils.get_best_result_signature(quick_stats)
-                rollout_1_best_sig = MCTSUtils.get_best_result_signature(rollout_stats)
-                
-                print(f"[提前终止检查] quick_rollout最佳签名: {quick_best_sig[:50] if quick_best_sig else 'None'}...")
-                print(f"[提前终止检查] rollout_1最佳签名:    {rollout_1_best_sig[:50] if rollout_1_best_sig else 'None'}...")
-                
-                if quick_best_sig and rollout_1_best_sig and quick_best_sig == rollout_1_best_sig:
-                    print(f"[提前终止] ✅ 条件1满足：quick_rollout奖励为1.0且与rollout_1结果一致")
-                    print(f"[提前终止]    quick_rollout奖励: {quick_reward:.4f}")
-                    print(f"[提前终止]    rollout_1奖励: {reward:.4f}")
-                    print(f"[提前终止]    选择quick_rollout的结果（更简洁，无CTE），提前终止")
-                    self._timing['total_s'] = max(0.0, _time_for_timing.time() - solve_start_ts)
-                    return {
-                        'optimal_sql': quick_sql if quick_sql else "",
-                        'statistics': self._get_final_statistics(),
-                        'tree_info': self.mcts_tree.get_tree_info(),
-                        'rollout_stats': rollout_stats_list,
-                        'used_quick_path': True,  # 标记使用了快速路径
-                        'early_termination': 'quick_path_consistent'  # 标记提前终止原因
-                    }
-                else:
-                    print(f"[提前终止检查] ❌ 结果签名不一致或有空值，继续执行后续rollout")
-            
-            # 条件2: 如果CTE rollout奖励为1，提前终止
+            # 提前终止策略：如果CTE rollout奖励为1，提前终止
             if reward >= high_reward_threshold:
-                print(f"[提前终止] ✅ 条件2满足：CTE rollout奖励为1.0 (reward={reward:.4f})")
+                print(f"[提前终止] ✅ CTE rollout奖励为1.0 (reward={reward:.4f})")
                 print(f"[提前终止]    提前终止剩余rollout")
                 break
 
@@ -228,181 +185,13 @@ class MCTSWorkflow:
             'optimal_sql': optimal_sql,
             'statistics': self._get_final_statistics(),
             'tree_info': self.mcts_tree.get_tree_info(),
-            'rollout_stats': rollout_stats_list,  # 每个rollout的详细统计信息
-            'used_quick_path': False  # 标记未使用快速路径（因为继续执行了完整MCTS）
+            'rollout_stats': rollout_stats_list  # 每个rollout的详细统计信息
         }
     
     def _select_node(self) -> MCTSNode:
         """选择节点（UCB1算法）"""
         return self.mcts_tree.select_node(self.exploration_constant)
     
-    
-    def _quick_path_rollout(self, root_node: MCTSNode) -> Tuple[float, Optional[str], Dict[str, Any]]:
-        """
-        快速路径rollout：直接基于根节点生成完整SQL（不经过CTE），用于处理简单SQL
-        
-        Args:
-            root_node: 根节点
-            
-        Returns:
-            (奖励值, 选择的SQL, 统计信息字典)
-        """
-        print(f"[快速路径] 开始快速路径rollout（深度=1，直接生成完整SQL）...")
-        
-        # 直接基于根节点生成多个SQL变体（不经过CTE链）
-        _sqlgen_t0 = _time_for_timing.time()
-        sql_variants = self.complete_sql_generator.generate_multiple_complete_sqls_parallel(
-            root_node,
-            num_variants=self.num_sql_variants,
-            max_workers=self.max_workers
-        )
-        self._timing['sql_gen_s'] += (_time_for_timing.time() - _sqlgen_t0)
-        
-        if not sql_variants:
-            print(f"[快速路径] ⚠️ 未生成任何SQL变体")
-            return 0.0, None, {
-                'sql_bucket_count': 0, 
-                'sql_total_variants': 0,
-                'all_sql_variants': [],
-                'result_buckets': {},
-                'valid_count': 0,
-                'error_reason': 'SQL生成失败：未生成任何SQL变体',
-                'cte_path': [],  # 快速路径没有CTE
-                'cte_bucket_counts': [],
-                'cte_depths': [],
-                'visit_counts': [],
-                'cte_buckets_per_node': [],
-                'leaf_depth': 0,
-                'leaf_visit_count': 0
-            }
-        
-        print(f"[快速路径] 生成了 {len(sql_variants)} 个SQL变体")
-        
-        # 使用工具类执行SQL并处理结果
-        execution_results, exec_elapsed, timeout_count = SQLResultProcessor.execute_and_process_sqls(
-            self.db_connector,
-            sql_variants,
-            self.sql_timeout_s,
-            self.max_workers,
-            context_prefix="[快速路径]"
-        )
-        # 记录数据库执行耗时
-        self._timing['db_exec_s'] += exec_elapsed
-        
-        # 计算一致性奖励与分桶
-        result_buckets, best_key = MCTSUtils.bucketize_valid_nonempty(execution_results)
-        valid_count = sum(1 for r in execution_results if r.get('valid', False))
-        # 获取SQL桶数量（最大桶的计数）
-        sql_bucket_count = max(result_buckets.values()) if result_buckets else 0
-        
-        if valid_count == 0:
-            # 所有SQL执行失败
-            all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
-            
-            return 0.0, None, {
-                'sql_bucket_count': 0, 
-                'sql_total_variants': len(sql_variants),
-                'all_sql_variants': all_sql_variants,
-                'result_buckets': {},
-                'valid_count': 0,
-                'error_reason': f'所有SQL执行失败：{len(sql_variants)}个SQL变体全部执行失败',
-                'cte_path': [],
-                'cte_bucket_counts': [],
-                'cte_depths': [],
-                'visit_counts': [],
-                'cte_buckets_per_node': [],
-                'leaf_depth': 0,
-                'leaf_visit_count': 0
-            }
-        
-        # 建立sql与签名的映射（使用工具类）
-        sql_with_signatures, signature_to_result, signature_to_column_order_sqls, signature_to_sql = \
-            SQLResultProcessor.build_sql_signature_mapping(sql_variants, execution_results)
-        
-        # 处理平票情况
-        if result_buckets:
-            max_count = max(result_buckets.values())
-            tied_keys = [k for k, v in result_buckets.items() if v == max_count]
-            
-            if len(tied_keys) > 1:
-                def get_tiebreak_score(sig: str) -> Tuple[int, int, int]:
-                    """返回(行数, 列数, SQL长度)，越小越好"""
-                    res = signature_to_result.get(sig, [])
-                    sql = signature_to_sql.get(sig, "")
-                    num_rows = len(res) if isinstance(res, list) else 0
-                    num_cols = 0
-                    if res and isinstance(res, list) and len(res) > 0:
-                        first_row = res[0]
-                        if isinstance(first_row, dict):
-                            num_cols = len(first_row.keys())
-                    sql_len = len(sql)
-                    return (num_rows, num_cols, sql_len)
-                
-                best_key = min(tied_keys, key=get_tiebreak_score)
-        
-        # 计算奖励并选择SQL（使用工具类）
-        reward, selected_sql = SQLResultProcessor.calculate_reward_and_select_sql(
-            sql_variants,
-            execution_results,
-            result_buckets,
-            best_key,
-            signature_to_column_order_sqls,
-            signature_to_sql,
-            sql_with_signatures,
-            context_prefix="[快速路径]"
-        )
-        
-        # 计算最频繁结果的出现次数
-        max_bucket_count = max(result_buckets.values()) if result_buckets else 0
-        print(f"[快速路径] 奖励: {reward:.4f} (一致性: {max_bucket_count}/{len(sql_variants)}, 通过率: {valid_count}/{len(sql_variants)})")
-        
-        # 打印一致性最高的数据库执行结果
-        best_result = None
-        if result_buckets and best_key:
-            # 从本次 execution_results 里找与 best_key 匹配的那条结果
-            for res in execution_results:
-                if res.get('valid', False):
-                    if MCTSUtils.create_result_signature(res) == best_key:
-                        best_result = res.get('query_result', None)
-                        break
-
-        if best_result is not None:
-            print("[快速路径] 一致性最高的数据库执行结果:")
-            print(best_result)
-        
-        # 构建所有SQL变体的详细信息（使用工具类）
-        all_sql_variants = SQLResultProcessor.build_all_sql_variants_info(sql_variants, execution_results)
-        
-        sql_stats = {
-            'sql_bucket_count': sql_bucket_count,
-            'sql_total_variants': len(sql_variants),
-            'all_sql_variants': all_sql_variants,
-            'result_buckets': dict(result_buckets) if result_buckets else {},
-            'valid_count': valid_count,
-            'error_reason': None
-        }
-        
-        
-        # 构建统计信息（快速路径没有CTE，所以相关字段为空）
-        rollout_stats = {
-            'reward': reward,
-            'cte_path': [],  # 快速路径没有CTE
-            'cte_bucket_counts': [],
-            'cte_depths': [],
-            'visit_counts': [],
-            'cte_buckets_per_node': [],
-            'leaf_depth': 0,  # 根节点深度为0
-            'leaf_visit_count': 0,
-            'sql_bucket_count': sql_bucket_count,
-            'sql_total_variants': len(sql_variants),
-            'selected_sql': selected_sql,
-            'all_sql_variants': all_sql_variants,
-            'result_buckets': sql_stats.get('result_buckets', {}),
-            'valid_count': valid_count,
-            'error_reason': sql_stats.get('error_reason', None)
-        }
-        
-        return reward, selected_sql, rollout_stats
     
     def _execute_mcts_rollout(self) -> Tuple[float, Optional[str], Dict[str, Any]]:
         """
@@ -1285,18 +1074,6 @@ class MCTSWorkflow:
             new_q = node.q_value
             q_backup = node.q_backup
             
-            print(
-                f"  [回传] 节点#{getattr(node, 'node_id', -1)} 深度={node.depth}:"
-            )
-            print(
-                f"    访问: {old_visits} → {node.visit_count}, "
-                f"BackupRewardSum: {old_backup_sum:.3f} → {node.backup_reward_sum:.3f}, "
-                f"BackupVisits: {old_backup_visits} → {node.backup_visits}"
-            )
-            print(
-                f"    Q值: {old_q:.4f} → {new_q:.4f} "
-                f"(Q_backup={q_backup:.3f})"
-            )
     
     
     def _is_node_execution_failed(self, node: MCTSNode) -> bool:
@@ -1444,28 +1221,4 @@ class MCTSWorkflow:
         for child in node.children:
             count += self._count_nodes_recursive(child)
         return count
-    
-    
-    
-    def set_mcts_parameters(self, rollouts_per_iteration: int = None, 
-                           max_cte_nodes_per_iteration: int = None, exploration_constant: float = None, 
-                           sql_timeout_s: float = None, strike_threshold: int = None):
-        """
-        设置MCTS超参数
-        
-        Args:
-            rollouts_per_iteration: 每次迭代的rollout数量
-            max_cte_nodes_per_iteration: 每次迭代生成的CTE变体数量
-            exploration_constant: UCB探索常数
-            sql_timeout_s: SQL执行超时时间（秒）
-            strike_threshold: 动态剪枝的strike阈值（默认3）
-        """
-        if rollouts_per_iteration is not None:
-            self.rollouts_per_iteration = rollouts_per_iteration
-        if max_cte_nodes_per_iteration is not None:
-            self.max_cte_nodes_per_iteration = max_cte_nodes_per_iteration
-        if exploration_constant is not None:
-            self.exploration_constant = exploration_constant
-        if sql_timeout_s is not None:
-            self.sql_timeout_s = sql_timeout_s
     

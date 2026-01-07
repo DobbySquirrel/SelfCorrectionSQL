@@ -72,13 +72,13 @@ class DatabaseConnector:
         try:
             # 检查数据库文件是否存在
             if not os.path.exists(self.db_path):
-                print(f"错误: 数据库文件不存在: {self.db_path}")
+                print(f"Error: Database file does not exist: {self.db_path}")
                 return False
                 
             self.connection = sqlite3.connect(self.db_path)
             return True
         except Exception as e:
-            print(f"数据库连接错误: {e}")
+            print(f"Database connection error: {e}")
             return False
             
     def disconnect(self):
@@ -96,7 +96,7 @@ class DatabaseConnector:
         """
         if not self.connection:
             if not self.connect():
-                return None, "无法连接到数据库"
+                return None, "Unable to connect to database"
         # SQLite queries don't strictly require a semicolon at the end
         # but adding it defensively if your original logic implies it for other DBs
         if not query.strip().endswith(';'):
@@ -110,7 +110,7 @@ class DatabaseConnector:
 
             return result, None # Return the list of tuples directly
         except Exception as e:
-            error_msg = f"查询执行错误: {e}"
+            error_msg = f"Query execution error: {e}"
             print(error_msg)
             return None, error_msg 
             
@@ -123,7 +123,7 @@ class DatabaseConnector:
         """
         if not self.connection:
             if not self.connect():
-                return None, "无法连接到数据库"
+                return None, "Unable to connect to database"
         if not query.strip().endswith(';'):
              query = query.strip() + ";"
         try:
@@ -155,9 +155,9 @@ class DatabaseConnector:
             # 将 SQLite 的中断错误识别为超时
             msg = str(e)
             if 'interrupted' in msg.lower() and timeout_s is not None:
-                error_msg = f"查询执行超时({timeout_s:.0f}s)"
+                error_msg = f"Query execution timeout ({timeout_s:.0f}s)"
             else:
-                error_msg = f"查询执行错误: {e}"
+                error_msg = f"Query execution error: {e}"
             print(error_msg)
             return None, error_msg
         finally:
@@ -177,7 +177,7 @@ class DatabaseConnector:
         if not query.strip().endswith(';'):
             query = query.strip() + ";"
         if not os.path.exists(self.db_path):
-            return None, f"数据库文件不存在: {self.db_path}"
+            return None, f"Database file does not exist: {self.db_path}"
 
         conn = None
         try:
@@ -202,7 +202,7 @@ class DatabaseConnector:
         except Exception as e:
             msg = str(e)
             if 'interrupted' in msg.lower() and timeout_s is not None:
-                return None, f"查询执行超时({timeout_s:.0f}s)"
+                return None, f"Query execution timeout ({timeout_s:.0f}s)"
             return None, f"查询执行错误: {e}"
         finally:
             if conn is not None:

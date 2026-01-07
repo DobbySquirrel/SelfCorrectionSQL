@@ -122,7 +122,8 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python3 /home/shenshuyu/SQL_tool_multiAgent/score_caluation/txt2json.py \
+# 使用示例（从项目根目录运行）：
+# python score_caluation/txt2json.py \
 #   --dev_set data/sub_sampled_bird_dev_set.json \
 #   --txt_sqls workflows/mcts_v1/test/out/12_25_single_rollout.txt \
 #   --output workflows/mcts_v1/test/out/12_25_single_rollout.json
