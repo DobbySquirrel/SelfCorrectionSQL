@@ -41,6 +41,17 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
    --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
    > workflows/mcts_v1/test/out/1_6_test_no_strategy.log 2>&1 &
 
+# 单个
+nohup python workflows/mcts_v1/test/test_mcts.py \
+   --ppl_file data/subset_ppl_dev_python.json \
+   --sql_out workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
+   --json_out workflows/mcts_v1/test/out/1_6_test_no_strategy_result.json \
+   --gold_file data/sub_sampled_bird_dev_set.json \
+   --parallel_workers 5 \
+   --strategy_mode NONE \
+   > workflows/mcts_v1/test/out/1_6_test_no_strategy.log 2>&1 &
+
+
 # 策略模式测试（LLM选择策略） <需要测>：
 nohup python workflows/mcts_v1/test/test_mcts.py \
    --ppl_file data/subset_ppl_dev_python.json \
@@ -52,6 +63,15 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
    --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
    > workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &
 
+# 单个
+nohup python workflows/mcts_v1/test/test_mcts.py \
+   --ppl_file data/subset_ppl_dev_python.json \
+   --sql_out workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
+   --json_out workflows/mcts_v1/test/out/1_6_test_with_strategy_result.json \
+   --gold_file data/sub_sampled_bird_dev_set.json \
+   --parallel_workers 5 \
+   --strategy_mode LLM_PICK_ONCE \
+   > workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &
 
 2. MCts 框架 V2
 To do

@@ -21,6 +21,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # If python-dotenv is not installed, skip
+
 from workflows.mcts_v1.mcts_workflow import MCTSWorkflow
 from workflows.mcts_v1.core.database_connector import DatabaseConnector
 from workflows.mcts_v1.utils.model_utils import get_llm_config, pick_model
@@ -405,6 +414,14 @@ def main():
         print(f"[配置] 启用多模型并行: {len(multi_base_urls)} 个端点")
         for i, url in enumerate(multi_base_urls):
             print(f"  端点 {i+1}: {url}")
+    else:
+        # 如果没有提供 --multi_base_urls，检查环境变量 VLLM_API_URL
+        env_url = os.environ.get("VLLM_API_URL")
+        if env_url:
+            multi_base_urls = [env_url.strip()]
+            print(f"[配置] 使用环境变量 VLLM_API_URL: {env_url}")
+        else:
+            print(f"[配置] 未指定端点，将使用默认配置（从环境变量或默认值）")
 
     print(f"并行rollout工作线程数: {args.parallel_workers}")
     print(f"并行处理问题数: {args.max_workers}")
