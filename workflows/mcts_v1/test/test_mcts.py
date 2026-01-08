@@ -385,7 +385,8 @@ def main():
     parser.add_argument("--parallel_workers", type=int, default=5, help="MCTS内部并行工作线程数（用于CTE/SQL生成，默认5）")
     parser.add_argument("--max_workers", type=int, default=1, help="并行处理多个问题的工作线程数（默认1）")
     parser.add_argument("--multi_base_urls", type=str, default=None, help="多个模型端点URL，用逗号分隔，例如：'http://localhost:8009/v1,http://localhost:8010/v1'")
-    parser.add_argument("--max_cte_nodes", type=int, default=8, help="每次扩展节点时生成的CTE变体数量（默认15）")
+    parser.add_argument("--max_cte_nodes", type=int, default=8, help="每次扩展节点时生成的CTE变体数量（默认8）")
+    parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     args = parser.parse_args()
@@ -394,6 +395,8 @@ def main():
     mcts_config = {
         'max_cte_nodes_per_iteration': args.max_cte_nodes,  # 从命令行参数获取
     }
+    if args.max_depth is not None:
+        mcts_config['max_depth'] = args.max_depth
 
     # 解析多模型端点
     multi_base_urls = None

@@ -74,7 +74,7 @@ class DatabaseConnector:
 
             return result, None # Return the list of tuples directly
         except Exception as e:
-            error_msg = f"查询执行错误: {e}"
+            error_msg = f"{e}"
             print(error_msg)
             return None, error_msg 
             
@@ -119,9 +119,9 @@ class DatabaseConnector:
             # 将 SQLite 的中断错误识别为超时
             msg = str(e)
             if 'interrupted' in msg.lower() and timeout_s is not None:
-                error_msg = f"查询执行超时({timeout_s:.0f}s)"
+                error_msg = f"Query execution timeout ({timeout_s:.0f}s)"
             else:
-                error_msg = f"查询执行错误: {e}"
+                error_msg = f"{e}"
             print(error_msg)
             return None, error_msg
         finally:

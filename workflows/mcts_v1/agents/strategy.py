@@ -2,7 +2,7 @@
 # Strategy Injection (for SimpleRolloutWorkflow, no MASTER prompt)
 # ==========================================================
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Optional, Literal, Tuple
 
 StrategyMode = Literal[
     "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4",
@@ -27,13 +27,6 @@ GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S4", lock_after_picked=True)
 
 
 # ---- 策略手册（给 CTE/SQL 生成器看的文本）----
-_SHARED_CONSTRAINTS = """
-Shared constraints:
-- Generate ONE step only (one CTE OR <END> OR one final SELECT depending on generator).
-- Never invent tables/columns. Use schema only.
-- Prefer executable, minimal joins.
-"""
-
 _STRATEGY_DESCRIPTIONS = {
     "S1": """S1 Entity-First:
 - If you introduce a new value filter (keyword/category/date/currency/segment) not confirmed, first sanity-check via safe assumptions:
@@ -54,7 +47,7 @@ _STRATEGY_DESCRIPTIONS = {
 - Prefer small incremental CTEs; rely on execution feedback."""
 }
 
-# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
+# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段，不包含S4，S4由LLM自己规划）
 _FULL_STRATEGY_HANDBOOK = f"""
 STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S1']}
@@ -63,13 +56,17 @@ STRATEGYs:
 
 {_STRATEGY_DESCRIPTIONS['S3']}
 
-{_STRATEGY_DESCRIPTIONS['S4']}
+S4 Custom:
+- You can choose S4 if you want to create your own custom strategy plan based on the specific question and schema.
+- When selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
+- The "thought" will be used as the strategy guidance in subsequent CTE generation steps.
 """
 
 def build_strategy_injection_text(
     mode: StrategyMode,
     fixed_strategy: Optional[str] = None,
     picked_strategy: Optional[str] = None,
+    picked_strategy_thought: Optional[str] = None,
     depth: int = 0,
 ) -> str:
     """
@@ -90,13 +87,14 @@ def build_strategy_injection_text(
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
         return f"""
 [GLOBAL STRATEGY MODE: {mode}]
-You MUST follow strategy {s} for this rollout. Do NOT switch.
-
-{_SHARED_CONSTRAINTS}
-
 {strategy_desc}
 
-[ACTIVE STRATEGY = {s}]
+**⚠️ CRITICAL: Additional Context Priority**
+- If "Additional context" provides filtering conditions, you MUST:
+  1. Include the relevant column in your first CTE
+  2. Apply the filter condition (WHERE clause) in your first CTE - do NOT defer it to later CTEs
+  3. Do NOT skip these conditions - they are essential requirements
+
 """
 
     # LLM pick once
@@ -112,9 +110,9 @@ Analyze the question and choose the most appropriate strategy:
 - S1 (Entity-First): Use when you need to verify entity/value constraints first
 - S2 (Relation-First): Use when join paths are uncertain
 - S3 (Proactive): Use when schema is ambiguous or knowledge is thin
-- S4 (Reactive): Use when schema is clear and you can try quickly
+- S4 (Custom): Use when you want to create your own custom strategy plan. If selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4).
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4). If you choose S4, the "thought" field is REQUIRED and will be used as the strategy guidance.
 
 Example JSON format:
 ```json
@@ -129,16 +127,13 @@ Example JSON format:
         else:
             # depth>0 时只需要已选择策略的说明
             s = picked_strategy or fixed_strategy or "S2"
-            strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+            if s == "S4" and picked_strategy_thought:
+                # S4使用LLM自己规划的thought作为策略描述
+                strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
+            else:
+                strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
             return f"""
-[GLOBAL STRATEGY MODE: LLM_PICK_ONCE]
-You have already chosen strategy {s} for this rollout. You MUST follow it. Do NOT switch.
-
-{_SHARED_CONSTRAINTS}
-
 {strategy_desc}
-
-[ACTIVE STRATEGY = {s}]
 """
 
     # fallback
@@ -160,6 +155,8 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     return f"""# STRATEGY SELECTION TASK
 
 You need to select ONE strategy from S1, S2, S3, or S4 for solving the following SQL generation task.
+
+Note: If you choose S4, you must provide a detailed "thought" field with your custom strategy plan. This thought will be used as the strategy guidance in subsequent CTE generation steps.
 
 **Question**: {question}
 
@@ -186,18 +183,19 @@ Example JSON format:
 - Output MUST be valid JSON wrapped in ```json code block
 - The "strategy" field MUST be exactly one of: "S1", "S2", "S3", or "S4"
 - Include a "thought" field explaining your choice
+- If you choose S4, the "thought" field is REQUIRED and must contain your detailed custom strategy plan
 """
 
 
-def extract_strategy_from_json(response: str) -> Optional[str]:
+def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[str]]:
     """
-    从JSON响应中提取策略
+    从JSON响应中提取策略和thought
     
     Args:
         response: LLM的JSON响应
         
     Returns:
-        策略字符串 (S1/S2/S3/S4) 或 None
+        (策略字符串 (S1/S2/S3/S4), thought字符串) 或 (None, None)
     """
     import json
     import re
@@ -238,20 +236,21 @@ def extract_strategy_from_json(response: str) -> Optional[str]:
         json_str = json_str.strip()
         data = json.loads(json_str)
         
-        # 4. 提取策略字段
+        # 4. 提取策略字段和thought
         strategy_str = data.get("strategy", "").upper().strip()
+        thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
         valid_strategies = ["S1", "S2", "S3", "S4"]
         if strategy_str in valid_strategies:
-            return strategy_str
+            return strategy_str, thought_str if thought_str else None
         
-        return None
+        return None, None
         
     except json.JSONDecodeError as e:
         print(f"[策略提取] JSON解析失败: {e}")
-        return None
+        return None, None
     except Exception as e:
         print(f"[策略提取] 提取策略时出错: {e}")
-        return None
+        return None, None
 

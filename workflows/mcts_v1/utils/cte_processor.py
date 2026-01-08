@@ -105,6 +105,8 @@ class CTEProcessor:
                     error_msg = res.get('error', '执行失败或超时')
                 else:
                     error_msg = "执行失败或超时"
+                # 打印简化的错误信息
+                print(f"[CTE执行失败] 错误: {error_msg}")
                 return cte_used, res, None, {'cte': cte_used, 'error': error_msg}, exec_sql
             return cte_used, res, bucket_key, None, exec_sql
         

@@ -531,18 +531,36 @@ class SQLExecutor:
         current_cte_stripped = current_cte.strip()
 
         # 收集路径上所有历史CTE（从当前节点开始，向上遍历到根节点）
+        # 注意：包括当前节点本身，因为当前节点可能已经包含了前序CTE（如果是在扩展阶段）
         cte_sequence: List[str] = []
+        cte_names_seen: set = set()  # 用于检测重复的CTE名称
         current_node = node  # 从当前节点开始，因为可能包含前序CTE
         while current_node is not None:
             if getattr(current_node, 'cte', None) and current_node.cte != "" and current_node.cte != "<END>":
                 cte_sequence.insert(0, current_node.cte)
+                # 提取CTE名称用于检测重复
+                cte_name = self.extract_cte_name(current_node.cte)
+                if cte_name:
+                    cte_names_seen.add(cte_name)
             current_node = current_node.parent
 
         # 添加新生成的CTE（如果它不是<END>）
         if current_cte_stripped and current_cte_stripped != "<END>":
-            # 检查是否已经在序列中（避免重复）
-            if not any(cte_sequence) or cte_sequence[-1] != current_cte_stripped:
+            # 提取新CTE的名称
+            new_cte_name = self.extract_cte_name(current_cte_stripped)
+            
+            # 检查新CTE是否与历史CTE同名（不允许重用CTE名称）
+            if new_cte_name and new_cte_name in cte_names_seen:
+                # 检测到同名CTE：这是一个错误，不应该重用已存在的CTE名称
+                # 仍然添加新CTE，但会在执行时产生duplicate WITH table name错误
+                # 这样可以让错误信息更清晰地传递给LLM
                 cte_sequence.append(current_cte_stripped)
+            else:
+                # 新CTE：添加到序列末尾
+                if not any(cte_sequence) or cte_sequence[-1] != current_cte_stripped:
+                    cte_sequence.append(current_cte_stripped)
+                    if new_cte_name:
+                        cte_names_seen.add(new_cte_name)
 
         return self.combine_cte_sequence(cte_sequence)
 

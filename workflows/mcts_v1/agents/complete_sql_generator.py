@@ -87,22 +87,23 @@ class CompleteSQLGenerator:
 
 **Database Admin Instructions (Must Strictly Adhere):**
 1. SELECT Clause & Output Schema (CRITICAL - STRICT ADHERENCE):NO Over-Selection (Minimal Intent): Strictly SELECT ONLY the columns explicitly requested in the question. ABSOLUTELY DO NOT include auxiliary columns used solely for sorting (ORDER BY) or filtering (WHERE) unless the user explicitly asks to "show" or "list" them.NO Under-Selection (Complete Attributes):Double Questions: If the question implies two intents (e.g., "What is the highest score AND which student got it?"), you MUST select BOTH the value (Score) and the entity (Student Name).Explicit Lists: If the question asks to "list ID, Name, and Date", you MUST select ALL three columns.Column Order: Arrange columns in the SELECT clause in the same order as they appear in the natural language question.
-2.  **Aggregation (MAX/MIN):** Always perform JOINs before using `MAX()` or `MIN()`.
+2.  **Aggregation (MAX/MIN):** Only use `MAX()` or `MIN()` when the question explicitly asks for the "highest", "maximum", "lowest", "minimum", "best", or "worst" value. If the question does not explicitly request an aggregated value, return all matching values without using aggregation functions. Always perform JOINs before using `MAX()` or `MIN()`.
 3.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
 4.  **Handling NULLs:** If a column may contain NULL values (indicated by "None" in value examples or explicitly stated), use `JOIN` or `WHERE <column> IS NOT NULL`.
 5.  **FROM/JOIN Clauses:** Only include tables essential to answer the question.
 6.  **Strictly Follow Hints:** Adhere to all provided hints.
 7.  **Thorough Question Analysis:** Address all conditions mentioned in the question.
 8.  **DISTINCT Keyword:** Use `SELECT DISTINCT` when the question requires unique values or when selecting columns that may have duplicates (e.g., IDs, URLs, names, nationalities, categories). If the question asks for a list of unique items or the result may contain duplicate values, always use `SELECT DISTINCT`. Refer to column statistics ("Value Statics") to determine if `DISTINCT` is necessary. When in doubt, use `DISTINCT` to ensure unique results.
-9.  **Column Selection:** When similar columns exist across tables, carefully analyze column descriptions and hints to choose the correct column.
-10. **String Concatenation:** Never use `|| ' ' ||` or any other method to concatenate strings in the `SELECT` clause.
-11. **JOIN Preference:** Prioritize `INNER JOIN` over nested `SELECT` statements.
-12. **Multiple Columns from Different Tables (CRITICAL):** When you need to select different columns from different tables, use `JOIN` to combine them horizontally (side by side), NOT `UNION ALL` to stack them vertically. 
+9.  **COUNT with DISTINCT (CRITICAL):** When using `COUNT()` after JOINs, especially with N:1 or M:N relationships, you MUST use `COUNT(DISTINCT column)` instead of `COUNT(*)` to avoid counting duplicate rows. If the relationship is N:1 (Many-to-One), the child table may have multiple rows per parent, so always use `COUNT(DISTINCT column)` when counting entities from the parent table. **Even if the preceding CTE uses `COUNT(*)`, you must check if the data involves JOINs with N:1 relationships and use `COUNT(DISTINCT column)` if counting entities.**
+10. **Column Selection:** When similar columns exist across tables, carefully analyze column descriptions and hints to choose the correct column.
+11. **String Concatenation:** Never use `|| ' ' ||` or any other method to concatenate strings in the `SELECT` clause.
+12. **JOIN Preference:** Prioritize `INNER JOIN` over nested `SELECT` statements.
+13. **Multiple Columns from Different Tables (CRITICAL):** When you need to select different columns from different tables, use `JOIN` to combine them horizontally (side by side), NOT `UNION ALL` to stack them vertically. 
     - CORRECT: `SELECT T1.col1, T2.col2 FROM table1 AS T1 INNER JOIN table2 AS T2 ON T1.id = T2.id`
     - WRONG: `SELECT col1 FROM table1 UNION ALL SELECT col2 FROM table2` (This stacks rows vertically, not pairing columns horizontally)
     - **Rule**: If the question asks for multiple columns from different tables, they should appear in the same row (use JOIN), not in separate rows (avoid UNION ALL).
-13. **SQLite Functions Only:** Use only functions available in SQLite.
-14. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year)."""
+14. **SQLite Functions Only:** Use only functions available in SQLite.
+15. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year)."""
 
     def _find_relevant_values(self, values: List[Any], question: str, top_n: int = 3) -> List[Any]:
         """

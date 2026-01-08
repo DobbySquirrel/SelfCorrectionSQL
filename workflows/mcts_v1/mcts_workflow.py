@@ -21,6 +21,8 @@ from .core.mcts_tree import MCTSTree
 from .core.mcts_node import MCTSNode
 from .core.database_connector import DatabaseConnector
 from .agents.cte_generator import CTEGenerator
+import json
+from pathlib import Path
 from .agents.complete_sql_generator import CompleteSQLGenerator
 from .agents.sql_executor import SQLExecutor
 from .utils.mcts_helpers import MCTSUtils
@@ -45,7 +47,7 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration = 8  # 从6增加到10，让visit_count更好地反映节点质量
+        self.rollouts_per_iteration = 10  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 5  # 每次扩展节点时生成的CTE变体数量
@@ -68,9 +70,20 @@ class MCTSWorkflow:
                     'api_key': config.get('api_key', '')
                 })
         
+        # 加载relationships.json
+        relationships_data = {}
+        relationships_file = Path(__file__).parent / "data" / "relationships.json"
+        if relationships_file.exists():
+            try:
+                with open(relationships_file, 'r', encoding='utf-8') as f:
+                    relationships_data = json.load(f)
+                print(f"✅ 加载了 {len(relationships_data)} 个数据库的关系信息")
+            except Exception as e:
+                print(f"⚠️ 加载relationships.json失败: {e}")
+        
         # 初始化MCTS组件
         self.mcts_tree = MCTSTree()
-        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs)
+        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, relationships_data=relationships_data)
         self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs)
         self.sql_executor = SQLExecutor(db_connector)
         # 设置sql_executor的cte_generator（用于错误恢复）
@@ -140,8 +153,9 @@ class MCTSWorkflow:
             additional_context=additional_context,
             parent=None
         )
-        # 在根节点存储 picked_strategy（用于 LLM_PICK_ONCE 模式）
+        # 在根节点存储 picked_strategy 和 picked_strategy_thought（用于 LLM_PICK_ONCE 模式）
         root_node.picked_strategy = None
+        root_node.picked_strategy_thought = None
         self.mcts_tree.set_root(root_node)
         
         # MCTS主循环：执行多个rollout
@@ -152,7 +166,6 @@ class MCTSWorkflow:
         
         # 串行执行 rollout，收集每个rollout的统计信息
         rollout_stats_list = []
-        high_reward_threshold = 1  # 高奖励阈值，达到此值可提前终止
         
         # 获取evidence信息（从additional_context或question中提取）
         evidence = additional_context if additional_context else ""
@@ -164,12 +177,6 @@ class MCTSWorkflow:
             rollout_stats['rollout_id'] = rollout + 1
             rollout_stats['is_quick_path'] = False
             rollout_stats_list.append(rollout_stats)
-            
-            # 提前终止策略：如果CTE rollout奖励为1，提前终止
-            if reward >= high_reward_threshold:
-                print(f"[提前终止] ✅ CTE rollout奖励为1.0 (reward={reward:.4f})")
-                print(f"[提前终止]    提前终止剩余rollout")
-                break
 
 
         # 使用奖励优先策略选择最佳 SQL（优先选择最高奖励的rollout的SQL）
@@ -321,8 +328,21 @@ class MCTSWorkflow:
         # 如果连续三次模糊匹配都返回空结果，才会停止扩展（consecutive_empty_count >= 3）
         # 第二次空结果时允许继续扩展，但会提示检查其他列
         # 添加CTE路径长度限制：基于分析结果，路径越长成功率越低（r=-0.2933）
+        # 如果当前节点执行失败，不再展开（但失败节点本身可以继续扩展，因为它们的目的就是让后续节点基于失败历史继续生成CTE）
+        # 失败节点（is_failed=True）允许继续扩展，因为它们的目的就是让后续节点基于失败历史继续生成CTE
+        def _should_continue_expansion(node):
+            """判断是否应该继续扩展节点"""
+            # 如果是失败节点，允许继续扩展
+            if getattr(node, 'execution_results', {}).get('is_failed', False):
+                return True
+            # 如果节点执行失败（但不是失败节点），不允许继续扩展
+            if self._is_node_execution_failed(node):
+                return False
+            return True
+        
         while (not current.is_terminal) and (current.depth < self.max_depth) and \
-              (getattr(current, 'consecutive_empty_count', 0) < 3):
+              (getattr(current, 'consecutive_empty_count', 0) < 3) and \
+              _should_continue_expansion(current):
             if current.is_expanded:
                 if current.children:
                     # 所有孩子都参与 UCB 竞争，包括 terminal
@@ -390,16 +410,32 @@ class MCTSWorkflow:
                     print(strategy_response)
                     print(f"{'='*80}")
                     
-                    # 从JSON响应中提取策略
-                    picked_strategy = extract_strategy_from_json(strategy_response)
+                    # 从JSON响应中提取策略和thought
+                    picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                     
                     if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
                         root_node.picked_strategy = picked_strategy
-                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                        root_node.picked_strategy_thought = picked_strategy_thought
+                        if picked_strategy == "S4":
+                            if picked_strategy_thought:
+                                print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                                print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
+                            else:
+                                print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
+                                root_node.picked_strategy = "S2"
+                                root_node.picked_strategy_thought = None
+                                picked_strategy = "S2"
+                                picked_strategy_thought = None
+                        else:
+                            print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                            if picked_strategy_thought:
+                                print(f"[策略选择] 策略规划: {picked_strategy_thought}")
                     else:
                         print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
                         root_node.picked_strategy = "S2"
+                        root_node.picked_strategy_thought = None
                         picked_strategy = "S2"
+                        picked_strategy_thought = None
                     
                     print(f"[策略选择] ========== 策略选择完成 ==========\n")
             
@@ -497,15 +533,53 @@ class MCTSWorkflow:
                                 error = '未知错误'
                             cte = failed_item.get('cte', '').strip()
                             
+                            # 尝试从错误信息中提取列名，并查找该列在schema中的实际位置
+                            # 检查是否是列名错误（支持多种错误格式）
+                            is_column_error = (
+                                'no such column' in error.lower() or 
+                                ('column' in error.lower() and ('not found' in error.lower() or 'unknown' in error.lower()))
+                            )
+                            
+                            if is_column_error:
+                                # 使用根节点的schema_info（确保使用最新的schema）
+                                schema_info = None
+                                if hasattr(current, 'schema_info') and current.schema_info:
+                                    schema_info = current.schema_info
+                                elif self.mcts_tree.root and hasattr(self.mcts_tree.root, 'schema_info'):
+                                    schema_info = self.mcts_tree.root.schema_info
+                                
+                                if schema_info:
+                                    # 传入CTE以便生成更准确的提示（检测是否在CTE上下文中）
+                                    column_mapping = MCTSUtils.find_column_table_mapping(error, schema_info, cte=cte)
+                                    if column_mapping:
+                                        # 在失败信息中添加列名到表的映射提示
+                                        if 'column_hint' not in failed_item:
+                                            failed_item['column_hint'] = column_mapping['hint']
+                                            failed_item['column_name'] = column_mapping['column']
+                                            failed_item['column_tables'] = column_mapping['tables']
+                                            print(f"[错误处理] ✅ 找到列名映射: {column_mapping['column']} -> {column_mapping['tables']}")
+                                    # else: 未找到映射，可能是列名确实不存在或schema格式问题
+                                # else: 无schema_info可用
+                            
                             # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
                             if error in existing_errors:
                                 # 查找已存在的相同错误信息的项
                                 for idx, existing_item in enumerate(current._failed_cte_attempts):
                                     if existing_item.get('error', '').strip() == error:
                                         existing_cte = existing_item.get('cte', '').strip()
-                                        # 如果新的CTE更短，替换
+                                        # 如果新的CTE更短，替换（同时保留列名映射信息）
                                         if len(cte) < len(existing_cte):
-                                            current._failed_cte_attempts[idx] = failed_item
+                                            # 如果新项有column_hint但旧项没有，保留新项；如果旧项有但新项没有，保留旧项的column_hint
+                                            if 'column_hint' in failed_item and 'column_hint' not in existing_item:
+                                                current._failed_cte_attempts[idx] = failed_item
+                                            elif 'column_hint' not in failed_item and 'column_hint' in existing_item:
+                                                # 保留旧项的column_hint，但更新其他字段
+                                                failed_item['column_hint'] = existing_item['column_hint']
+                                                failed_item['column_name'] = existing_item.get('column_name')
+                                                failed_item['column_tables'] = existing_item.get('column_tables')
+                                                current._failed_cte_attempts[idx] = failed_item
+                                            else:
+                                                current._failed_cte_attempts[idx] = failed_item
                                             # 更新deduplicated_failed_info中对应的项
                                             for d_idx, d_item in enumerate(deduplicated_failed_info):
                                                 if d_item.get('error', '').strip() == error:
@@ -771,7 +845,87 @@ class MCTSWorkflow:
             created_children = list(created_map.values())
             
             if not created_children:
-                # 没有创建任何子节点，停止扩展
+                # 没有创建任何子节点（所有CTE变体都失败或为空且无WHERE子句）
+                # 如果有失败信息，创建失败节点继续扩展
+                if failed_info:
+                    # 按照错误信息分桶，为每种错误类型创建失败节点
+                    error_buckets = {}
+                    for failed_item in failed_info:
+                        error_msg = failed_item.get('error', '未知错误').strip()
+                        # 过滤掉无效的重复命名错误
+                        if error_msg and error_msg.lower().find('duplicate with table name') != -1:
+                            continue
+                        # 规范化错误信息（用于分桶）
+                        if not error_msg:
+                            error_msg = '未知错误'
+                        if error_msg not in error_buckets:
+                            error_buckets[error_msg] = []
+                        error_buckets[error_msg].append(failed_item)
+                    
+                    # 如果没有失败信息，创建一个通用的失败节点
+                    if not error_buckets:
+                        error_buckets['所有CTE变体都执行失败'] = []
+                    
+                    # 为每种错误类型创建一个失败节点
+                    root_schema = self.mcts_tree.root.schema_info if self.mcts_tree.root else current.schema_info
+                    created_failed_nodes = []
+                    with self.mcts_tree.lock:
+                        if not current.is_expanded:  # 再次检查，避免重复创建
+                            for error_msg, failed_items in error_buckets.items():
+                                failed_child = MCTSNode(
+                                    question=current.question,
+                                    schema_info=root_schema,
+                                    additional_context=current.additional_context,
+                                    parent=current
+                                )
+                                failed_child.cte = ""  # 失败节点没有CTE
+                                
+                                # 构建详细的错误信息
+                                if len(failed_items) > 0:
+                                    detailed_error = f"{error_msg} (共{len(failed_items)}个CTE变体失败)"
+                                else:
+                                    detailed_error = error_msg
+                                
+                                failed_child.execution_results['cte_result'] = {
+                                    'valid': False,
+                                    'error': detailed_error
+                                }
+                                failed_child.execution_results['is_failed'] = True
+                                failed_child.execution_results['error_type'] = error_msg
+                                
+                                # 保存失败尝试信息，供下一轮使用
+                                failed_child._failed_cte_attempts = current._failed_cte_attempts.copy() if hasattr(current, '_failed_cte_attempts') else []
+                                
+                                # 将当前错误类型的失败信息添加到失败节点中（去重后的）
+                                if failed_items:
+                                    existing_combinations_in_failed_node = {
+                                        (item.get('error', '').strip(), item.get('cte', '').strip()) 
+                                        for item in failed_child._failed_cte_attempts
+                                    }
+                                    for failed_item in failed_items:
+                                        error = failed_item.get('error', '').strip()
+                                        cte = failed_item.get('cte', '').strip()
+                                        combination = (error, cte)
+                                        if error and combination not in existing_combinations_in_failed_node:
+                                            failed_child._failed_cte_attempts.append(failed_item)
+                                            existing_combinations_in_failed_node.add(combination)
+                                
+                                # 失败节点也增加深度（深度+1）
+                                current.add_child(failed_child)
+                                created_failed_nodes.append(failed_child)
+                            
+                            if created_failed_nodes:
+                                current.is_expanded = True
+                    
+                    # 选择第一个失败节点继续扩展（如果有多个失败节点，后续可以通过UCB选择不同的错误路径）
+                    if created_failed_nodes:
+                        failed_child = created_failed_nodes[0]  # 选择第一个失败节点
+                        added_nodes.append(failed_child)
+                        current = failed_child
+                        # 继续while循环，尝试在失败节点上生成新的CTE
+                        continue
+                
+                # 如果没有失败信息，停止扩展
                 if first_step:
                     current.is_expanded = True
                 break
@@ -1088,15 +1242,17 @@ class MCTSWorkflow:
     def _generate_cte_variants(self, node: MCTSNode) -> List[str]:
         """生成多个CTE变体（根据配置选择串行或并行）"""
         # 获取策略相关参数
-        # 从根节点获取 picked_strategy（如果已选择）
+        # 从根节点获取 picked_strategy 和 picked_strategy_thought（如果已选择）
         root_node = self.mcts_tree.root if self.mcts_tree else None
         picked_strategy = getattr(root_node, 'picked_strategy', None) if root_node else None
+        picked_strategy_thought = getattr(root_node, 'picked_strategy_thought', None) if root_node else None
         depth = node.depth
         
         # 生成策略注入文本
         strategy_text = build_strategy_injection_text(
             mode=self.strategy_mode,
             picked_strategy=picked_strategy,
+            picked_strategy_thought=picked_strategy_thought,
             depth=depth
         )
         
@@ -1114,6 +1270,34 @@ class MCTSWorkflow:
         current = node
         visited_nodes = set()  # 避免重复收集同一节点的失败信息
         
+        # 辅助函数：检查列名错误是否已经被前序CTE修正
+        def is_column_error_fixed(column_name: str, error_msg: str) -> bool:
+            """检查列名错误是否已经被前序CTE修正"""
+            if not column_name:
+                return False
+            
+            # 从当前节点向上遍历，检查是否有成功的CTE包含了这个列名
+            check_node = node
+            while check_node is not None:
+                # 检查当前节点的CTE是否成功执行
+                if hasattr(check_node, 'cte') and check_node.cte and check_node.cte != "<END>":
+                    exec_results = check_node.execution_results.get('cte_result', {})
+                    if exec_results.get('valid', False):
+                        # CTE执行成功，检查是否包含该列名
+                        cte_text = check_node.cte
+                        # 检查列名是否在CTE的SELECT子句中（使用反引号包裹或直接使用）
+                        column_patterns = [
+                            f"`{column_name}`",
+                            f"`{column_name.replace(' ', '')}`",  # 处理空格
+                            f"{column_name}",  # 直接使用（可能被反引号包裹）
+                        ]
+                        for pattern in column_patterns:
+                            if pattern.lower() in cte_text.lower():
+                                # 找到了列名，说明错误已经被修正
+                                return True
+                check_node = check_node.parent
+            return False
+        
         # 向上遍历父节点链，收集所有失败尝试
         while current is not None and current.node_id not in visited_nodes:
             visited_nodes.add(current.node_id)
@@ -1130,6 +1314,11 @@ class MCTSWorkflow:
                         error = '未知错误'
                     cte = attempt.get('cte', '').strip()
                     
+                    # 检查是否是列名错误，并且是否已经被修正
+                    column_name = attempt.get('column_name')
+                    if column_name and is_column_error_fixed(column_name, error):
+                        # 错误已经被修正，完全跳过这个失败尝试
+                        continue
                     
                     # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
                     if error in existing_errors:
@@ -1137,9 +1326,19 @@ class MCTSWorkflow:
                         for idx, existing_item in enumerate(failed_attempts):
                             if existing_item.get('error', '').strip() == error:
                                 existing_cte = existing_item.get('cte', '').strip()
-                                # 如果新的CTE更短，替换
+                                # 如果新的CTE更短，替换（同时保留列名映射信息）
                                 if len(cte) < len(existing_cte):
-                                    failed_attempts[idx] = attempt
+                                    # 如果新项有column_hint但旧项没有，保留新项；如果旧项有但新项没有，保留旧项的column_hint
+                                    if 'column_hint' in attempt and 'column_hint' not in existing_item:
+                                        failed_attempts[idx] = attempt
+                                    elif 'column_hint' not in attempt and 'column_hint' in existing_item:
+                                        # 保留旧项的column_hint，但更新其他字段
+                                        attempt['column_hint'] = existing_item['column_hint']
+                                        attempt['column_name'] = existing_item.get('column_name')
+                                        attempt['column_tables'] = existing_item.get('column_tables')
+                                        failed_attempts[idx] = attempt
+                                    else:
+                                        failed_attempts[idx] = attempt
                                 break
                     else:
                         # 如果错误信息不存在，直接添加

@@ -203,7 +203,7 @@ class DatabaseConnector:
             msg = str(e)
             if 'interrupted' in msg.lower() and timeout_s is not None:
                 return None, f"Query execution timeout ({timeout_s:.0f}s)"
-            return None, f"查询执行错误: {e}"
+            return None, f"{e}"
         finally:
             if conn is not None:
                 try:

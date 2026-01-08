@@ -372,3 +372,238 @@ class MCTSUtils:
         # 找到出现次数最多的签名
         best_signature = max(result_buckets.keys(), key=lambda k: result_buckets[k])
         return best_signature
+    
+    @staticmethod
+    def parse_schema_column_mapping(schema_info: str) -> Dict[str, List[str]]:
+        """
+        解析schema_info，建立列名到表的映射
+        
+        Args:
+            schema_info: schema信息字符串，格式如：
+                # table1(`col1`, `col2`, ...)
+                # table2(`col3`, `col4`, ...)
+        
+        Returns:
+            字典：{列名: [表名列表]}，因为同一列名可能出现在多个表中
+        """
+        column_to_tables = {}
+        
+        if not schema_info:
+            return column_to_tables
+        
+        # 匹配表定义行：# table_name(`col1`, `col2`, ...)
+        # 使用更精确的正则表达式，匹配到最后一个右括号（处理列名中包含括号的情况，如 `Enrollment (K-12)`）
+        table_pattern = r'#\s*(\w+)\s*\((.*)\)\s*$'
+        
+        for line in schema_info.split('\n'):
+            line = line.strip()
+            if not line.startswith('#'):
+                continue
+            
+            match = re.match(table_pattern, line)
+            if not match:
+                continue
+            
+            table_name = match.group(1)
+            columns_str = match.group(2)
+            
+            # 解析列名（优先匹配反引号内的内容，因为schema中所有列名都用反引号包裹）
+            # 只匹配反引号内的列名，忽略没有反引号的列名（避免错误匹配）
+            column_pattern = r'`([^`]+)`'
+            columns = re.findall(column_pattern, columns_str)
+            
+            for col_name in columns:
+                col_name = col_name.strip()
+                
+                if col_name:
+                    # 使用小写作为键，以便大小写不敏感匹配
+                    col_key = col_name.lower()
+                    if col_key not in column_to_tables:
+                        column_to_tables[col_key] = []
+                    if table_name not in column_to_tables[col_key]:
+                        column_to_tables[col_key].append(table_name)
+                    # 同时保存原始列名（用于后续匹配）
+                    if col_name not in column_to_tables:
+                        column_to_tables[col_name] = column_to_tables[col_key]
+        
+        return column_to_tables
+    
+    @staticmethod
+    def extract_column_from_error(error_msg: str) -> Optional[str]:
+        """
+        从错误信息中提取列名
+        
+        支持的错误格式：
+        - "no such column: s.Low Grade"
+        - "no such column: Low Grade"
+        - "no such column: `Low Grade`"
+        
+        Args:
+            error_msg: 错误信息字符串
+        
+        Returns:
+            提取的列名（去除表前缀和反引号），如果无法提取则返回None
+        """
+        if not error_msg:
+            return None
+        
+        error_msg = error_msg.strip()
+        
+        # 匹配 "no such column: ..." 格式
+        patterns = [
+            r'no\s+such\s+column[:\s]+(?:[\w.]+\.)?[`"]?([^`".,;]+)[`"]?',
+            r'column[:\s]+(?:[\w.]+\.)?[`"]?([^`".,;]+)[`"]?\s+not\s+found',
+            r'unknown\s+column[:\s]+(?:[\w.]+\.)?[`"]?([^`".,;]+)[`"]?',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, error_msg, re.IGNORECASE)
+            if match:
+                col_name = match.group(1).strip()
+                # 移除可能的表前缀（如 "s."）
+                if '.' in col_name:
+                    col_name = col_name.split('.')[-1]
+                # 移除反引号
+                col_name = col_name.strip('`"\'')
+                if col_name:
+                    return col_name
+        
+        return None
+    
+    @staticmethod
+    def find_column_table_mapping(error_msg: str, schema_info: str, cte: str = None) -> Optional[Dict[str, Any]]:
+        """
+        从错误信息中提取列名，并在schema中查找该列所属的表
+        
+        Args:
+            error_msg: 错误信息（如 "no such column: s.Low Grade"）
+            schema_info: schema信息字符串
+            cte: 可选的CTE字符串，用于检测是否在CTE上下文中
+        
+        Returns:
+            如果找到映射，返回 {'column': str, 'tables': List[str], 'hint': str}
+            如果未找到，返回None
+        """
+        # 提取列名
+        column_name = MCTSUtils.extract_column_from_error(error_msg)
+        if not column_name:
+            return None
+        
+        # 检查错误信息中是否包含表名（如 "schools.State"）
+        has_table_prefix = '.' in error_msg and 'no such column' in error_msg.lower()
+        table_name_in_error = None
+        if has_table_prefix:
+            # 提取表名（错误信息格式：no such column: table.column）
+            match = re.search(r'no\s+such\s+column[:\s]+([\w.]+)\.', error_msg, re.IGNORECASE)
+            if match:
+                table_name_in_error = match.group(1)
+        
+        # 解析schema，建立列名到表的映射
+        column_to_tables = MCTSUtils.parse_schema_column_mapping(schema_info)
+        
+        # 查找列名对应的表（支持大小写不敏感匹配）
+        matching_tables = []
+        column_lower = column_name.lower()
+        
+        # 优先使用小写键匹配（因为parse_schema_column_mapping现在使用小写作为主键）
+        if column_lower in column_to_tables:
+            matching_tables = column_to_tables[column_lower]
+        # 如果小写匹配失败，尝试原始列名匹配
+        elif column_name in column_to_tables:
+            matching_tables = column_to_tables[column_name]
+        else:
+            # 最后尝试大小写不敏感匹配（遍历所有键）
+            for col, tables in column_to_tables.items():
+                if col.lower() == column_lower:
+                    matching_tables = tables
+                    break
+        
+        if not matching_tables:
+            return None
+        
+        # 检测是否在CTE上下文中（从另一个CTE选择）
+        is_cte_context = False
+        cte_source = None
+        from_table_name = None  # CTE从哪个表选择（如果是表的话）
+        alias_to_table = {}  # 别名到表名的映射（如 {'s': 'schools'}）
+        if cte:
+            # 从schema中提取所有表名
+            all_table_names = []
+            table_pattern = r'#\s*(\w+)\s*\('
+            for line in schema_info.split('\n'):
+                line = line.strip()
+                if line.startswith('#'):
+                    match = re.match(table_pattern, line)
+                    if match:
+                        all_table_names.append(match.group(1))
+            
+            # 检查CTE是否从另一个CTE选择（如 FROM c_cols）
+            # 匹配 FROM table [AS] alias 或 FROM table alias
+            cte_match = re.search(r'FROM\s+(\w+)(?:\s+AS\s+(\w+))?(?:\s+(\w+))?', cte, re.IGNORECASE)
+            if cte_match:
+                cte_source = cte_match.group(1)
+                alias = cte_match.group(2) or cte_match.group(3)  # AS alias 或直接 alias
+                
+                # 检查cte_source是否是表名
+                if cte_source and cte_source.lower() in [t.lower() for t in all_table_names]:
+                    from_table_name = cte_source
+                    # 如果有别名，记录别名到表名的映射
+                    if alias:
+                        alias_to_table[alias.lower()] = cte_source
+                    # 表名本身也可以作为"别名"
+                    alias_to_table[cte_source.lower()] = cte_source
+                else:
+                    # 如果源不是schema中的表名，则可能是CTE
+                    is_cte_context = True
+        
+        # 构建提示信息（英文）
+        # 优先处理：在CTE上下文中且使用了表前缀的情况
+        if has_table_prefix and table_name_in_error and is_cte_context and cte_source:
+            # 在CTE上下文中，且使用了表前缀
+            if len(matching_tables) == 1:
+                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', but it's not included in the '{cte_source}' CTE. You cannot use '{table_name_in_error}.{column_name}' in a CTE that selects from '{cte_source}'. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
+            else:
+                tables_str = ', '.join(matching_tables)
+                hint = f"Column '{column_name}' is located in tables: {tables_str}, but it's not included in the '{cte_source}' CTE. You cannot use table prefixes like '{table_name_in_error}.{column_name}' in a CTE that selects from '{cte_source}'. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
+        elif is_cte_context and cte_source:
+            # 在CTE上下文中：提示需要在CTE定义中添加该列
+            if len(matching_tables) == 1:
+                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', but it's not included in the '{cte_source}' CTE. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition, or access it directly from table '{matching_tables[0]}'"
+            else:
+                tables_str = ', '.join(matching_tables)
+                hint = f"Column '{column_name}' is located in tables: {tables_str}, but it's not included in the '{cte_source}' CTE. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
+        elif has_table_prefix and table_name_in_error and from_table_name:
+            # 从表选择，但使用了错误的表前缀（列在另一个表中）
+            # 检查table_name_in_error是否是别名，如果是则获取对应的表名
+            actual_table_in_error = alias_to_table.get(table_name_in_error.lower(), table_name_in_error)
+            
+            if len(matching_tables) == 1:
+                if actual_table_in_error.lower() == from_table_name.lower():
+                    # 使用了正确的表别名，但列不在这个表中
+                    hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', not in '{from_table_name}'. You need to JOIN table '{matching_tables[0]}' to access this column, or use {matching_tables[0]}.`{column_name}`"
+                else:
+                    # 使用了错误的表别名
+                    hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', not in '{actual_table_in_error}'. You need to JOIN table '{matching_tables[0]}' to access this column, or use {matching_tables[0]}.`{column_name}`"
+            else:
+                tables_str = ', '.join(matching_tables)
+                hint = f"Column '{column_name}' is located in tables: {tables_str}, not in '{actual_table_in_error}'. You need to JOIN one of these tables to access this column"
+        elif has_table_prefix and table_name_in_error:
+            # 错误信息中包含表名，但在CTE中不能使用原始表名（不在CTE上下文中，且不是从表选择）
+            if len(matching_tables) == 1:
+                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}'. However, you cannot use '{table_name_in_error}.{column_name}' in a CTE that selects from another CTE. Please add '{column_name}' to the previous CTE's SELECT clause, or access it directly from table '{matching_tables[0]}'"
+            else:
+                tables_str = ', '.join(matching_tables)
+                hint = f"Column '{column_name}' is located in tables: {tables_str}. However, you cannot use table prefixes in a CTE that selects from another CTE. Please add '{column_name}' to the previous CTE's SELECT clause"
+        else:
+            # 标准提示
+            if len(matching_tables) == 1:
+                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}'. Please use {matching_tables[0]}.`{column_name}` or access it via JOIN"
+            else:
+                tables_str = ', '.join(matching_tables)
+                hint = f"Column '{column_name}' is located in the following tables: {tables_str}. Please use the correct table name to access this column"
+        
+        return {
+            'column': column_name,
+            'tables': matching_tables,
+            'hint': hint
+        }

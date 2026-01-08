@@ -210,16 +210,32 @@ class SimpleRolloutWorkflow:
                 print(strategy_response)
                 print(f"{'='*80}")
                 
-                # 从JSON响应中提取策略
-                picked_strategy = extract_strategy_from_json(strategy_response)
+                # 从JSON响应中提取策略和thought
+                picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                 
                 if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
                     current_context["picked_strategy"] = picked_strategy
-                    print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                    current_context["picked_strategy_thought"] = picked_strategy_thought
+                    if picked_strategy == "S4":
+                        if picked_strategy_thought:
+                            print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                            print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
+                        else:
+                            print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
+                            current_context["picked_strategy"] = "S2"
+                            current_context["picked_strategy_thought"] = None
+                            picked_strategy = "S2"
+                            picked_strategy_thought = None
+                    else:
+                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                        if picked_strategy_thought:
+                            print(f"[策略选择] 策略规划: {picked_strategy_thought}")
                 else:
                     print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
                     current_context["picked_strategy"] = "S2"
+                    current_context["picked_strategy_thought"] = None
                     picked_strategy = "S2"
+                    picked_strategy_thought = None
                 
                 print(f"[策略选择] ========== 策略选择完成 ==========\n")
             
@@ -327,12 +343,14 @@ class SimpleRolloutWorkflow:
         """
         # 获取策略相关参数
         picked_strategy = context.get("picked_strategy", None)
+        picked_strategy_thought = context.get("picked_strategy_thought", None)
         depth = len(context['cte_chain'])
         
         # 生成策略注入文本
         strategy_text = build_strategy_injection_text(
             mode=self.strategy_mode,
             picked_strategy=picked_strategy,
+            picked_strategy_thought=picked_strategy_thought,
             depth=depth
         )
         

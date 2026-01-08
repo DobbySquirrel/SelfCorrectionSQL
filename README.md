@@ -107,13 +107,14 @@ python workflows/mcts_v1/test/test_mcts.py \
 ```bash
 nohup python workflows/mcts_v1/test/test_mcts.py \
    --ppl_file data/subset_ppl_dev_python.json \
-   --sql_out workflows/mcts_v1/test/out/1_6_test_no_strategy_sql.txt \
-   --json_out workflows/mcts_v1/test/out/1_6_test_no_strategy_result.json \
+   --sql_out workflows/mcts_v1/test/out/1_7_test_no_strategy_sql.txt \
+   --json_out workflows/mcts_v1/test/out/1_7_test_no_strategy_result.json \
    --gold_file data/sub_sampled_bird_dev_set.json \
+   --max_workers 20 \
    --parallel_workers 5 \
    --strategy_mode NONE \
    --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
-   > workflows/mcts_v1/test/out/1_6_test_no_strategy.log 2>&1 &
+   > workflows/mcts_v1/test/out/1_7_test_no_strategy.log 2>&1 &
 ```
 
 **2. 策略模式测试（LLM选择策略1.6测试）**
@@ -124,6 +125,7 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
    --sql_out workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
    --json_out workflows/mcts_v1/test/out/1_6_test_with_strategy_result.json \
    --gold_file data/sub_sampled_bird_dev_set.json \
+   --max_workers 20 \
    --parallel_workers 5 \
    --strategy_mode LLM_PICK_ONCE \
    --multi_base_urls "http://localhost:8000/v1" \
@@ -189,9 +191,9 @@ python workflows/mcts_v1/test/test_single_mcts.py \
   --gold_file data/sub_sampled_bird_dev_set.json \
   --parallel_workers 5 \
   --max_workers 10 \
-  --max_cte_nodes 5 \
+  --max_cte_nodes 8 \
   --max_depth 8 \
-  --num_sql_variants 5 \
+  --num_sql_variants 8 \
   --multi_base_urls "http://localhost:8000/v1"
 ```
 
@@ -206,14 +208,17 @@ python workflows/mcts_v1/test/test_single_mcts.py \
   --gold_file data/sub_sampled_bird_dev_set.json \
   --parallel_workers 5 \
   --max_workers 10 \
-  --max_cte_nodes 5 \
+  --max_cte_nodes 8 \
   --max_depth 8 \
-  --num_sql_variants 5 \
+  --num_sql_variants 8 \
   --strategy_mode LLM_PICK_ONCE \
   --multi_base_urls "http://localhost:8000/v1,http://localhost:8010/v1"
 ```
 
 **后台运行示例 1.6**：
+
+python workflows/mcts_v1/test/test_mcts.py   --ppl_file data/subset_ppl_dev_python.json   --sql_out workflows/mcts_v1/test/out/test_q35_81.txt   --json_out workflows/mcts_v1/test/out/test_q35_81.json   --qids "240,347,362,483,529,625,760,766,847,972,1032,1063,1085,1087,1195,1249,1268,1272,1467"   --gold_file data/sub_sampled_bird_dev_set.json   --parallel_workers 5 --max_workers 20  --multi_base_urls "http://localhost:8000/v1"   --strategy_mode FORCE_S2
+**后台运行示例（子集）**：
 
 ```bash
 nohup python workflows/mcts_v1/test/test_single_mcts.py \
@@ -223,12 +228,30 @@ nohup python workflows/mcts_v1/test/test_single_mcts.py \
   --gold_file data/sub_sampled_bird_dev_set.json \
   --parallel_workers 5 \
   --max_workers 40 \
-  --max_cte_nodes 5 \
+  --max_cte_nodes 8 \
   --max_depth 8 \
-  --num_sql_variants 5 \
+  --num_sql_variants 8 \
   --strategy_mode NONE \
   --multi_base_urls "http://localhost:8000/v1" \
   > workflows/mcts_v1/test/out/test_background.log 2>&1 &
+```
+
+**后台运行示例（全部数据集）**：
+
+```bash
+nohup python workflows/mcts_v1/test/test_single_mcts.py \
+  --ppl_file /hpc2hdd/home/sshen190/wtao565/SelfCorrectionSQL/data/ppl_dev.json \
+  --sql_out workflows/mcts_v1/test/out/test_full_background.txt \
+  --json_out workflows/mcts_v1/test/out/test_full_background.json \
+  --gold_file data/dev.json \
+  --parallel_workers 5 \
+  --max_workers 20 \
+  --max_cte_nodes 8 \
+  --max_depth 8 \
+  --num_sql_variants 8 \
+  --strategy_mode NONE \
+  --multi_base_urls "http://localhost:8000/v1" \
+  > workflows/mcts_v1/test/out/test_full_background.log 2>&1 &
 ```
 
 **主要参数**：

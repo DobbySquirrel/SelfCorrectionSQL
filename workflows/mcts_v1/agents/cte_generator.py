@@ -6,7 +6,7 @@ CTE生成器智能体
 """
 
 import autogen
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import Levenshtein
 import random
 import re
@@ -18,7 +18,7 @@ from openai import OpenAI
 class CTEGenerator:
     """CTE生成器智能体"""
     
-    def __init__(self, llm_config: Dict, max_depth: int = 5, multi_model_configs: List[Dict] = None, relationships_map: Dict[str, Dict[str, Any]] = None):
+    def __init__(self, llm_config: Dict, max_depth: int = 5, multi_model_configs: List[Dict] = None, relationships_map: Dict[str, Dict[str, Any]] = None, relationships_data: Dict[str, Any] = None):
         """
         初始化CTE生成器
         
@@ -27,11 +27,13 @@ class CTEGenerator:
             max_depth: 最大允许深度（步骤数）
             multi_model_configs: 多个模型配置列表（用于多模型并行加速）
             relationships_map: 关系映射字典，格式: {f"{table1}<->{table2}": {'type': '1:1', ...}, ...}
+            relationships_data: 关系数据字典，格式: {db_name: {relationships: [...], metadata: {...}}}
         """
         self.llm_config = llm_config
         self.max_depth = max_depth
         self.multi_model_configs = multi_model_configs or []
         self.relationships_map = relationships_map or {}
+        self.relationships_data = relationships_data or {}
         # 线程锁：保护 agent 创建过程（避免并行环境下的 Pydantic 冲突）
         self._agent_lock = threading.Lock()
         # 用于轮询选择模型的计数器（线程安全）
@@ -79,59 +81,68 @@ class CTEGenerator:
     def _get_cte_system_message(self) -> str:
         """获取CTE生成器的系统消息"""
         max_depth_str = str(self.max_depth) if hasattr(self, 'max_depth') else "5"
-        return f"""你是一个专业的数据分析师，你需要根据现有内容决定下一步探索什么。
+        return f"""You are a professional data analyst. You need to decide what to explore next based on the existing content.
 
-**重要：直接输出SQL代码，不要输出推理过程或解释！只返回SQL代码块！**
+**IMPORTANT: Output SQL code directly, do NOT output reasoning process or explanations! Only return SQL code blocks!**
 
-**任务**: 基于提供的自然语言问题和数据库模式，**只生成一个CTE定义**（不包含SELECT语句），系统会自动添加SELECT。
+**Task**: Based on the provided natural language question and database schema, **generate only ONE CTE definition** (without SELECT statement). The system will automatically add SELECT.
 
-**重要：在生成新CTE之前，先判断前序CTE是否已经恰好回答了问题，没有多余的信息！**
+**IMPORTANT: Before generating a new CTE, first determine if the preceding CTE has already answered the question exactly, without extra information!**
 
-**两种可能的输出**:
+**⚠️ CRITICAL: Evidence Verification Required**
+   - **Before using any information from "Additional context" or "Evidence":**
+     1. **MUST first verify** if the preceding CTE execution results already contain the needed columns/values
+     2. If Evidence mentions a condition, you MUST:
+        - First check if the preceding CTE includes the relevant column mentioned in the condition
+        - If the column is missing, add it to your CTE first
+        - Then verify the actual values in execution results before applying the condition
+     3. **Never blindly trust Evidence** - always verify against execution results first
 
-1. **如果最后一个CTE返回的内容回答了问题** → 输出:
+**Two Possible Outputs**:
+
+1. **If the last CTE's returned content answers the question** → Output:
 ```sql
 <END>
 ```
 
-2. **如果需要继续** → 生成一个新的CTE，从以下类型中选择一个:
+2. **If continuation is needed** → Generate a new CTE, choose one from the following types:
 
-**表达式类型** (按"列先、行后"分层原则):
+**Expression Types** (following "column-first, row-later" layering principle):
 
-**列选择操作** (Column-only - 只选列，不改行数，不筛选):
-1. **<列选择>**: 只选择后续会用到的列，不添加WHERE条件
-   - 格式: `SELECT col1, col2 FROM table`
-   - 用途: 先与数据库交互，看到需要的列和数据类型
+**Column Selection Operation** (Column-only - select columns only, don't change row count, no filtering):
+1. **<Column Selection>**: Only select columns that will be used later, do not add WHERE conditions
+   - Format: `SELECT col1, col2 FROM table`
+   - Purpose: Interact with the database first to see the needed columns and data types
 
-**行筛选操作** (Row-only - 只加WHERE条件，不新增/删除列):
-2. **<行筛选>**: 只添加WHERE条件进行行筛选
-   - 格式: `SELECT col1, col2 FROM previous_cte WHERE condition`
-   - 用途: 基于前序CTE的列进行行筛选
+**Row Filtering Operation** (Row-only - only add WHERE conditions, no new/removed columns):
+2. **<Row Filtering>**: Only add WHERE conditions for row filtering
+   - Format: `SELECT col1, col2 FROM previous_cte WHERE condition`
+   - Purpose: Filter rows based on columns from preceding CTE
 
-**表连接操作** (Table-only - 只做JOIN，不筛选，不改列表达式):
-3. **<表连接>**: 只进行表连接，不添加WHERE条件
-   - 格式: `SELECT t1.col1, t2.col2 FROM cte1 t1 JOIN table2 t2 ON condition`
-   - 用途: 连接不同表获取更多列
+**Table Join Operation** (Table-only - only perform JOIN, no filtering, no column expression changes):
+3. **<Table Join>**: Only perform table joins, do not add WHERE conditions
+   - Format: `SELECT t1.col1, t2.col2 FROM cte1 t1 JOIN table2 t2 ON condition`
+   - Purpose: Join different tables to get more columns
 
-**聚合操作** (Agg-only - 只做聚合，不筛选):
-4. **<聚合>**: 只进行聚合计算
-   - 格式: `SELECT COUNT(*), SUM(col) FROM previous_cte GROUP BY col`
-   - 用途: 对前序CTE结果进行聚合
+**Aggregation Operation** (Agg-only - only perform aggregation, no filtering):
+4. **<Aggregation>**: Only perform aggregation calculations
+   - Format: `SELECT COUNT(*), SUM(col) FROM previous_cte GROUP BY col`
+   - Purpose: Aggregate results from preceding CTE
 
-**高级操作** (需要前序CTE结果):
-5. **<集合>**: 集合运算 (UNION, INTERSECT, EXCEPT, DISTINCT)
-6. **<字符串>**: 字符串处理函数 (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
-7. **<日期>**: 日期时间处理 (STRFTIME, DATE, DATETIME, julianday)
-8. **<窗口>**: 窗口函数 (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
+**Advanced Operations** (require preceding CTE results):
+5. **<Set>**: Set operations (UNION, INTERSECT, EXCEPT, DISTINCT)
+6. **<String>**: String processing functions (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
+7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
+8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
 
 
-**重要规则**:
-- **第一步必须是列选择**: 无前序CTE时，必须先选择需要的列与数据库交互
-- **严格分层**: 每个CTE只做一种变化（列选择→行筛选→表连接→行筛选→聚合）
-- **避免复合变化**: 不要在一个CTE中同时做列选择和行筛选
-- **深度限制**: 系统允许生成最多{max_depth_str}个CTE步骤。当前步骤信息会在输入中提供，请根据剩余步骤数合理安排CTE生成策略
+**Important Rules**:
+- **First step must be column selection**: When there are no preceding CTEs, you must first select the needed columns to interact with the database
+- **Strict layering**: Each CTE only performs one type of change (column selection → row filtering → table join → row filtering → aggregation)
+- **Avoid composite changes**: Do not perform both column selection and row filtering in one CTE
+- **Depth limit**: The system allows generating at most {max_depth_str} CTE steps. Current step information will be provided in the input. Please arrange CTE generation strategy reasonably based on remaining steps
 
-生成格式:
+Generation format:
 ```sql
 WITH new_cte_name AS (
     SELECT ...
@@ -140,32 +151,38 @@ WITH new_cte_name AS (
 )
 ```
 
-**生成规则**:
-- 只生成CTE定义（到 `)` 为止），每次只能生成一个类型
-- 列级别变化和行级变化的操作不要合并在一起
-- 不能使用逗号连接多个CTE.
-- 不要添加任何SELECT语句
-- 可以引用前序CTE的名称，我会添加在执行程序中，不需要你重复写。
-- With不能命名已存在的CTE名称！必须使用新的、未被使用过的名称`
-- 列名规则：必须使用schema中提供的完整列名，包含空格、括号等特殊字符的列名必须用反引号包裹
+**Generation Rules**:
+- Only generate CTE definition (up to `)`), only one type per generation
+- Do not combine column-level changes and row-level changes in one operation
+- Cannot use commas to connect multiple CTEs
+- Do not add any SELECT statements
+- You can reference preceding CTE names. I will add them in the executor, you don't need to repeat them.
+- **CTE Naming Rules**:
+  - **CRITICAL**: You MUST use a NEW, UNUSED CTE name for each CTE you generate
+  - **DO NOT reuse existing CTE names**: If a preceding CTE has issues, you should create a new CTE with a different name instead of reusing the same name
+  - Each CTE in the sequence must have a unique name to avoid conflicts
+- Column name rules: Must use the complete column names provided in the schema. Column names containing spaces, parentheses, or other special characters must be wrapped in backticks
 
 
 
 **Database Admin Instructions (Must Strictly Adhere):**
 1.  **SELECT Clause:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values.
-2.  **Aggregation (MAX/MIN):** Always perform JOINs before using `MAX()` or `MIN()`.
-3.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
-4.  **Handling NULLs:** If a column may contain NULL values (indicated by "None" in value examples or explicitly stated), use `JOIN` or `WHERE <column> IS NOT NULL`.
-5.  **FROM/JOIN Clauses:** Only include tables essential to answer the question.
-6.  **Strictly Follow Hints:** Adhere to all provided hints.
-7.  **Thorough Question Analysis:** Address all conditions mentioned in the question.
-8.  **DISTINCT Keyword:** Use `SELECT DISTINCT` when the question requires unique values (e.g., IDs, URLs). Refer to column statistics ("Value Statics") to determine if `DISTINCT` is necessary.
-9.  **Column Selection:** When similar columns exist across tables, carefully analyze column descriptions and hints to choose the correct column.
-10. **String Concatenation:** Never use `|| ' ' ||` or any other method to concatenate strings in the `SELECT` clause.
-11. **JOIN Preference:** Prioritize `INNER JOIN` over nested `SELECT` statements.
-12. **SQLite Functions Only:** Use only functions available in SQLite (unless fuzzy matching extensions are available).
-13. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year).
-14. **Fuzzy Matching (When Previous CTE Returns Empty Results):** If the previous CTE execution returned an empty result set, it may indicate that exact string matching failed. In such cases, use fuzzy matching methods:
+   - **CRITICAL**: When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps (e.g., join keys like `CDSCode`, columns needed for final answer like `City`, `School`). Do NOT drop columns that are required for later operations.
+2.  **FROM Table Selection:** If filtering/ordering columns come from a specific table, use that table as the FROM driving table. This ensures the filtering/ordering conditions can be applied correctly.
+3.  **Aggregation (MAX/MIN):** Always perform JOINs before using `MAX()` or `MIN()`.
+4.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
+5.  **Handling NULLs:** If a column may contain NULL values (indicated by "None" in value examples or explicitly stated), use `JOIN` or `WHERE <column> IS NOT NULL`.
+6.  **FROM/JOIN Clauses:** Only include tables essential to answer the question.
+7.  **Strictly Follow Hints:** Adhere to all provided hints.
+8.  **Thorough Question Analysis:** Address all conditions mentioned in the question.
+9.  **DISTINCT Keyword:** Use `SELECT DISTINCT` when the question requires unique values or when selecting columns that may have duplicates (e.g., IDs, URLs, names, nationalities, categories). If the question asks for a list of unique items or the result may contain duplicate values, always use `SELECT DISTINCT`. Refer to column statistics ("Value Statics") to determine if `DISTINCT` is necessary. When in doubt, use `DISTINCT` to ensure unique results.
+10. **COUNT with DISTINCT (CRITICAL):** When using `COUNT()` after JOINs, especially with N:1 or M:N relationships, you MUST use `COUNT(DISTINCT column)` instead of `COUNT(*)` to avoid counting duplicate rows. If the relationship is N:1 (Many-to-One), the child table may have multiple rows per parent, so always use `COUNT(DISTINCT column)` when counting entities from the parent table. **Check the table relationships provided in the prompt - if you see N:1 relationships and you're counting entities from the parent table, you MUST use `COUNT(DISTINCT column)` where the column is the unique identifier from the parent table.**
+11. **Column Selection:** When similar columns exist across tables, carefully analyze column descriptions and hints to choose the correct column.
+12. **String Concatenation:** Never use `|| ' ' ||` or any other method to concatenate strings in the `SELECT` clause.
+13. **JOIN Preference:** Prioritize `INNER JOIN` over nested `SELECT` statements.
+14. **SQLite Functions Only:** Use only functions available in SQLite (unless fuzzy matching extensions are available).
+15. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year).
+15. **Fuzzy Matching (When Previous CTE Returns Empty Results):** If the previous CTE execution returned an empty result set, it may indicate that exact string matching failed. In such cases, use fuzzy matching methods:
     - **CRITICAL**: When generating fuzzy matching CTE, you MUST generate **DIVERSE** LIKE patterns. **DO NOT** repeat the same pattern multiple times.
     - **Required Pattern Types** (for each target string):
       1. **Broad Match**: `LIKE '%Target%'` (Contains)
@@ -179,10 +196,6 @@ WITH new_cte_name AS (
     - **GOOD Example** (DO THIS):
       ```sql
       WHERE col LIKE '%Value%'      -- Contains
-      OR col LIKE 'Value%'          -- Starts with
-      OR col LIKE '%Value'          -- Ends with
-      OR col = 'Value'              -- Exact match
-      OR col LIKE '% Value %'       -- With spaces
       LIMIT 10
       ```
     - **Important**: The system generates multiple CTE variants in parallel. Each variant should explore **DIFFERENT** LIKE patterns. Do NOT generate the same pattern in multiple variants.
@@ -193,46 +206,47 @@ WITH new_cte_name AS (
 Schema provides column names with backticks when they contain spaces/special characters.
 **You MUST copy these column names EXACTLY as shown in the schema - DO NOT convert spaces to underscores!**
 
-问题：Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?
-Schema：
+Question: Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?
+Schema:
 satscores(cds, AvgScrMath), frpm(CDSCode, School Code, Charter Funding Type), schools(CDSCode, Charter)
 
-示例 1 — 第一个 CTE（列选择）
+Example 1 — First CTE (Column Selection)
 WITH c_cols AS (
     SELECT ss.cds, ss.`AvgScrMath`
     FROM satscores AS ss
 )
 
-获得`AvgScrMath`的数值是[500,501,569,640...]
-示例 2 — 第二个 CTE（行筛选）
+Obtained `AvgScrMath` values are [500,501,569,640...]
+Example 2 — Second CTE (Row Filtering)
 WITH c_rows AS (
     SELECT cds, `AvgScrMath`
     FROM c_cols
     WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 560
 )
 
-示例 3 — 第三个 CTE（表连接）
+Example 3 — Third CTE (Table Join)
 WITH t_join AS (
     SELECT f.`School Code`, f.`Charter Funding Type`
     FROM c_rows r
     INNER JOIN frpm f ON r.cds = f.`CDSCode`
 )
 
-获得`Charter Funding Type`的数值是[Directly funded,Somehow funded, w/o funded,...]
-示例 4 — 第四个 CTE（行筛选）
+Obtained `Charter Funding Type` values are [Directly funded,Somehow funded, w/o funded,...]
+Example 4 — Fourth CTE (Row Filtering)
 WITH t_rows AS (
     SELECT `School Code`
     FROM t_join
     WHERE `Charter Funding Type` = 'Directly funded'
 )
 
-示例 5 — 第五个 CTE（聚合）
+Example 5 — Fifth CTE (Aggregation)
 WITH final_count AS (
     SELECT COUNT(*) AS answer
     FROM t_rows
 )
+Note: If the question involves JOINs with N:1 relationships and asks "how many" entities, use COUNT(DISTINCT entity_id) instead of COUNT(*) to avoid counting duplicates.
 
-示例 6 — 停止
+Example 6 — Stop
 <END>
 
 /no_think
@@ -255,6 +269,9 @@ WITH final_count AS (
         # 通过node.parent向上追溯获取前序CTE信息
         preceding_cte_info = self._get_preceding_cte_info(node)
         
+        # 获取关系信息
+        relationships_info = self._get_relationships_info(node.schema_info)
+        
         # 获取当前深度和剩余深度
         current_depth = node.depth
         remaining_steps = max(0, self.max_depth - current_depth)
@@ -265,6 +282,7 @@ WITH final_count AS (
 
 * **Natural language question**: {node.question}
 * **Database schema**: {node.schema_info}
+{relationships_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 * **Preceding CTE and Results (Quick verification with LIMIT)**: 
 {preceding_cte_info}
@@ -384,12 +402,40 @@ WITH final_count AS (
                 else:
                     # 没有找到匹配的右括号，CTE不完整
                     print(f"⚠️ _extract_cte_from_response: CTE括号不匹配，拒绝不完整的CTE")
+                    print(f"   不完整的CTE内容:\n{cte_text}")
+                    print(f"   括号计数: {paren_count} (未闭合)")
                     return ""  # 拒绝不完整的CTE
         
         # 系统自动添加SELECT语句
         full_cte = f"{cte_text}\nSELECT * FROM {cte_name};"
         
         return full_cte
+    
+    def _remove_foreign_key(self, schema_info: str) -> str:
+        """
+        移除schema_info中的foreign_key部分
+        
+        Args:
+            schema_info: 包含foreign_key的schema信息
+            
+        Returns:
+            移除foreign_key后的schema信息
+        """
+        try:
+            if 'foreign_key:' not in schema_info:
+                return schema_info
+            
+            # 分离表定义和外键定义
+            schema_part, _ = schema_info.split('foreign_key:', 1)
+            # 移除末尾可能的空行和单独的 #
+            lines = schema_part.rstrip().split('\n')
+            # 移除末尾的空行和单独的 #
+            while lines and (not lines[-1].strip() or lines[-1].strip() == '#'):
+                lines.pop()
+            return '\n'.join(lines)
+        except Exception as e:
+            print(f"⚠️  移除foreign_key失败: {e}，使用原始schema")
+            return schema_info
     
     def _extract_table_order(self, schema_info: str) -> List[str]:
         """
@@ -773,7 +819,7 @@ LIMIT 5;
 ### [IMPORTANT NOTES]
 
 - **Each CTE variant should explore DIFFERENT patterns** - the system generates multiple variants in parallel, so each should try different LIKE patterns.
-- **If the target string is simple (e.g., "TR047")**, try: `'%TR047%'`, `'TR047%'`, `'%TR047'`, `'TR047'`, `'%TR%047%'` (split), etc.
+- **If the target string is simple (e.g., "TR047")**, try: `'%TR047%'`, `'%TR%047%'` (split), etc.
 - **If the target contains special characters**, try variations with/without spaces, with/without the special characters.
 - **Always include a LIMIT clause** to prevent excessive results.
 """
@@ -790,21 +836,36 @@ LIMIT 5;
             格式化的前序CTE信息字符串
         """
         # 收集从根节点到当前节点的所有CTE（包括当前节点自己的CTE）
+        # 按顺序收集，不处理同名替换（不允许重用CTE名称）
         cte_path = []
-        current = node  # 🔧 修复：从node本身开始，而不是node.parent
+        seen_cte_names = set()  # 用于检测重复的CTE名称
+        current = node  # 从node本身开始
         
-        while current is not None:
-            if current.cte and current.cte != "" and current.cte != "<END>":
-                cte_info = {
-                    'cte': current.cte,
-                    'execution_result': current.execution_results.get('cte_result', {})
-                }
-                cte_path.insert(0, cte_info)  # 插入到开头，保持从根到叶的顺序
-            current = current.parent
+        # 从根节点到当前节点，按顺序收集CTE
+        root_to_current = []
+        temp = node
+        while temp is not None:
+            root_to_current.insert(0, temp)
+            temp = temp.parent
+        
+        # 按顺序收集CTE（只收集第一次出现的CTE名称，忽略重复的）
+        for n in root_to_current:
+            if n.cte and n.cte != "" and n.cte != "<END>":
+                # 提取CTE名称
+                match = re.search(r'WITH\s+(\w+)\s+AS', n.cte, re.IGNORECASE)
+                if match:
+                    cte_name = match.group(1)
+                    # 只添加第一次出现的CTE（如果遇到重复名称，跳过）
+                    if cte_name not in seen_cte_names:
+                        cte_path.append({
+                            'cte': n.cte,
+                            'execution_result': n.execution_results.get('cte_result', {})
+                        })
+                        seen_cte_names.add(cte_name)
         
         # 如果没有前序CTE，返回提示信息
         if not cte_path:
-            return "无前序CTE"
+            return "No preceding CTE"
         
         # 获取问题文本（用于相似度计算）
         question = node.question
@@ -896,7 +957,7 @@ LIMIT 5;
                     total_rows = len(query_result)
                     query_result_limited = query_result[:20]
                     formatted_info.append(f"**Execution Result**: Successfully returned {total_rows} rows")
-                    # 只保留与问题相关的示例数据值，不再打印“结果列”和“实际数据行”
+                    # 只保留与问题相关的示例数据值，不再打印"结果列"和"实际数据行"
                     if len(query_result_limited) > 0:
                         columns = list(query_result_limited[0].keys())
                         # 显示与问题相关的示例数据值（每列的唯一值样本）
@@ -948,18 +1009,52 @@ LIMIT 5;
                         # 使用之前已经检查好的 is_second_empty 变量
                         if is_second_empty:
                             # 第二次空结果：重复提示使用模糊匹配（避免检查其他列导致SQL超时）
-                            print("前序CTE第二次有WHERE子句但返回空结果，重复提示使用模糊匹配创建新CTE(取新表名)。")
+                            print("Preceding CTE has WHERE clause but returned empty result for the second time. Repeating hint to use fuzzy matching to create new CTE (with new table name).")
                             formatted_info.append(self._get_fuzzy_match_hint(is_second_empty=True))
                         else:
-                            # 第一次空结果：使用当前的相似度方法
-                            print("前序CTE第一次有WHERE子句但返回空结果，提示使用模糊匹配创建新CTE(取新表名)。")
+                            # 第一次空结果：提示使用模糊匹配
                             formatted_info.append(self._get_fuzzy_match_hint(is_second_empty=False))
             else:
-                error = exec_result.get('error', 'Unknown error')
-                formatted_info.append(f"**Execution Result**: Execution failed - {error}")
-            formatted_info.append("")  # 空行分隔
+                # 执行失败
+                error_msg = exec_result.get('error', 'Execution failed')
+                formatted_info.append(f"**Execution Result**: Execution failed")
+                formatted_info.append(f"**Error**: {error_msg}")
         
         return "\n".join(formatted_info)
+    
+    def _extract_db_name_from_schema(self, schema_info: str) -> Optional[str]:
+        """从schema_info中提取数据库名称"""
+        if not schema_info:
+            return None
+        # schema_info格式通常是: "db_name:california_schools\n# ..."
+        match = re.search(r'db_name:\s*(\w+)', schema_info, re.IGNORECASE)
+        if match:
+            return match.group(1)
+        return None
+    
+    def _get_relationships_info(self, schema_info: str) -> str:
+        """获取并格式化关系信息"""
+        db_name = self._extract_db_name_from_schema(schema_info)
+        if not db_name or db_name not in self.relationships_data:
+            return ""
+        
+        relationships = self.relationships_data[db_name].get('relationships', [])
+        if not relationships:
+            return ""
+        
+        # 格式化关系信息
+        lines = ["* **Table Relationships**: "]
+        for rel in relationships:
+            table1 = rel.get('table1', '')
+            col1 = rel.get('col1', '')
+            table2 = rel.get('table2', '')
+            col2 = rel.get('col2', '')
+            rel_type = rel.get('relationship_type', '')
+            description = rel.get('description', '')
+            
+            lines.append(f"  - {table1}.{col1} <-> {table2}.{col2}: {rel_type} - {description}")
+        
+        return "\n".join(lines)
     
     def _should_monitor_cte(self, question: str) -> bool:
         """
@@ -1007,7 +1102,7 @@ LIMIT 5;
         
         # 格式化已使用的CTE名称提示
         if used_cte_names:
-            used_names_str = f"* **Used CTE Names (Cannot reuse)**: {', '.join(used_cte_names)}"
+            used_names_str = f"* **Used CTE Names**: {', '.join(used_cte_names)}\n  - **Important**: You MUST use a NEW CTE name that is different from all existing CTE names. Do NOT reuse any existing CTE name, as this will cause errors."
         else:
             used_names_str = "* **Used CTE Names**: None"
         
@@ -1026,10 +1121,13 @@ LIMIT 5;
         
         # 构建失败尝试提示（如果有）
         failed_attempts_section = ""
+        column_hints = []  # 收集所有列名到表的映射提示
+        
         if failed_attempts and len(failed_attempts) > 0:
             # 处理失败信息：可能是字符串（旧格式）或字典（新格式，包含错误信息）
             failed_items = []
-            for item in failed_attempts[:5]:  # 最多显示5个（增加数量）
+            attempt_count = 0
+            for item in failed_attempts[:5]:  # 最多显示5个
                 if isinstance(item, dict):
                     # 新格式：包含CTE和错误信息
                     cte = item.get('cte', '').strip()
@@ -1037,25 +1135,43 @@ LIMIT 5;
                     # 过滤掉无效的重复命名错误
                     if error and error.lower().find('duplicate with table name') != -1:
                         continue
-                    # 如果CTE不为空，显示CTE和错误；如果CTE为空，只显示错误
+                    
+                    # 检查是否有列名到表的映射提示
+                    column_hint = item.get('column_hint')
+                    if column_hint:
+                        column_hints.append(column_hint)
+                    
+                    attempt_count += 1
+                    # 统一格式：编号 + CTE（如果有）+ 错误信息
                     if cte:
-                        failed_items.append(f"```sql\n{cte}\n```\nError: {error}")
+                        failed_items.append(f"**Failed Attempt #{attempt_count}:**\n```sql\n{cte}\n```\n**Error:** {error}")
                     else:
                         # CTE为空，只显示错误信息（可能是失败节点的汇总错误）
-                        failed_items.append(f"Error: {error}")
+                        failed_items.append(f"**Failed Attempt #{attempt_count}:**\n**Error:** {error}")
                 else:
                     # 旧格式：只有CTE文本
                     cte_text = str(item).strip()
+                    attempt_count += 1
                     if cte_text:
-                        failed_items.append(f"```sql\n{cte_text}\n```\nError: Execution failed or timeout")
+                        failed_items.append(f"**Failed Attempt #{attempt_count}:**\n```sql\n{cte_text}\n```\n**Error:** Execution failed or timeout")
                     else:
-                        failed_items.append(f"Error: Execution failed or timeout")
+                        failed_items.append(f"**Failed Attempt #{attempt_count}:**\n**Error:** Execution failed or timeout")
             
-            failed_list = "\n\n".join(failed_items)
-            failed_attempts_section = f"""
+            if failed_items:
+                failed_list = "\n\n".join(failed_items)
+                
+                # 如果有列名映射提示，单独放在一个部分
+                column_hints_section = ""
+                if column_hints:
+                    # 去重列名提示
+                    unique_hints = list(set(column_hints))
+                    column_hints_section = f"\n\n**⚠️ Column Location Hints (CRITICAL):**\n" + "\n".join(f"- {hint}" for hint in unique_hints)
+                
+                failed_attempts_section = f"""  
 * **Previous Failed Attempts (Please avoid generating similar CTEs)**:
 The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
-{failed_list}
+
+{failed_list}{column_hints_section}
 
 """
         
@@ -1065,18 +1181,25 @@ The following CTEs failed during generation or execution in previous attempts. P
 ### [CRITICAL: INFORMATION PRIORITY]
 
 **Priority: Execution Results > Evidence**
-   - **Execution Results** (from Preceding CTE) are FACTS - use exact values, formats, column names
-   - **Evidence/Additional Context** are hints - may contain errors, verify against execution results first
-   - If conflicts occur, always trust execution results over evidence
+- **Execution Results** are FACTS - use exact values, formats, column names
+- **Evidence/Additional Context** are hints - verify against execution results first
+- If Evidence mentions a condition, check if the preceding CTE includes the relevant column. If not, add it first, then verify values before applying the condition.
 
 ================================================================================
 
 """
         
+        # 获取关系信息
+        relationships_info = self._get_relationships_info(node.schema_info)
+        
+        # 移除foreign_key信息，简化prompt（relationships_info已提供足够的关系信息）
+        schema_without_fk = self._remove_foreign_key(node.schema_info)
+        
         user_input = f"""
 **Input**:
 * **Natural language question**: {node.question}
-* **Database schema**: {node.schema_info}
+* **Database schema**: {schema_without_fk}
+{relationships_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 
 {priority_guidance}
