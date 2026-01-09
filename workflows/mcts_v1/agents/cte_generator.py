@@ -1102,7 +1102,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                         failed_items.append(f"**Failed Attempt #{attempt_count}:**\n**Error:** Execution failed or timeout")
             
             if failed_items:
-                failed_list = "\n\n".join(failed_items)
+            failed_list = "\n\n".join(failed_items)
                 
                 # 如果有列名映射提示，单独放在一个部分
                 column_hints_section = ""
@@ -1111,7 +1111,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     unique_hints = list(set(column_hints))
                     column_hints_section = f"\n\n**⚠️ Column Location Hints (CRITICAL):**\n" + "\n".join(f"- {hint}" for hint in unique_hints)
                 
-                failed_attempts_section = f"""  
+            failed_attempts_section = f"""
 * **Previous Failed Attempts (Please avoid generating similar CTEs)**:
 The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
 

@@ -416,7 +416,7 @@ class MCTSWorkflow:
                         root_node.picked_strategy_thought = picked_strategy_thought
                         if picked_strategy == "S4":
                             if picked_strategy_thought:
-                                print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
                                 print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
                             else:
                                 print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
@@ -577,7 +577,7 @@ class MCTSWorkflow:
                                                 failed_item['column_tables'] = existing_item.get('column_tables')
                                                 current._failed_cte_attempts[idx] = failed_item
                                             else:
-                                                current._failed_cte_attempts[idx] = failed_item
+                                            current._failed_cte_attempts[idx] = failed_item
                                             # 更新deduplicated_failed_info中对应的项
                                             for d_idx, d_item in enumerate(deduplicated_failed_info):
                                                 if d_item.get('error', '').strip() == error:
@@ -1333,7 +1333,7 @@ class MCTSWorkflow:
                                         attempt['column_tables'] = existing_item.get('column_tables')
                                         failed_attempts[idx] = attempt
                                     else:
-                                        failed_attempts[idx] = attempt
+                                    failed_attempts[idx] = attempt
                                 break
                     else:
                         # 如果错误信息不存在，直接添加
@@ -1397,4 +1397,4 @@ class MCTSWorkflow:
         except Exception:
             pass
         return tree_stats
-
+    

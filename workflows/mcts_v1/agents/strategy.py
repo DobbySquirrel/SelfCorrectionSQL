@@ -131,7 +131,7 @@ Example JSON format:
                 # S4使用LLM自己规划的thought作为策略描述
                 strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
             else:
-                strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+            strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
             return f"""
 {strategy_desc}
 """
