@@ -372,7 +372,7 @@ class MCTSUtils:
         # 找到出现次数最多的签名
         best_signature = max(result_buckets.keys(), key=lambda k: result_buckets[k])
         return best_signature
-    
+
     @staticmethod
     def parse_schema_column_mapping(schema_info: str) -> Dict[str, List[str]]:
         """

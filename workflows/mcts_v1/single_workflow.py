@@ -218,7 +218,7 @@ class SimpleRolloutWorkflow:
                     current_context["picked_strategy_thought"] = picked_strategy_thought
                     if picked_strategy == "S4":
                         if picked_strategy_thought:
-                            print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                    print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
                             print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
                         else:
                             print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
