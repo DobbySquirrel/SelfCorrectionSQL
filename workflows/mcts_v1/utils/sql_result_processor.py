@@ -219,8 +219,9 @@ class SQLResultProcessor:
                 if res.get('valid', False):
                     selected_sql = sql
                     break
-            if selected_sql is None and len(sql_variants) > 0:
-                selected_sql = sql_variants[0]
+            # 如果所有SQL都无效，不选择任何SQL（返回None），避免选择语法错误的SQL
+            if selected_sql is None:
+                print(f"{context_prefix} ⚠️ 警告：所有SQL都无效，不选择任何SQL")
         
         return reward, selected_sql
     

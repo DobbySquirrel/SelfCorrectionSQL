@@ -47,16 +47,13 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration = 10  # 从6增加到10，让visit_count更好地反映节点质量
+        self.rollouts_per_iteration =8  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
-        self.max_cte_nodes_per_iteration = 5  # 每次扩展节点时生成的CTE变体数量
+        self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
         # 范围：5-8个，根据rollouts_per_iteration动态调整
         self.num_sql_variants = 10  # 每个rollout末尾生成的SQL变体数量
-        # 基于分析结果的优化参数
-        self.bucket_count_threshold = 4  # bucket_count>=4时成功率显著提高（成功案例平均4.43 vs 失败3.15）
-        self.depth_penalty_start = 6  # 深度超过6层时开始应用惩罚
 
         # 从llm_config中提取multi_model_configs（如果存在config_list）
         multi_model_configs = None
@@ -1017,17 +1014,14 @@ class MCTSWorkflow:
                         # 检查是否非单0
                         is_nonzero = is_valid_nonempty and not MCTSUtils.is_single_zero_result(exec_res.get('query_result', []))
                         
-                        # 综合评分：(非空且非单0, LIKE CTE非空优先, bucket_count>=阈值, 深度惩罚, 路径长度惩罚, Q值)
-                        bucket_count = get_bucket_count(child)
-                        depth_score = 1.0 if child.depth <= self.depth_penalty_start else 0.8
+                        # 综合评分：(非空且非单0, LIKE CTE非空优先, 深度惩罚, 路径长度惩罚, Q值)
                         # 对于有CTE的节点，depth = CTE路径长度，所以直接用depth判断
                         path_score = 1.0 if child.depth < 5 else (1.0 - 0.1 * (child.depth - 4))
                         
                         return (
                             1 if is_nonzero else 0,  # 非空且非单0优先
                             1 if (is_valid_nonempty and is_like_cte) else 0,  # 在非空CTE中，优先选择LIKE CTE
-                            1 if bucket_count >= self.bucket_count_threshold else 0,  # bucket_count>=4优先
-                            depth_score,  # 深度越浅越好
+                            1.0 if child.depth <= 6 else 0.8,  # 深度越浅越好
                             path_score,  # 路径越短越好
                             child.q_value  # Q值
                         )

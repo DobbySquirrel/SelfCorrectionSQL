@@ -100,6 +100,33 @@ class SQLSelector:
         if best_rollout:
             selected_sql = best_rollout.get('selected_sql')
             if selected_sql:
+                # 验证选择的SQL是否有效（检查all_sql_variants中是否有对应的有效SQL）
+                all_sql_variants = best_rollout.get('all_sql_variants', [])
+                is_valid_sql = False
+                if all_sql_variants:
+                    for sql_info in all_sql_variants:
+                        if sql_info.get('sql', '').strip() == selected_sql.strip() and sql_info.get('valid', False):
+                            is_valid_sql = True
+                            break
+                else:
+                    # 如果没有all_sql_variants信息，假设SQL有效（向后兼容）
+                    is_valid_sql = True
+                
+                if not is_valid_sql:
+                    print(f"[Selection] ⚠️ 警告：选择的SQL无效（语法错误），尝试从其他rollout中选择有效的SQL")
+                    # 尝试从其他rollout中选择有效的SQL
+                    for rollout_stats in rollout_stats_list:
+                        all_sql_variants_alt = rollout_stats.get('all_sql_variants', [])
+                        if all_sql_variants_alt:
+                            for sql_info in all_sql_variants_alt:
+                                if sql_info.get('valid', False):
+                                    valid_sql = sql_info.get('sql', '').strip()
+                                    if valid_sql:
+                                        print(f"[Selection] ✅ 找到有效的SQL替代方案")
+                                        return valid_sql
+                    print(f"[Selection] ❌ 所有rollout都没有有效的SQL")
+                    return ""
+                
                 is_quick_path = best_rollout.get('is_quick_path', False)
                 rollout_id = best_rollout.get('rollout_id', '?')
                 rollout_type = "快速路径" if is_quick_path else f"CTE Rollout {rollout_id}"
