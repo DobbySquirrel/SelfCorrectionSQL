@@ -34,7 +34,7 @@ class SimpleRolloutWorkflow:
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数
             enable_probe: 是否启用Probe步骤（在生成CTE前先执行probe探测），默认为True
-            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
+            strategy_mode: 策略模式（FORCE_S1/S2/S3, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
@@ -213,7 +213,7 @@ class SimpleRolloutWorkflow:
                 # 从JSON响应中提取策略和thought
                 picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                 
-                if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
+                if picked_strategy and picked_strategy in ("S1", "S2", "S3"):
                     current_context["picked_strategy"] = picked_strategy
                     current_context["picked_strategy_thought"] = picked_strategy_thought
                     if picked_strategy == "S4":
