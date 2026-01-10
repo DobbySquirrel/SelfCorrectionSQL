@@ -24,7 +24,80 @@ class StrategyConfig:
 
 
 GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S4", lock_after_picked=True)
+CTE_ACTION_level="""
 
+Expression Types:
+
+**Column Selection Operation** (Column-only - select columns only, don't change row count, no filtering):
+1. **<Column Selection>**: Only select columns that will be used later, do not add WHERE conditions
+   - Format: `SELECT col1, col2 FROM table`
+   - Purpose: Interact with the database first to see the needed columns and data types
+
+**Row Filtering Operation** (Row-only - only add WHERE conditions, no new/removed columns):
+2. **<Row Filtering>**: Only add WHERE conditions for row filtering
+   - Format: `SELECT col1, col2 FROM previous_cte WHERE condition`
+   - Purpose: Filter rows based on columns from preceding CTE
+
+**Table Join Operation** (Table-only - only perform JOIN, no filtering, no column expression changes):
+3. **<Table Join>**: Only perform table joins, do not add WHERE conditions
+   - Format: `SELECT t1.col1, t2.col2 FROM cte1 t1 JOIN table2 t2 ON condition`
+   - Purpose: Join different tables to get more columns
+
+**Aggregation Operation** (Agg-only - only perform aggregation, no filtering):
+4. **<Aggregation>**: Only perform aggregation calculations
+   - Format: `SELECT COUNT(*), SUM(col) FROM previous_cte GROUP BY col`
+   - Purpose: Aggregate results from preceding CTE
+
+**Advanced Operations** (require preceding CTE results):
+5. **<Set>**: Set operations (UNION, INTERSECT, EXCEPT, DISTINCT)
+6. **<String>**: String processing functions (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
+7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
+8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
+
+Example:
+
+Question: Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?
+Schema: satscores(cds, AvgScrMath), frpm(CDSCode, School Code, Charter Funding Type), schools(CDSCode, Charter)
+
+First CTE (Column Selection)
+WITH c_cols AS (
+    SELECT ss.cds, ss.`AvgScrMath`
+    FROM satscores AS ss
+)
+
+Obtained `AvgScrMath` values are [500,501,569,640...]
+Second CTE (Row Filtering)
+WITH c_rows AS (
+    SELECT cds, `AvgScrMath`
+    FROM c_cols
+    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 560
+)
+
+Third CTE (Table Join)
+WITH t_join AS (
+    SELECT f.`School Code`, f.`Charter Funding Type`
+    FROM c_rows r
+    INNER JOIN frpm f ON r.cds = f.`CDSCode`
+)
+
+Obtained `Charter Funding Type` values are [Directly funded,Somehow funded, w/o funded,...]
+Fourth CTE (Row Filtering)
+WITH t_rows AS (
+    SELECT `School Code`
+    FROM t_join
+    WHERE `Charter Funding Type` = 'Directly funded'
+)
+
+Fifth CTE (Aggregation)
+WITH final_count AS (
+    SELECT COUNT(*) AS answer
+    FROM t_rows
+)
+
+Stop
+<END>
+
+"""
 
 # ---- 策略手册（给 CTE/SQL 生成器看的文本）----
 _STRATEGY_DESCRIPTIONS = {
@@ -42,16 +115,17 @@ _STRATEGY_DESCRIPTIONS = {
 - Upfront disambiguation: if schema is large/ambiguous, create a robust intermediate CTE with only necessary columns.
 - Avoid fancy expressions until you have the correct grain.""",
     
-    "S4": """S4 Reactive:
-- Try a plausible CTE quickly; keep it simple.
-- Prefer small incremental CTEs; rely on execution feedback.""",
+    "S4": """S4 Custom:
+- You can choose S4 if you want to create your own custom strategy plan based on the specific question and schema.
+- When selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
+- The "thought" will be used as the strategy guidance in subsequent CTE generation steps.""",
     
     "S5": """S5 Evidence-Based:
-- When creating a CTE, ALWAYS validate it against the evidence fields provided in the dataset.
-- Use the evidence information to verify column names, filter values, join conditions, and data constraints.
-- If the evidence contains specific values, column names, or relationships, incorporate them into your CTE.
-- Cross-reference your CTE logic with the evidence to ensure correctness before proceeding.
-- If evidence suggests a different approach, adjust your CTE accordingly."""
+Always validate your CTE against the evidence fields in the dataset.
+Use the evidence to verify column names, filter values, join conditions, and constraints.
+Apply specific values, column names, or relationships from the evidence to your CTE.
+Cross-check your CTE logic with the evidence and adjust accordingly.
+"""
 }
 
 # 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段，不包含S4，S4由LLM自己规划）
@@ -63,12 +137,10 @@ STRATEGYs:
 
 {_STRATEGY_DESCRIPTIONS['S3']}
 
+{_STRATEGY_DESCRIPTIONS['S4']}
+
 {_STRATEGY_DESCRIPTIONS['S5']}
 
-S4 Custom:
-- You can choose S4 if you want to create your own custom strategy plan based on the specific question and schema.
-- When selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
-- The "thought" will be used as the strategy guidance in subsequent CTE generation steps.
 """
 
 def build_strategy_injection_text(
@@ -94,92 +166,33 @@ def build_strategy_injection_text(
         s = mode.replace("FORCE_", "")
         # 只返回当前策略的说明，不包含其他策略
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
-        # 对于 S5，特别强调使用 evidence 进行验证
-        if s == "S5":
-            return f"""
-[GLOBAL STRATEGY MODE: {mode}]
-{strategy_desc}
-
-**⚠️ CRITICAL: Evidence Validation**
-- The "Additional context" field contains evidence information from the dataset.
-- You MUST use this evidence to validate your CTE:
-  * Check if column names in your CTE match those mentioned in the evidence
-  * Verify filter values against evidence-provided values
-  * Ensure join conditions align with evidence-suggested relationships
-  * Cross-reference data constraints and constraints mentioned in evidence
-- If your CTE contradicts the evidence, you MUST revise it before proceeding.
-- The evidence is a critical validation source - do not ignore it.
-
-**⚠️ CRITICAL: Additional Context Priority**
-- If "Additional context" provides filtering conditions, you MUST:
-  1. Include the relevant column in your first CTE
-  2. Apply the filter condition (WHERE clause) in your first CTE - do NOT defer it to later CTEs
-  3. Do NOT skip these conditions - they are essential requirements
-"""
         return f"""
-[GLOBAL STRATEGY MODE: {mode}]
 {strategy_desc}
 
-**Additional Context are essential requirements**
-- If "Additional context" provides filtering conditions, you MUST:
-  1. Include the relevant column in your CTE
-  2. Apply the filter condition (WHERE clause) in your CTE
-
+{CTE_ACTION_level}
 """
 
     # LLM pick once
     if mode == "LLM_PICK_ONCE":
+        # 注意：策略选择阶段使用 build_strategy_selection_prompt 单独调用
+        # 这里只处理 depth>0 的情况，即策略已选择后，注入已选择的策略说明
         if depth == 0 and not picked_strategy:
-            # depth=0 时需要所有策略说明，因为模型要选择
-            # 注意：这个函数返回的文本会用于策略选择阶段，不是CTE生成阶段
-            return f"""
-**STRATEGY SELECTION REQUIRED** (Root Node)
-
-You MUST select ONE strategy from S1, S2, S3, S4, or S5 based on the question and schema.
-Analyze the question and choose the most appropriate strategy:
-- S1 (Entity-First): Use when you need to verify entity/value constraints first
-- S2 (Relation-First): Use when join paths are uncertain
-- S3 (Proactive): Use when schema is ambiguous or knowledge is thin
-- S5 (Evidence-Based): Use when evidence fields are available in the dataset and you want to validate CTEs against evidence
-- S4 (Custom): Use when you want to create your own custom strategy plan. If selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
-
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S4, or S5). If you choose S4, the "thought" field is REQUIRED and will be used as the strategy guidance.
-
-Example JSON format:
-```json
-{{
-  "thought": "I choose S1 because...",
-  "strategy": "S1"
-}}
-```
-
-{_FULL_STRATEGY_HANDBOOK}
-"""
+            # depth=0 时策略还未选择，不应该调用此函数
+            # 策略选择应该使用 build_strategy_selection_prompt 单独调用
+            return ""
+        
+        # depth>0 时只需要已选择策略的说明
+        s = picked_strategy or fixed_strategy or "S2"
+        if s == "S4" and picked_strategy_thought:
+            # S4使用LLM自己规划的thought作为策略描述
+            strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
         else:
-            # depth>0 时只需要已选择策略的说明
-            s = picked_strategy or fixed_strategy or "S2"
-            if s == "S4" and picked_strategy_thought:
-                # S4使用LLM自己规划的thought作为策略描述
-                strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
-            else:
-                strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
-            # 对于 S5，添加额外的 evidence 验证说明
-            if s == "S5":
-                return f"""
+            strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+
+        return f"""
 {strategy_desc}
 
-**⚠️ CRITICAL: Evidence Validation**
-- The "Additional context" field contains evidence information from the dataset.
-- You MUST use this evidence to validate your CTE:
-  * Check if column names in your CTE match those mentioned in the evidence
-  * Verify filter values against evidence-provided values
-  * Ensure join conditions align with evidence-suggested relationships
-  * Cross-reference data constraints and constraints mentioned in evidence
-- If your CTE contradicts the evidence, you MUST revise it before proceeding.
-- The evidence is a critical validation source - do not ignore it.
-"""
-            return f"""
-{strategy_desc}
+{CTE_ACTION_level}
 """
 
     # fallback
@@ -201,9 +214,6 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     return f"""# STRATEGY SELECTION TASK
 
 You need to select ONE strategy from S1, S2, S3, S4, or S5 for solving the following SQL generation task.
-
-Note: If you choose S4, you must provide a detailed "thought" field with your custom strategy plan. This thought will be used as the strategy guidance in subsequent CTE generation steps.
-Note: S5 (Evidence-Based) is recommended when evidence fields are available in the dataset, as it uses evidence to validate CTEs during generation.
 
 **Question**: {question}
 
@@ -230,7 +240,6 @@ Example JSON format:
 - Output MUST be valid JSON wrapped in ```json code block
 - The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S4", or "S5"
 - Include a "thought" field explaining your choice
-- If you choose S4, the "thought" field is REQUIRED and must contain your detailed custom strategy plan
 """
 
 

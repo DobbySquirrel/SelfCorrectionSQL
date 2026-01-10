@@ -15,7 +15,7 @@ import time as _time_for_timing
 class CTEProcessor:
     """CTE处理工具类"""
     
-    def __init__(self, sql_executor, cte_probe_timeout_s: float, max_workers: int, timing_dict: Optional[Dict[str, Any]] = None):
+    def __init__(self, sql_executor, cte_probe_timeout_s: float, max_workers: int, timing_dict: Optional[Dict[str, Any]] = None, cte_probe_limit: int = 15):
         """
         初始化CTE处理器
         
@@ -24,11 +24,13 @@ class CTEProcessor:
             cte_probe_timeout_s: CTE探针执行超时时间（秒）
             max_workers: 最大并行工作线程数
             timing_dict: 可选的计时统计字典（用于记录执行耗时）
+            cte_probe_limit: CTE探针查询的LIMIT值（默认15）
         """
         self.sql_executor = sql_executor
         self.cte_probe_timeout_s = cte_probe_timeout_s
         self.max_workers = max_workers
         self.timing_dict = timing_dict
+        self.cte_probe_limit = cte_probe_limit
     
     def deduplicate_cte_variants(
         self, 
@@ -81,11 +83,11 @@ class CTEProcessor:
             exec_sql = self.sql_executor.build_executable_cte_sql(node, one_cte)
             # 检查是否已经有LIMIT（包括LIMIT 5、LIMIT 10等）
             has_limit = re.search(r'\bLIMIT\s+\d+', exec_sql, re.IGNORECASE) is not None
-            # 如果没有LIMIT，添加LIMIT 5用于探针执行（快速检测，与prompt中的建议一致）
+            # 如果没有LIMIT，添加LIMIT用于探针执行（使用cte_probe_limit，与prompt中的建议一致）
             if exec_sql and not has_limit:
-                # 在最后的SELECT语句前添加LIMIT 5
+                # 在最后的SELECT语句前添加LIMIT
                 if 'SELECT * FROM' in exec_sql.upper():
-                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', r'\1 LIMIT 5\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
+                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', rf'\1 LIMIT {self.cte_probe_limit}\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
             # 2) 直接执行（不再进行自动修复）
             # 使用较短的超时时间进行探针执行（快速检测）
             res = self.sql_executor._execute_single_query(exec_sql, timeout_s=self.cte_probe_timeout_s)

@@ -6,7 +6,7 @@ CTE生成器智能体
 """
 
 import autogen
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import Levenshtein
 import random
 import re
@@ -86,91 +86,32 @@ class CTEGenerator:
         max_depth_str = str(self.max_depth) if hasattr(self, 'max_depth') else "5"
         return f"""You are a professional data analyst. You need to decide what to explore next based on the existing content.
 
-**IMPORTANT: Output SQL code directly, do NOT output reasoning process or explanations! Only return SQL code blocks!**
-
-**Task**: Based on the provided natural language question and database schema, **generate only ONE CTE definition** (without SELECT statement). The system will automatically add SELECT.
-
-**IMPORTANT: Before generating a new CTE, first determine if the preceding CTE has already answered the question exactly, without extra information!**
-
-**⚠️ CRITICAL: Evidence Verification Required**
-   - **Before using any information from "Additional context" or "Evidence":**
-     1. **MUST first verify** if the preceding CTE execution results already contain the needed columns/values
-     2. If Evidence mentions a condition, you MUST:
-        - First check if the preceding CTE includes the relevant column mentioned in the condition
-        - If the column is missing, add it to your CTE first
-        - Then verify the actual values in execution results before applying the condition
-     3. **Never blindly trust Evidence** - always verify against execution results first
+**Task: Based on the provided natural language question, database schema and Evidence/Additional Context, do the generation.
 
 **Two Possible Outputs**:
-
 1. **If the last CTE's returned content answers the question** → Output:
 ```sql
 <END>
 ```
 
-2. **If continuation is needed** → Generate a new CTE, choose one from the following types:
-
-**Expression Types** (following "column-first, row-later" layering principle):
-
-**Column Selection Operation** (Column-only - select columns only, don't change row count, no filtering):
-1. **<Column Selection>**: Only select columns that will be used later, do not add WHERE conditions
-   - Format: `SELECT col1, col2 FROM table`
-   - Purpose: Interact with the database first to see the needed columns and data types
-
-**Row Filtering Operation** (Row-only - only add WHERE conditions, no new/removed columns):
-2. **<Row Filtering>**: Only add WHERE conditions for row filtering
-   - Format: `SELECT col1, col2 FROM previous_cte WHERE condition`
-   - Purpose: Filter rows based on columns from preceding CTE
-
-**Table Join Operation** (Table-only - only perform JOIN, no filtering, no column expression changes):
-3. **<Table Join>**: Only perform table joins, do not add WHERE conditions
-   - Format: `SELECT t1.col1, t2.col2 FROM cte1 t1 JOIN table2 t2 ON condition`
-   - Purpose: Join different tables to get more columns
-
-**Aggregation Operation** (Agg-only - only perform aggregation, no filtering):
-4. **<Aggregation>**: Only perform aggregation calculations
-   - Format: `SELECT COUNT(*), SUM(col) FROM previous_cte GROUP BY col`
-   - Purpose: Aggregate results from preceding CTE
-
-**Advanced Operations** (require preceding CTE results):
-5. **<Set>**: Set operations (UNION, INTERSECT, EXCEPT, DISTINCT)
-6. **<String>**: String processing functions (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
-7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
-8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
-
-
-**Important Rules**:
-- **First step must be column selection**: When there are no preceding CTEs, you must first select the needed columns to interact with the database
-- **Strict layering**: Each CTE only performs one type of change (column selection → row filtering → table join → row filtering → aggregation)
-- **Avoid composite changes**: Do not perform both column selection and row filtering in one CTE
-- **Depth limit**: The system allows generating at most {max_depth_str} CTE steps. Current step information will be provided in the input. Please arrange CTE generation strategy reasonably based on remaining steps
-
-Generation format:
+2. **If continuation is needed** → Generate a new CTE.
 ```sql
 WITH new_cte_name AS (
     SELECT ...
-    FROM previous_cte_name
+    FROM ...
     ...
 )
 ```
 
 **Generation Rules**:
-- Only generate CTE definition (up to `)`), only one type per generation
-- Do not combine column-level changes and row-level changes in one operation
-- Cannot use commas to connect multiple CTEs
+- Priority: Execution Results > Evidence. Execution Results are FACTS - use exact values, formats, column names. Evidence/Additional Context are hints - verify against execution results first
 - Do not add any SELECT statements
 - You can reference preceding CTE names. I will add them in the executor, you don't need to repeat them.
-- **CTE Naming Rules**:
-  - **CRITICAL**: You MUST use a NEW, UNUSED CTE name for each CTE you generate
-  - **DO NOT reuse existing CTE names**: If a preceding CTE has issues, you should create a new CTE with a different name instead of reusing the same name
-  - Each CTE in the sequence must have a unique name to avoid conflicts
-- Column name rules: Must use the complete column names provided in the schema. Column names containing spaces, parentheses, or other special characters must be wrapped in backticks
-
-
+- You MUST use a NEW, UNUSED CTE name for each CTE you generate.
+- Must use the complete column names provided in the schema. Column names containing spaces, parentheses, or other special characters must be wrapped in backticks
 
 **Database Admin Instructions (Must Strictly Adhere):**
-1.  **SELECT Clause:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values.
-   - **CRITICAL**: When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps (e.g., join keys like `CDSCode`, columns needed for final answer like `City`, `School`). Do NOT drop columns that are required for later operations.
+1.  **SELECT Clause:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values. When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps. Do NOT drop columns that are required for later operations.
 2.  **FROM Table Selection:** If filtering/ordering columns come from a specific table, use that table as the FROM driving table. This ensures the filtering/ordering conditions can be applied correctly.
 3.  **Aggregation (MAX/MIN):** Always perform JOINs before using `MAX()` or `MIN()`.
 4.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
@@ -179,155 +120,16 @@ WITH new_cte_name AS (
 7.  **Strictly Follow Hints:** Adhere to all provided hints.
 8.  **Thorough Question Analysis:** Address all conditions mentioned in the question.
 9.  **DISTINCT Keyword:** Use `SELECT DISTINCT` when the question requires unique values or when selecting columns that may have duplicates (e.g., IDs, URLs, names, nationalities, categories). If the question asks for a list of unique items or the result may contain duplicate values, always use `SELECT DISTINCT`. Refer to column statistics ("Value Statics") to determine if `DISTINCT` is necessary. When in doubt, use `DISTINCT` to ensure unique results.
-10. **COUNT with DISTINCT (CRITICAL):** When using `COUNT()` after JOINs, especially with N:1 or M:N relationships, you MUST use `COUNT(DISTINCT column)` instead of `COUNT(*)` to avoid counting duplicate rows. If the relationship is N:1 (Many-to-One), the child table may have multiple rows per parent, so always use `COUNT(DISTINCT column)` when counting entities from the parent table. **Check the table relationships provided in the prompt - if you see N:1 relationships and you're counting entities from the parent table, you MUST use `COUNT(DISTINCT column)` where the column is the unique identifier from the parent table.**
+10. **COUNT with DISTINCT:** When using `COUNT()` after JOINs, especially with N:1 or M:N relationships, you MUST use `COUNT(DISTINCT column)` instead of `COUNT(*)` to avoid counting duplicate rows. If the relationship is N:1 (Many-to-One), the child table may have multiple rows per parent, so always use `COUNT(DISTINCT column)` when counting entities from the parent table. **Check the table relationships provided in the prompt - if you see N:1 relationships and you're counting entities from the parent table, you MUST use `COUNT(DISTINCT column)` where the column is the unique identifier from the parent table.**
 11. **Column Selection:** When similar columns exist across tables, carefully analyze column descriptions and hints to choose the correct column.
 12. **String Concatenation:** Never use `|| ' ' ||` or any other method to concatenate strings in the `SELECT` clause.
 13. **JOIN Preference:** Prioritize `INNER JOIN` over nested `SELECT` statements.
 14. **SQLite Functions Only:** Use only functions available in SQLite (unless fuzzy matching extensions are available).
 15. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year).
-15. **Fuzzy Matching (When Previous CTE Returns Empty Results):** If the previous CTE execution returned an empty result set, it may indicate that exact string matching failed. In such cases, use fuzzy matching methods:
-    - **CRITICAL**: When generating fuzzy matching CTE, you MUST generate **DIVERSE** LIKE patterns. **DO NOT** repeat the same pattern multiple times.
-    - **Required Pattern Types** (for each target string):
-      1. **Broad Match**: `LIKE '%Target%'` (Contains)
-      2. **Spacing Variants**: `LIKE '% Target %'` (with spaces) or `LIKE 'Target'` (exact)
-      3. **Boundary Match**: `LIKE 'Target%'` (starts with) OR `LIKE '%Target'` (ends with)
-      4. **Structural Match**: If contains symbols (e.g., "=", "-"), try removing them or adding spaces (e.g., " = " → "=", "%=%")
-    - **Important**: The system generates multiple CTE variants in parallel. Each variant should explore **DIFFERENT** LIKE patterns. Do NOT generate the same pattern in multiple variants.
-    - **Method 2** (if Method 1 fails): Use SQLite functions (LENGTH, INSTR, SUBSTR, CASE WHEN) to calculate similarity scores and ORDER BY to find the most similar rows.
-    - When you see "CRITICAL ALERT: EMPTY RESULT RECOVERY" in the preceding CTE results, prioritize using these fuzzy matching techniques with diverse patterns.
-
-**CRITICAL: Column Name Rules (Must Follow Exactly):**
-Schema provides column names with backticks when they contain spaces/special characters.
-**You MUST copy these column names EXACTLY as shown in the schema - DO NOT convert spaces to underscores!**
-
-Question: Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?
-Schema:
-satscores(cds, AvgScrMath), frpm(CDSCode, School Code, Charter Funding Type), schools(CDSCode, Charter)
-
-Example 1 — First CTE (Column Selection)
-WITH c_cols AS (
-    SELECT ss.cds, ss.`AvgScrMath`
-    FROM satscores AS ss
-)
-
-Obtained `AvgScrMath` values are [500,501,569,640...]
-Example 2 — Second CTE (Row Filtering)
-WITH c_rows AS (
-    SELECT cds, `AvgScrMath`
-    FROM c_cols
-    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 560
-)
-
-Example 3 — Third CTE (Table Join)
-WITH t_join AS (
-    SELECT f.`School Code`, f.`Charter Funding Type`
-    FROM c_rows r
-    INNER JOIN frpm f ON r.cds = f.`CDSCode`
-)
-
-Obtained `Charter Funding Type` values are [Directly funded,Somehow funded, w/o funded,...]
-Example 4 — Fourth CTE (Row Filtering)
-WITH t_rows AS (
-    SELECT `School Code`
-    FROM t_join
-    WHERE `Charter Funding Type` = 'Directly funded'
-)
-
-Example 5 — Fifth CTE (Aggregation)
-WITH final_count AS (
-    SELECT COUNT(*) AS answer
-    FROM t_rows
-)
-
-Example 6 — Stop
-<END>
-
-Note: If the question involves JOINs with N:1 relationships and asks "how many" entities, use COUNT(DISTINCT entity_id) instead of COUNT(*) to avoid counting duplicates.
 
 /no_think
 """
 
-    def generate_cte(self, node, temperature: float = 0.7) -> str:
-        """
-        为给定节点生成CTE
-        
-        Args:
-            node: MCTS节点
-            temperature: 生成温度
-            
-        Returns:
-            生成的CTE字符串或<END>标记
-        """
-        # 每次生成前重新设置agent以应用新的temperature
-        self.setup_agent(temperature)
-        
-        # 通过node.parent向上追溯获取前序CTE信息
-        preceding_cte_info = self._get_preceding_cte_info(node)
-        
-        # 增强 foreign_key 信息，添加关系类型
-        enhanced_schema = self._enhance_foreign_key_with_relationship_types(node.schema_info)
-        
-        # 如果 foreign_key 已经增强（包含关系类型），则不再显示 Table Relationships（避免重复）
-        # 检查 enhanced_schema 是否包含关系类型标记（如 "(N:1)"）
-        has_enhanced_fk = 'foreign_key:' in enhanced_schema and any(
-            f'({rel_type})' in enhanced_schema 
-            for rel_type in ['1:1', '1:N', 'N:1', 'M:N']
-        )
-        
-        # 只在 foreign_key 未增强时显示 Table Relationships
-        relationships_info = ""
-        if not has_enhanced_fk:
-            relationships_info = self._get_relationships_info(node.schema_info)
-            if relationships_info:
-                relationships_info = "\n" + relationships_info
-        
-        # 获取当前深度和剩余深度
-        current_depth = node.depth
-        remaining_steps = max(0, self.max_depth - current_depth)
-        
-        # 构建用户输入
-        user_input = f"""
-**Input**:
-
-* **Natural language question**: {node.question}
-* **Database schema**: {enhanced_schema}
-{relationships_info}
-* **Additional context**: {node.additional_context}
-* **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
-{preceding_cte_info}
-* **Depth Information**: 
-  - Maximum allowed steps: {self.max_depth}
-  - Current step: {current_depth + 1} (depth: {current_depth})
-  - Remaining steps: {remaining_steps}
-"""
-        
-        # 打印CTE生成的prompt（用于调试）
-        should_monitor = self._should_monitor_cte(node.question)
-        if should_monitor:
-            print(f"[CTE生成] User Input (generate_cte):")
-            print(f"  {'='*80}")
-            print(user_input)
-            print(f"  {'='*80}")
-        
-        # 使用智能体生成CTE
-        messages = [
-            {
-                "role": "user",
-                "content": user_input
-            }
-        ]
-        
-        response = self.cte_agent.generate_reply(messages)
-        
-        # 检查是否输出了<END>
-        if "<END>" in response:
-            return "<END>"
-        
-        # 提取CTE代码
-        cte = self._extract_cte_from_response(response)
-        
-        return cte
-    
     def _extract_cte_from_response(self, response) -> str:
         """
         从响应中提取CTE代码，并自动添加SELECT语句
@@ -928,6 +730,67 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         enhanced_fk = '\n'.join(enhanced_lines)
         return f"{schema_part}foreign_key:{enhanced_fk}"
     
+    def _extract_strategy_from_context(self, additional_context: str) -> Tuple[str, str]:
+        """
+        从additional_context中分离strategy_text和剩余的additional_context
+        
+        Args:
+            additional_context: 包含strategy_text和原始additional_context的字符串
+            
+        Returns:
+            (strategy_text, remaining_additional_context) 元组
+        """
+        if not additional_context:
+            return "", ""
+        
+        # 识别strategy_text的标记：
+        # 1. "[GLOBAL STRATEGY MODE:" - FORCE模式
+        # 2. "Expression Types:" - CTE_ACTION_level的开始
+        # 3. "S1 Entity-First:" / "S2 Relation-First:" 等 - 策略描述的开始
+        
+        strategy_markers = [
+            "[GLOBAL STRATEGY MODE:",
+            "Expression Types:",
+            "S1 Entity-First:",
+            "S2 Relation-First:",
+            "S3 Proactive:",
+            "S4 Reactive:",
+            "S4 Custom Strategy:",
+            "S5 Evidence-Based:"
+        ]
+        
+        # 查找第一个strategy标记的位置
+        first_marker_pos = len(additional_context)
+        first_marker = None
+        for marker in strategy_markers:
+            pos = additional_context.find(marker)
+            if pos != -1 and pos < first_marker_pos:
+                first_marker_pos = pos
+                first_marker = marker
+        
+        # 如果没有找到strategy标记，说明没有strategy_text
+        if first_marker_pos == len(additional_context):
+            return "", additional_context
+        
+        # 分离strategy_text和remaining_additional_context
+        # strategy_text从第一个标记开始，到additional_context的末尾
+        # 但需要处理可能的多个部分（strategy_text可能在中间，前后都有其他内容）
+        
+        # 尝试找到strategy_text的结束位置
+        # strategy_text通常以CTE_ACTION_level的示例结束，或者以空行+其他内容结束
+        # 简单处理：从第一个标记开始，到下一个明显的分隔（双换行+非strategy内容）或文件末尾
+        
+        # 更简单的方法：从第一个标记开始，提取到additional_context末尾
+        # 因为strategy_text通常是在additional_context的后面添加的
+        strategy_text = additional_context[first_marker_pos:].strip()
+        remaining_additional_context = additional_context[:first_marker_pos].strip()
+        
+        # 如果remaining_additional_context为空，返回空字符串
+        if not remaining_additional_context:
+            remaining_additional_context = ""
+        
+        return strategy_text, remaining_additional_context
+    
     def _should_monitor_cte(self, question: str) -> bool:
         """
         判断是否需要监控此问题的CTE生成过程
@@ -974,7 +837,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         
         # 格式化已使用的CTE名称提示
         if used_cte_names:
-            used_names_str = f"* **Used CTE Names**: {', '.join(used_cte_names)}\n  - **Important**: You MUST use a NEW CTE name that is different from all existing CTE names. Do NOT reuse any existing CTE name, as this will cause errors."
+            used_names_str = f"* **Used CTE Names**: {', '.join(used_cte_names)}\n"
         else:
             used_names_str = "* **Used CTE Names**: None"
         
@@ -1046,15 +909,7 @@ The following CTEs failed during generation or execution in previous attempts. P
 {failed_list}{column_hints_section}
 
 """
-        
-        # 构建用户输入
-        # 优先级指导prompt（放在最显眼的位置）
-        priority_guidance = """
-**Priority: Execution Results > Evidence**
-- **Execution Results** are FACTS - use exact values, formats, column names
-- **Evidence/Additional Context** are hints - verify against execution results first
-"""
-        
+                
         # 增强 foreign_key 信息，添加关系类型
         enhanced_schema = self._enhance_foreign_key_with_relationship_types(node.schema_info)
         
@@ -1073,29 +928,26 @@ The following CTEs failed during generation or execution in previous attempts. P
             if relationships_info:
                 relationships_info = "\n" + relationships_info
         
+        # 从additional_context中分离strategy_text和剩余的additional_context
+        strategy_text, remaining_additional_context = self._extract_strategy_from_context(node.additional_context)
+        
+        # 构建用户输入
+        strategy_section = f"{strategy_text}\n\n" if strategy_text else ""
         user_input = f"""
-**Input**:
+{strategy_section}**Input**:
 * **Natural language question**: {node.question}
 * **Database schema**: {enhanced_schema}
 {relationships_info}
-* **Additional context**: {node.additional_context}
-{priority_guidance}
+* **Additional context**: {remaining_additional_context}
 
 * **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: {preceding_cte_info}
 * {used_names_str}
 {failed_attempts_section}* **Depth Information**: 
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1}
-  - Remaining steps: {remaining_steps}. Each step processes data, ensure that information needed for subsequent steps is passed down.
+  - Remaining steps: {remaining_steps}. 
 
 """
-        
-        # 打印CTE生成的prompt（用于调试）
-        if should_monitor:
-            print(f"[CTE生成] User Input (parallel):")
-            print(f"  {'='*80}")
-            print(user_input)
-            print(f"  {'='*80}")
         
         # 从llm_config中提取OpenAI配置
         config = self.llm_config.get('config_list', [{}])[0]
@@ -1105,6 +957,16 @@ The following CTEs failed during generation or execution in previous attempts. P
         
         # 构建系统消息
         system_message = self._get_cte_system_message()
+        
+        # 打印CTE生成的prompt（用于调试）- 包含system message和user input
+        if should_monitor:
+            print(f"[CTE生成] User Input (parallel):")
+            print(f"  {'='*80}")
+            print(f"[System Message]:")
+            print(system_message)
+            print(f"\n[User Input]:")
+            print(user_input)
+            print(f"  {'='*80}")
         
         # 并行为每个temperature组生成变体
         from concurrent.futures import ThreadPoolExecutor, as_completed

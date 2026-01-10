@@ -500,14 +500,16 @@ class SQLExecutor:
             original_context = node.additional_context
             node.additional_context = f"{original_context}\n\n{fix_prompt}"
             
-            # 调用CTE生成器
-            fixed_cte = self.cte_generator.generate_cte(node)
+            # 调用CTE生成器（使用generate_multiple_cte_variants，取第一个结果）
+            cte_variants = self.cte_generator.generate_multiple_cte_variants(node, num_variants=1, failed_attempts=[])
             
             # 恢复原始context
             node.additional_context = original_context
             
-            if fixed_cte and fixed_cte != "<END>":
-                return fixed_cte
+            if cte_variants and len(cte_variants) > 0:
+                fixed_cte = cte_variants[0]
+                if fixed_cte and fixed_cte != "<END>":
+                    return fixed_cte
             
             return None
         except Exception as e:

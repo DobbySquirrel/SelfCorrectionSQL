@@ -66,12 +66,13 @@ class SimpleRolloutWorkflow:
             self.probe_generator = ProbeGenerator(llm_config, db_connector, multi_model_configs=multi_model_configs)
         else:
             self.probe_generator = None
-        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs)
-        self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs)
+        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, cte_probe_limit=self.cte_probe_limit)
+        self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs, cte_probe_limit=self.cte_probe_limit)
         self.sql_executor = SQLExecutor(db_connector)
         # 超时配置
         self.sql_timeout_s = 40
         self.cte_probe_timeout_s = 30
+        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
         self.probe_timeout_s = 30  # Probe SQL执行超时时间
         
         # 计时统计
@@ -529,10 +530,10 @@ class SimpleRolloutWorkflow:
                 print(f"[CTE执行] ⚠️ {error_msg}")
                 return one_cte, {'valid': False, 'query_result': [], 'error': error_msg}, None, {'cte': one_cte, 'error': error_msg}
             
-            # 添加LIMIT 5用于探针执行
+            # 添加LIMIT用于探针执行（使用cte_probe_limit，与prompt中的建议一致）
             if exec_sql and not re.search(r'\bLIMIT\s+\d+', exec_sql, re.IGNORECASE):
                 if 'SELECT * FROM' in exec_sql.upper():
-                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', r'\1 LIMIT 5\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
+                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', rf'\1 LIMIT {self.cte_probe_limit}\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
             
             # 执行
             res = self.sql_executor._execute_single_query(exec_sql, timeout_s=self.cte_probe_timeout_s)
