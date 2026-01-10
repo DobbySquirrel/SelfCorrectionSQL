@@ -47,7 +47,8 @@ class MCTSWorkflow:
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration =8  # 从6增加到10，让visit_count更好地反映节点质量
+        # using rollouts_per_iteration=1 to test 
+        self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
