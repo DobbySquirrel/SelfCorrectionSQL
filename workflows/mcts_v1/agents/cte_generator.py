@@ -382,18 +382,36 @@ Example 6 — Stop
             # 从 AS 后面查找第一个 (
             paren_start = cte_text.find('(', as_pos)
             if paren_start > 0:
-                # 使用平衡括号算法检查括号是否匹配
+                # 使用平衡括号算法检查括号是否匹配（考虑字符串中的括号）
                 paren_count = 0
-                for i in range(paren_start, len(cte_text)):
-                    if cte_text[i] == '(':
-                        paren_count += 1
-                    elif cte_text[i] == ')':
-                        paren_count -= 1
-                        if paren_count == 0:
-                            # 找到了匹配的右括号，CTE完整
-                            break
-                else:
-                    # 没有找到匹配的右括号，CTE不完整
+                in_string = False
+                string_char = None  # 记录字符串的引号类型（' 或 "）
+                i = paren_start
+                while i < len(cte_text):
+                    char = cte_text[i]
+                    
+                    # 处理字符串边界
+                    if char in ("'", '"') and (i == 0 or cte_text[i-1] != '\\'):
+                        if not in_string:
+                            in_string = True
+                            string_char = char
+                        elif char == string_char:
+                            in_string = False
+                            string_char = None
+                    
+                    # 只在非字符串状态下计算括号
+                    if not in_string:
+                        if char == '(':
+                            paren_count += 1
+                        elif char == ')':
+                            paren_count -= 1
+                            if paren_count == 0:
+                                # 找到了匹配的右括号，CTE完整
+                                break
+                    i += 1
+                
+                # 如果括号计数不为0，说明括号不匹配
+                if paren_count != 0:
                     print(f"⚠️ _extract_cte_from_response: CTE括号不匹配，拒绝不完整的CTE")
                     print(f"   不完整的CTE内容:\n{cte_text}")
                     print(f"   括号计数: {paren_count} (未闭合)")
