@@ -24,8 +24,8 @@ class StrategyConfig:
 
 
 GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S2", lock_after_picked=True)
-CTE_ACTION_level="""
-
+# CTE操作类型说明（所有策略共用）
+CTE_ACTION_TYPES = """
 Expression Types:
 
 **Column Selection Operation** (Column-only - select columns only, don't change row count, no filtering):
@@ -53,9 +53,11 @@ Expression Types:
 6. **<String>**: String processing functions (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
 7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
 8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
+"""
 
-Examples:
-
+# 各策略的示例（根据选定的策略动态注入）
+_STRATEGY_EXAMPLES = {
+    "S1": """
 **S1 (Entity-First) Example:**
 Question: List all patients who were born in 1937 whose total cholesterol was beyond the normal range.
 Schema: Patient(ID, Birthday), Laboratory(ID, T_CHO)
@@ -84,7 +86,8 @@ WITH final_results AS (
 SELECT COUNT(*) AS total_patients FROM final_results;
 
 <END>
-
+""",
+    "S2": """
 **S2 (Relation-First) Example:**
 Question: Among the cards with converted mana cost higher than 5 in the set Coldsnap, how many of them have unknown power?
 Schema: cards(id, convertedManaCost, power, setCode), sets(code, name)
@@ -119,7 +122,8 @@ WITH final_count AS (
 SELECT answer FROM final_count;
 
 <END>
-
+""",
+    "S3": """
 **S3 (Evidence-Based) Example:**
 Question: What was Francesco Parravicini's potential on 2010/8/30?
 Schema: Player(player_api_id, player_name), Player_Attributes(player_api_id, potential, date)
@@ -154,30 +158,27 @@ WITH final_result AS (
 SELECT potential FROM final_result;
 
 <END>
-
 """
+}
 
 # ---- 策略手册（给 CTE/SQL 生成器看的文本）----
 _STRATEGY_DESCRIPTIONS = {
     "S1": """S1 Entity-First:
-- If you introduce a new value filter (keyword/category/date/currency/segment) not confirmed, first sanity-check via safe assumptions:
-  * prefer simple filters on one table before joins
-  * prefer explicit WHERE on known columns, avoid guessing enums
-- Avoid wide joins early.""",
+- When introducing a new filter, first apply simple filters on a single table before performing any joins.
+- Use explicit `WHERE` conditions on known columns and avoid assumptions about unknown values.
+- Minimize the use of wide or complex joins early in the query construction to keep it simple and focused.""",
     
     "S2": """S2 Relation-First:
-- First ensure join path correctness (use FK hints from schema/foreign_key text).
-- Build join skeleton first, then add filters.""",
+- Prioritize ensuring the correctness of join paths (using foreign key hints if available).
+- Build the join skeleton first, ensuring relationships are correct, then apply filters after the join structure is in place.""",
     
     "S3": """S3 Evidence-Based:
-- When creating a CTE, ALWAYS validate it against the evidence fields provided in the dataset.
-- Use the evidence information to verify column names, filter values, join conditions, and data constraints.
-- If the evidence contains specific values, column names, or relationships, incorporate them into your CTE.
-- Cross-reference your CTE logic with the evidence to ensure correctness before proceeding.
-- If evidence suggests a different approach, adjust your CTE accordingly.
-- If your CTE contradicts the evidence, you MUST revise it before proceeding.
-- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps."""
+- Always validate CTE fields, filter values, and join conditions against the provided dataset evidence.
+- Use evidence to confirm column names, filter values, and relationships.
+- If the evidence suggests a different approach, adjust your CTEs accordingly.
+- If your CTE contradicts the evidence, revise it before proceeding, or continue with standard CTE generation if no evidence is available at the time."""
 }
+
 
 # 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
 _FULL_STRATEGY_HANDBOOK = f"""
@@ -212,10 +213,13 @@ def build_strategy_injection_text(
         s = mode.replace("FORCE_", "")
         # 只返回当前策略的说明，不包含其他策略
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+        strategy_example = _STRATEGY_EXAMPLES.get(s, "")
         return f"""
 {strategy_desc}
 
-{CTE_ACTION_level}
+{CTE_ACTION_TYPES}
+
+{strategy_example}
 """
 
     # LLM pick once
@@ -230,28 +234,16 @@ def build_strategy_injection_text(
         # depth>0 时只需要已选择策略的说明
         s = picked_strategy or fixed_strategy or "S2"
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+        strategy_example = _STRATEGY_EXAMPLES.get(s, "")
         
         # 对于 S3，添加额外的 evidence 验证说明
-        if s == "S3":
-            return f"""
-{strategy_desc}
-
-**⚠️ CRITICAL: Evidence Validation (S3 Strategy)**
-- If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
-  * Check if column names in your CTE match those mentioned in the evidence
-  * Verify filter values against evidence-provided values
-  * Ensure join conditions align with evidence-suggested relationships
-  * Cross-reference data constraints and constraints mentioned in evidence
-  * If your CTE contradicts the evidence, you MUST revise it before proceeding
-  * The evidence is a critical validation source - do not ignore it
-
-{CTE_ACTION_level}
-"""
         
         return f"""
 {strategy_desc}
 
-{CTE_ACTION_level}
+{CTE_ACTION_TYPES}
+
+{strategy_example}
 """
 
     # fallback
@@ -274,8 +266,6 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
 
 You need to select ONE strategy from S1, S2, or S3 for solving the following SQL generation task.
 
-Note: S3 (Evidence-Based) is recommended when evidence fields are available in the dataset, as it uses evidence to validate CTEs during generation.
-
 **Question**: {question}
 
 **Database Schema**:
@@ -286,6 +276,16 @@ Note: S3 (Evidence-Based) is recommended when evidence fields are available in t
 **Available Strategies**:
 
 {_FULL_STRATEGY_HANDBOOK}
+
+**Strategy Examples** (to help you understand how each strategy works):
+
+{CTE_ACTION_TYPES}
+
+{_STRATEGY_EXAMPLES['S1']}
+
+{_STRATEGY_EXAMPLES['S2']}
+
+{_STRATEGY_EXAMPLES['S3']}
 
 **CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, or S3).
 

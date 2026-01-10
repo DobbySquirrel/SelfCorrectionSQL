@@ -414,8 +414,16 @@ class MCTSWorkflow:
                     print(strategy_response)
                     print(f"{'='*80}")
                     
+                    # 处理autogen返回的不同类型：如果是字典，提取content字段
+                    if isinstance(strategy_response, dict):
+                        strategy_response_text = strategy_response.get('content', '') or str(strategy_response)
+                    elif not isinstance(strategy_response, str):
+                        strategy_response_text = str(strategy_response)
+                    else:
+                        strategy_response_text = strategy_response
+                    
                     # 从JSON响应中提取策略和thought
-                    picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
+                    picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
                     
                     if picked_strategy and picked_strategy in ("S1", "S2", "S3"):
                         root_node.picked_strategy = picked_strategy
