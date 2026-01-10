@@ -283,7 +283,6 @@ Example 6 — Stop
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1} (depth: {current_depth})
   - Remaining steps: {remaining_steps}
-  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question, or output <END> to finish
 """
         
         # 打印CTE生成的prompt（用于调试）
@@ -1122,12 +1121,10 @@ The following CTEs failed during generation or execution in previous attempts. P
         # 构建用户输入
         # 优先级指导prompt（放在最显眼的位置）
         priority_guidance = """
-### [CRITICAL: INFORMATION PRIORITY]
 
 **Priority: Execution Results > Evidence**
 - **Execution Results** are FACTS - use exact values, formats, column names
 - **Evidence/Additional Context** are hints - verify against execution results first
-- If Evidence mentions a condition, check if the preceding CTE includes the relevant column. If not, add it first, then verify values before applying the condition.
 
 ================================================================================
 
@@ -1154,7 +1151,6 @@ The following CTEs failed during generation or execution in previous attempts. P
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1}
   - Remaining steps: {remaining_steps}. Each step processes data, ensure that information needed for subsequent steps is passed down.
-  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question.
 
 """
         
