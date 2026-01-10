@@ -226,7 +226,6 @@ class CompleteSQLGenerator:
                     # 显示列信息
                     if len(query_result_limited) > 0:
                         columns = list(query_result_limited[0].keys())
-                        formatted_info.append(f"**Result Columns**: {columns}")
                         # 显示与问题相关的示例数据值（每列Top3最相关的值）
                         formatted_info.append("**Relevant Sample Values**:")
                         for col in columns:

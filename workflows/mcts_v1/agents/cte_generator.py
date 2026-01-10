@@ -334,6 +334,8 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
         
         LLM只生成: WITH xxx AS (...)
         系统自动添加: SELECT * FROM xxx;
+        
+        改进：使用平衡括号算法提取完整的CTE，避免提取不完整的CTE
         """
         # 处理autogen返回的不同类型
         if isinstance(response, dict):
@@ -348,89 +350,73 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
         # 尝试从代码块中提取
         code_block_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL)
         if code_block_match:
-            cte_text = code_block_match.group(1).strip()
+            raw_text = code_block_match.group(1).strip()
         else:
-            # 如果没有代码块，尝试直接提取WITH语句
-            lines = response.split('\n')
-            cte_lines = []
-            in_cte = False
-            
-            for line in lines:
-                if 'WITH' in line.upper():
-                    in_cte = True
-                    cte_lines.append(line)
-                elif in_cte:
-                    cte_lines.append(line)
-                    # 检测CTE结束（遇到右括号）
-                    if line.strip().endswith(')') and not line.strip().endswith('('):
-                        break
-            
-            cte_text = '\n'.join(cte_lines).strip()
+            # 如果没有代码块，使用整个响应文本
+            raw_text = response.strip()
         
-        if not cte_text or 'WITH' not in cte_text.upper():
+        if not raw_text or 'WITH' not in raw_text.upper():
             return ""
         
-        # 清理：移除末尾的分号和多余的SELECT语句
-        cte_text = cte_text.rstrip(';').strip()
+        # 清理：移除末尾的分号
+        raw_text = raw_text.rstrip(';').strip()
         
-        # 如果LLM还是生成了SELECT，移除它
-        # 查找最后一个右括号的位置
-        last_paren_pos = cte_text.rfind(')')
-        if last_paren_pos > 0:
-            # 检查右括号后是否有SELECT
-            after_paren = cte_text[last_paren_pos + 1:].strip()
-            if after_paren.upper().startswith('SELECT'):
-                # 移除SELECT部分
-                cte_text = cte_text[:last_paren_pos + 1]
-        
-        # 提取CTE名称
-        cte_name_match = re.search(r'WITH\s+(\w+)\s+AS', cte_text, re.IGNORECASE)
-        if not cte_name_match:
-            return ""
-        
-        cte_name = cte_name_match.group(1)
-        
-        # 验证CTE是否完整：检查括号是否匹配
+        # 使用平衡括号算法提取完整的CTE
         # 找到 WITH name AS ( 的位置
-        as_pos = cte_text.upper().find('AS')
-        if as_pos > 0:
-            # 从 AS 后面查找第一个 (
-            paren_start = cte_text.find('(', as_pos)
-            if paren_start > 0:
-                # 使用平衡括号算法检查括号是否匹配（考虑字符串中的括号）
-                paren_count = 0
-                in_string = False
-                string_char = None  # 记录字符串的引号类型（' 或 "）
-                i = paren_start
-                while i < len(cte_text):
-                    char = cte_text[i]
-                    
-                    # 处理字符串边界
-                    if char in ("'", '"') and (i == 0 or cte_text[i-1] != '\\'):
-                        if not in_string:
-                            in_string = True
-                            string_char = char
-                        elif char == string_char:
-                            in_string = False
-                            string_char = None
-                    
-                    # 只在非字符串状态下计算括号
-                    if not in_string:
-                        if char == '(':
-                            paren_count += 1
-                        elif char == ')':
-                            paren_count -= 1
-                            if paren_count == 0:
-                                # 找到了匹配的右括号，CTE完整
-                                break
-                    i += 1
-                
-                # 如果括号计数不为0，说明括号不匹配
-                if paren_count != 0:
-                    print(f"⚠️ _extract_cte_from_response: CTE括号不匹配，拒绝不完整的CTE")
-                    print(f"   不完整的CTE内容:\n{cte_text}")
-                    print(f"   括号计数: {paren_count} (未闭合)")
-                    return ""  # 拒绝不完整的CTE
+        with_match = re.search(r'WITH\s+(\w+)\s+AS\s*\(', raw_text, re.IGNORECASE)
+        if not with_match:
+            return ""
+        
+        cte_name = with_match.group(1)
+        paren_start = with_match.end() - 1  # AS 后面的 ( 的位置
+        
+        # 使用平衡括号算法找到匹配的右括号（考虑字符串中的括号）
+        # SQL中字符串转义通常使用 ''（两个单引号）而不是 \'
+        paren_count = 0
+        in_string = False
+        string_char = None  # 记录字符串的引号类型（' 或 "）
+        
+        i = paren_start
+        while i < len(raw_text):
+            char = raw_text[i]
+            
+            # 处理字符串边界（SQL中单引号字符串用 '' 转义，双引号用 "" 转义）
+            if char in ("'", '"'):
+                if not in_string:
+                    in_string = True
+                    string_char = char
+                elif char == string_char:
+                    # 检查是否是转义的引号（两个连续的引号）
+                    if i + 1 < len(raw_text) and raw_text[i + 1] == string_char:
+                        i += 1  # 跳过转义的引号
+                    else:
+                        in_string = False
+                        string_char = None
+            
+            # 只在非字符串状态下计算括号
+            if not in_string:
+                if char == '(':
+                    paren_count += 1
+                elif char == ')':
+                    paren_count -= 1
+                    if paren_count == 0:
+                        # 找到了匹配的右括号，提取完整的CTE
+                        cte_text = raw_text[:i + 1].strip()
+                        break
+            i += 1
+        else:
+            # 如果循环结束还没找到匹配的右括号，说明CTE不完整
+            print(f"⚠️ _extract_cte_from_response: CTE括号不匹配，拒绝不完整的CTE")
+            print(f"   不完整的CTE内容:\n{raw_text[:500]}...")
+            print(f"   括号计数: {paren_count} (未闭合)")
+            return ""  # 拒绝不完整的CTE
+        
+        # 如果LLM生成了SELECT，移除它（在右括号之后的部分）
+        # 检查右括号后是否有SELECT
+        after_paren = raw_text[i + 1:].strip()
+        if after_paren.upper().startswith('SELECT'):
+            # SELECT部分已经被排除在cte_text之外，无需处理
+            pass
         
         # 系统自动添加SELECT语句
         full_cte = f"{cte_text}\nSELECT * FROM {cte_name};"

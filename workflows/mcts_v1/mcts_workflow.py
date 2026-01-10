@@ -122,7 +122,8 @@ class MCTSWorkflow:
             sql_executor=self.sql_executor,
             cte_probe_timeout_s=self.cte_probe_timeout_s,
             max_workers=self.max_workers,
-            timing_dict=self._timing
+            timing_dict=self._timing,
+            cte_probe_limit=self.cte_probe_limit
         )
         
         # 策略模式配置
