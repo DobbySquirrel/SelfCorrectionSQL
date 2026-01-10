@@ -100,18 +100,18 @@ def build_strategy_injection_text(
 [GLOBAL STRATEGY MODE: {mode}]
 {strategy_desc}
 
-**⚠️ CRITICAL: Evidence Validation**
-- The "Additional context" field contains evidence information from the dataset.
-- You MUST use this evidence to validate your CTE:
+**⚠️ CRITICAL: Evidence Validation (S5 Strategy)**
+- If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
   * Check if column names in your CTE match those mentioned in the evidence
   * Verify filter values against evidence-provided values
   * Ensure join conditions align with evidence-suggested relationships
   * Cross-reference data constraints and constraints mentioned in evidence
-- If your CTE contradicts the evidence, you MUST revise it before proceeding.
-- The evidence is a critical validation source - do not ignore it.
+  * If your CTE contradicts the evidence, you MUST revise it before proceeding
+  * The evidence is a critical validation source - do not ignore it
+- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps
 
 **⚠️ CRITICAL: Additional Context Priority**
-- If "Additional context" provides filtering conditions, you MUST:
+- If "Additional context" provides filtering conditions or evidence information, you MUST:
   1. Include the relevant column in your first CTE
   2. Apply the filter condition (WHERE clause) in your first CTE - do NOT defer it to later CTEs
   3. Do NOT skip these conditions - they are essential requirements
@@ -168,15 +168,15 @@ Example JSON format:
                 return f"""
 {strategy_desc}
 
-**⚠️ CRITICAL: Evidence Validation**
-- The "Additional context" field contains evidence information from the dataset.
-- You MUST use this evidence to validate your CTE:
+**⚠️ CRITICAL: Evidence Validation (S5 Strategy)**
+- If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
   * Check if column names in your CTE match those mentioned in the evidence
   * Verify filter values against evidence-provided values
   * Ensure join conditions align with evidence-suggested relationships
   * Cross-reference data constraints and constraints mentioned in evidence
-- If your CTE contradicts the evidence, you MUST revise it before proceeding.
-- The evidence is a critical validation source - do not ignore it.
+  * If your CTE contradicts the evidence, you MUST revise it before proceeding
+  * The evidence is a critical validation source - do not ignore it
+- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps
 """
             return f"""
 {strategy_desc}
