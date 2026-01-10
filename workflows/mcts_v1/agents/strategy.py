@@ -125,6 +125,8 @@ Always validate your CTE against the evidence fields in the dataset.
 Use the evidence to verify column names, filter values, join conditions, and constraints.
 Apply specific values, column names, or relationships from the evidence to your CTE.
 Cross-check your CTE logic with the evidence and adjust accordingly.
+If your CTE contradicts the evidence, you MUST revise it before proceeding
+- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps 
 """
 }
 
