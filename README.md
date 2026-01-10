@@ -138,12 +138,12 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
 ```bash
 nohup python workflows/mcts_v1/test/test_mcts.py \
    --ppl_file data/subset_ppl_dev_python.json \
-   --sql_out workflows/mcts_v1/test/out/1_6_test_with_strategy_sql.txt \
-   --json_out workflows/mcts_v1/test/out/1_6_test_with_strategy_result.json \
+   --sql_out workflows/mcts_v1/test/out/1_10_test_with_strategy_sql.txt \
+   --json_out workflows/mcts_v1/test/out/1_10_test_with_strategy_result.json \
    --gold_file data/sub_sampled_bird_dev_set.json \
    --max_workers 20 \
-   --parallel_workers 5 \
-   --strategy_mode LLM_PICK_ONCE \
+   --parallel_workers 1 \
+   --strategy_mode FORCE_S5 \
    --multi_base_urls "http://localhost:8000/v1" \
    > workflows/mcts_v1/test/out/1_6_test_with_strategy.log 2>&1 &
 ```

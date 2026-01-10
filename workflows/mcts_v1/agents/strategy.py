@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, Literal, Tuple
 
 StrategyMode = Literal[
-    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4", "FORCE_S5",
+    "FORCE_S1", "FORCE_S2", "FORCE_S3",
     "NONE",
     "LLM_PICK_ONCE",
 ]
@@ -18,7 +18,7 @@ class StrategyConfig:
       - NONE: inject nothing (baseline)
       - LLM_PICK_ONCE: at depth=0 ask model to pick strategy once, then lock for later steps
     """
-    mode: StrategyMode = "FORCE_S4"
+    mode: StrategyMode = "FORCE_S2"
     # 如果你想在一次run中固定策略，不允许后续prompt再出现"可切换"表述，就保持True
     lock_after_picked: bool = True
 
@@ -130,7 +130,7 @@ If your CTE contradicts the evidence, you MUST revise it before proceeding
 """
 }
 
-# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段，不包含S4，S4由LLM自己规划）
+# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
 _FULL_STRATEGY_HANDBOOK = f"""
 STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S1']}
@@ -228,7 +228,7 @@ You need to select ONE strategy from S1, S2, S3, S4, or S5 for solving the follo
 
 {_FULL_STRATEGY_HANDBOOK}
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S4, or S5).
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, or S3).
 
 Example JSON format:
 ```json
@@ -240,7 +240,7 @@ Example JSON format:
 
 **Output Requirements**:
 - Output MUST be valid JSON wrapped in ```json code block
-- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S4", or "S5"
+- The "strategy" field MUST be exactly one of: "S1", "S2", or "S3"
 - Include a "thought" field explaining your choice
 """
 
@@ -253,7 +253,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         response: LLM的JSON响应
         
     Returns:
-        (策略字符串 (S1/S2/S3/S4/S5), thought字符串) 或 (None, None)
+        (策略字符串 (S1/S2/S3), thought字符串) 或 (None, None)
     """
     import json
     import re
@@ -299,7 +299,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
-        valid_strategies = ["S1", "S2", "S3", "S4", "S5"]
+        valid_strategies = ["S1", "S2", "S3"]
         if strategy_str in valid_strategies:
             return strategy_str, thought_str if thought_str else None
         
