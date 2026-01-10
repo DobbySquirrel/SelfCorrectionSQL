@@ -15,16 +15,18 @@ from openai import OpenAI
 class CompleteSQLGenerator:
     """完整SQL生成器智能体"""
     
-    def __init__(self, llm_config: Dict, multi_model_configs: List[Dict] = None):
+    def __init__(self, llm_config: Dict, multi_model_configs: List[Dict] = None, cte_probe_limit: int = 15):
         """
         初始化完整SQL生成器
         
         Args:
             llm_config: LLM配置
             multi_model_configs: 多个模型配置列表（用于多模型并行加速）
+            cte_probe_limit: CTE探针查询的LIMIT值（默认15）
         """
         self.llm_config = llm_config
         self.multi_model_configs = multi_model_configs or []
+        self.cte_probe_limit = cte_probe_limit
         # 线程锁：保护 agent 创建过程（避免并行环境下的 Pydantic 冲突）
         self._agent_lock = threading.Lock()
         # 用于轮询选择模型的计数器（线程安全）
@@ -288,7 +290,7 @@ Please generate a complete SQL query
 **Database schema**: {node.schema_info}
 **Additional context**: {node.additional_context} (Syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 
-**Existing CTE and Results (Quick verification with LIMIT)**: 
+**Existing CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
 {preceding_cte_info}/no_think
 """
         print(user_input)

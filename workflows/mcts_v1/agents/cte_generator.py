@@ -264,8 +264,22 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
         # 通过node.parent向上追溯获取前序CTE信息
         preceding_cte_info = self._get_preceding_cte_info(node)
         
-        # 获取关系信息
-        relationships_info = self._get_relationships_info(node.schema_info)
+        # 增强 foreign_key 信息，添加关系类型
+        enhanced_schema = self._enhance_foreign_key_with_relationship_types(node.schema_info)
+        
+        # 如果 foreign_key 已经增强（包含关系类型），则不再显示 Table Relationships（避免重复）
+        # 检查 enhanced_schema 是否包含关系类型标记（如 "(N:1)"）
+        has_enhanced_fk = 'foreign_key:' in enhanced_schema and any(
+            f'({rel_type})' in enhanced_schema 
+            for rel_type in ['1:1', '1:N', 'N:1', 'M:N']
+        )
+        
+        # 只在 foreign_key 未增强时显示 Table Relationships
+        relationships_info = ""
+        if not has_enhanced_fk:
+            relationships_info = self._get_relationships_info(node.schema_info)
+            if relationships_info:
+                relationships_info = "\n" + relationships_info
         
         # 获取当前深度和剩余深度
         current_depth = node.depth
@@ -276,7 +290,7 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
 **Input**:
 
 * **Natural language question**: {node.question}
-* **Database schema**: {node.schema_info}
+* **Database schema**: {enhanced_schema}
 {relationships_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 * **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
@@ -844,6 +858,77 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         
         return "\n".join(lines)
     
+    def _enhance_foreign_key_with_relationship_types(self, schema_info: str) -> str:
+        """
+        增强 foreign_key 信息，在每行后面添加关系类型（1:1, N:1, M:N等）
+        
+        Args:
+            schema_info: 包含 foreign_key 的 schema 信息
+            
+        Returns:
+            增强后的 schema 信息
+        """
+        if 'foreign_key:' not in schema_info:
+            return schema_info
+        
+        db_name = self._extract_db_name_from_schema(schema_info)
+        if not db_name or db_name not in self.relationships_data:
+            # 如果没有关系数据，返回原始信息
+            return schema_info
+        
+        relationships = self.relationships_data[db_name].get('relationships', [])
+        if not relationships:
+            return schema_info
+        
+        # 创建关系查找字典：{(table1, col1, table2, col2): relationship_type}
+        rel_dict = {}
+        for rel in relationships:
+            table1 = rel.get('table1', '').lower()
+            col1 = rel.get('col1', '').lower()
+            table2 = rel.get('table2', '').lower()
+            col2 = rel.get('col2', '').lower()
+            rel_type = rel.get('relationship_type', '')
+            
+            # 存储两个方向的关系
+            rel_dict[(table1, col1, table2, col2)] = rel_type
+            rel_dict[(table2, col2, table1, col1)] = rel_type
+        
+        # 分离 foreign_key 部分
+        parts = schema_info.split('foreign_key:', 1)
+        if len(parts) != 2:
+            return schema_info
+        
+        schema_part = parts[0]
+        fk_part = parts[1]
+        
+        # 解析并增强每一行 foreign_key
+        import re
+        enhanced_lines = []
+        for line in fk_part.split('\n'):
+            original_line = line
+            line = line.strip()
+            
+            # 匹配格式: # table1(col1) references table2(col2)
+            match = re.match(r'#\s*(\w+)\(([^)]+)\)\s+references\s+(\w+)\(([^)]+)\)', line, re.IGNORECASE)
+            if match:
+                table1, col1, table2, col2 = match.groups()
+                # 查找关系类型
+                key = (table1.lower(), col1.lower(), table2.lower(), col2.lower())
+                rel_type = rel_dict.get(key, '')
+                
+                if rel_type:
+                    # 添加关系类型信息
+                    enhanced_lines.append(f"{line} ({rel_type})")
+                else:
+                    enhanced_lines.append(original_line)
+            else:
+                # 保留原始行（包括空行和注释行）
+                enhanced_lines.append(original_line)
+        
+        # 重新组合
+        enhanced_fk = '\n'.join(enhanced_lines)
+        return f"{schema_part}foreign_key:{enhanced_fk}"
+    
     def _should_monitor_cte(self, question: str) -> bool:
         """
         判断是否需要监控此问题的CTE生成过程
@@ -971,16 +1056,28 @@ The following CTEs failed during generation or execution in previous attempts. P
 - **Evidence/Additional Context** are hints - verify against execution results first
 """
         
-        # 获取关系信息
-        relationships_info = self._get_relationships_info(node.schema_info)
+        # 增强 foreign_key 信息，添加关系类型
+        enhanced_schema = self._enhance_foreign_key_with_relationship_types(node.schema_info)
         
-        # 移除foreign_key信息，简化prompt（relationships_info已提供足够的关系信息）
-        schema_without_fk = self._remove_foreign_key(node.schema_info)
+        # 如果 foreign_key 已经增强（包含关系类型），则不再显示 Table Relationships（避免重复）
+        # 检查 enhanced_schema 是
+        # 否包含关系类型标记（如 "(N:1)"）
+        has_enhanced_fk = 'foreign_key:' in enhanced_schema and any(
+            f'({rel_type})' in enhanced_schema 
+            for rel_type in ['1:1', '1:N', 'N:1', 'M:N']
+        )
+        
+        # 只在 foreign_key 未增强时显示 Table Relationships
+        relationships_info = ""
+        if not has_enhanced_fk:
+            relationships_info = self._get_relationships_info(node.schema_info)
+            if relationships_info:
+                relationships_info = "\n" + relationships_info
         
         user_input = f"""
 **Input**:
 * **Natural language question**: {node.question}
-* **Database schema**: {schema_without_fk}
+* **Database schema**: {enhanced_schema}
 {relationships_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
 

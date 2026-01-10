@@ -86,7 +86,7 @@ class MCTSWorkflow:
         # 初始化MCTS组件
         self.mcts_tree = MCTSTree()
         self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, relationships_data=relationships_data, cte_probe_limit=self.cte_probe_limit)
-        self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs)
+        self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs, cte_probe_limit=self.cte_probe_limit)
         self.sql_executor = SQLExecutor(db_connector)
         # 设置sql_executor的cte_generator（用于错误恢复）
         self.sql_executor.set_cte_generator(self.cte_generator)
