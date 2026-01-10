@@ -52,8 +52,11 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
     question = sample["question"]
     schema_info = sample["simplified_ddl"]
     foreign_key = sample.get("foreign_key", "")
-    evidence = sample.get("combine_evidence", "")
+    # 优先使用 combine_evidence，如果不存在则使用 evidence
+    combine_evidence = sample.get("combine_evidence", "")
     single_evidence = sample.get("evidence", "")
+    # 使用 combine_evidence 如果存在，否则使用 evidence
+    evidence_to_use = combine_evidence if combine_evidence else single_evidence
 
     db = build_db_connector(db_name)
     
@@ -99,7 +102,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
     res = w.solve(
         question=question,
         schema_info=f"db_name:{db_name}\n{schema_info}\nforeign_key:{foreign_key}",
-        additional_context=f"{single_evidence}"
+        additional_context=f"{evidence_to_use}"
     )
 
     optimal_sql = res.get("optimal_sql", "")
@@ -388,7 +391,7 @@ def main():
     parser.add_argument("--max_cte_nodes", type=int, default=8, help="每次扩展节点时生成的CTE变体数量（默认8）")
     parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
-                       help="策略模式：FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
+                       help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     args = parser.parse_args()
     
     # MCTS配置

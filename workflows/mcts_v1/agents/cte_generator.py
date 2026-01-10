@@ -299,7 +299,6 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1} (depth: {current_depth})
   - Remaining steps: {remaining_steps}
-  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question, or output <END> to finish
 """
         
         # 打印CTE生成的prompt（用于调试）
@@ -1040,7 +1039,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     unique_hints = list(set(column_hints))
                     column_hints_section = f"\n\n**⚠️ Column Location Hints (CRITICAL):**\n" + "\n".join(f"- {hint}" for hint in unique_hints)
                 
-                failed_attempts_section = f"""  
+                failed_attempts_section = f"""
 * **Previous Failed Attempts (Please avoid generating similar CTEs)**:
 The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
 
@@ -1088,7 +1087,6 @@ The following CTEs failed during generation or execution in previous attempts. P
   - Maximum allowed steps: {self.max_depth}
   - Current step: {current_depth + 1}
   - Remaining steps: {remaining_steps}. Each step processes data, ensure that information needed for subsequent steps is passed down.
-  - Note: If remaining steps are limited, prioritize generating CTEs that directly answer the question.
 
 """
         

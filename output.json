@@ -1,0 +1,39 @@
+{
+  "9": {
+    "sql": "",
+    "stats": {
+      "average_reward": 0.0,
+      "total_visits": 1,
+      "timing": {
+        "total_s": 1.3860764503479004,
+        "rollout_s": 1.3859727382659912,
+        "cte_gen_s": 1.385873556137085,
+        "sql_gen_s": 0.0,
+        "db_exec_s": 0.0,
+        "rollout_count": 1
+      }
+    },
+    "all_sqls_with_attributes": [],
+    "rollout_stats": [
+      {
+        "reward": 0.0,
+        "cte_path": [],
+        "cte_bucket_counts": [],
+        "cte_depths": [],
+        "visit_counts": [],
+        "cte_buckets_per_node": [],
+        "leaf_depth": 0,
+        "leaf_visit_count": 1,
+        "sql_bucket_count": 0,
+        "sql_total_variants": 0,
+        "selected_sql": null,
+        "all_sql_variants": [],
+        "result_buckets": {},
+        "valid_count": 0,
+        "error_reason": null,
+        "rollout_id": 1,
+        "is_quick_path": false
+      }
+    ]
+  }
+}

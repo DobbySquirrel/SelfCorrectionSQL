@@ -163,78 +163,13 @@ nohup python workflows/mcts_v1/test/run_all_strategies.py \
    > workflows/mcts_v1/test/out/test_all_strategies.log 2>&1 &
 ```
 
-**批量运行指定策略**：
-
-```bash
-python workflows/mcts_v1/test/run_all_strategies.py \
-   --ppl_file data/subset_ppl_dev_python.json \
-   --sql_out workflows/mcts_v1/test/out/test_selected_strategies.txt \
-   --json_out workflows/mcts_v1/test/out/test_selected_strategies.json \
-   --gold_file data/sub_sampled_bird_dev_set.json \
-   --strategies "FORCE_S1,FORCE_S2" \
-   --parallel_workers 5
-```
-
-#### 简化版单 Rollout 测试（test_single_mcts.py）
-
-`test_single_mcts.py` 是简化版的测试脚本，使用 `SimpleRolloutWorkflow` 进行单次 Rollout，相比完整的 MCTS 工作流更快速、资源消耗更少。
-
-**与 test_mcts.py 的区别**：
-- `test_mcts.py`: 使用完整的 MCTS 算法，多轮迭代和选择
-- `test_single_mcts.py`: 使用简化的单 Rollout 工作流，只进行一次完整的 SQL 生成
-
-**使用示例**：
-
-```bash
-# 单样本测试
-python workflows/mcts_v1/test/test_single_mcts.py \
-  --ppl_file data/subset_ppl_dev_python.json \
-  --sql_out workflows/mcts_v1/test/out/test_single_rollout.txt \
-  --json_out workflows/mcts_v1/test/out/test_single_rollout.json \
-  --qid 25 \
-  --gold_file data/sub_sampled_bird_dev_set.json \
-  --parallel_workers 5 \
-  --multi_base_urls "http://localhost:8000/v1"
-```
-
-**多样本测试**：
-
-```bash
-python workflows/mcts_v1/test/test_single_mcts.py \
-  --ppl_file data/subset_ppl_dev_python.json \
-  --sql_out workflows/mcts_v1/test/out/test_single_rollout_all.txt \
-  --json_out workflows/mcts_v1/test/out/test_single_rollout_all.json \
-  --gold_file data/sub_sampled_bird_dev_set.json \
-  --parallel_workers 5 \
-  --max_workers 10 \
-  --max_cte_nodes 8 \
-  --max_depth 8 \
-  --num_sql_variants 8 \
-  --multi_base_urls "http://localhost:8000/v1"
-```
-
-**完整参数示例（包含所有可选参数）**：
-
-```bash
-# 完整参数运行示例
-python workflows/mcts_v1/test/test_single_mcts.py \
-  --ppl_file data/subset_ppl_dev_python.json \
-  --sql_out workflows/mcts_v1/test/out/test_complete.txt \
-  --json_out workflows/mcts_v1/test/out/test_complete.json \
-  --gold_file data/sub_sampled_bird_dev_set.json \
-  --parallel_workers 5 \
-  --max_workers 10 \
-  --max_cte_nodes 8 \
-  --max_depth 8 \
-  --num_sql_variants 8 \
-  --strategy_mode LLM_PICK_ONCE \
-  --multi_base_urls "http://localhost:8000/v1,http://localhost:8010/v1"
-```
 
 **后台运行示例 1.6**：
 
 python workflows/mcts_v1/test/test_mcts.py   --ppl_file data/subset_ppl_dev_python.json   --sql_out workflows/mcts_v1/test/out/test_q35_81.txt   --json_out workflows/mcts_v1/test/out/test_q35_81.json   --qids "240,347,362,483,529,625,760,766,847,972,1032,1063,1085,1087,1195,1249,1268,1272,1467"   --gold_file data/sub_sampled_bird_dev_set.json   --parallel_workers 5 --max_workers 20  --multi_base_urls "http://localhost:8000/v1"   --strategy_mode FORCE_S2
-**后台运行示例（子集）**：
+
+
+<!-- **后台运行示例（子集）**：
 
 ```bash
 nohup python workflows/mcts_v1/test/test_single_mcts.py \
@@ -252,29 +187,12 @@ nohup python workflows/mcts_v1/test/test_single_mcts.py \
   > workflows/mcts_v1/test/out/test_background.log 2>&1 &
 ```
 
-**后台运行示例（全部数据集）**：
-
-```bash
-nohup python workflows/mcts_v1/test/test_single_mcts.py \
-  --ppl_file /hpc2hdd/home/sshen190/wtao565/SelfCorrectionSQL/data/ppl_dev.json \
-  --sql_out workflows/mcts_v1/test/out/test_full_background.txt \
-  --json_out workflows/mcts_v1/test/out/test_full_background.json \
-  --gold_file data/dev.json \
-  --parallel_workers 5 \
-  --max_workers 20 \
-  --max_cte_nodes 8 \
-  --max_depth 8 \
-  --num_sql_variants 8 \
-  --strategy_mode NONE \
-  --multi_base_urls "http://localhost:8000/v1" \
-  > workflows/mcts_v1/test/out/test_full_background.log 2>&1 &
-```
 
 **主要参数**：
 - `--max_cte_nodes`: 每次生成的 CTE 变体数量（默认 5）
 - `--max_depth`: CTE 链最大深度（默认 8）
 - `--num_sql_variants`: 最终生成的 SQL 变体数量（默认 5）
-- 其他参数与 `test_mcts.py` 相同
+- 其他参数与 `test_mcts.py` 相同 -->
 
 ### MCTS 框架 V2
 

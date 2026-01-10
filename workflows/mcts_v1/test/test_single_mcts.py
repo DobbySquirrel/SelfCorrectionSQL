@@ -367,7 +367,7 @@ def main():
     parser.add_argument("--max_depth", type=int, default=8, help="CTE链最大深度（默认8）")
     parser.add_argument("--num_sql_variants", type=int, default=5, help="最终生成的SQL变体数量（默认5）")
     parser.add_argument("--strategy_mode", type=str, default=None,
-                        choices=["FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4", "NONE", "LLM_PICK_ONCE"],
+                        choices=["FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4", "FORCE_S5", "NONE", "LLM_PICK_ONCE"],
                         help="策略模式：强制策略、无策略、或LLM选择")
     args = parser.parse_args()
     

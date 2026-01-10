@@ -43,11 +43,12 @@ class MCTSWorkflow:
             llm_config: LLM配置
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数（默认根据实际需求动态计算）
-            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
+            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
-        self.rollouts_per_iteration =8  # 从6增加到10，让visit_count更好地反映节点质量
+        # using rollouts_per_iteration=1 to test 
+        self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 1.414  # sqrt(2)
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
@@ -82,6 +83,9 @@ class MCTSWorkflow:
                 print(f"✅ 加载了 {len(relationships_data)} 个数据库的关系信息")
             except Exception as e:
                 print(f"⚠️ 加载relationships.json失败: {e}")
+        
+        # CTE探针配置（需要在初始化CTEGenerator之前定义）
+        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
         
         # 初始化MCTS组件
         self.mcts_tree = MCTSTree()
@@ -412,7 +416,7 @@ class MCTSWorkflow:
                     # 从JSON响应中提取策略和thought
                     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                     
-                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
+                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4", "S5"):
                         root_node.picked_strategy = picked_strategy
                         root_node.picked_strategy_thought = picked_strategy_thought
                         if picked_strategy == "S4":
@@ -579,11 +583,11 @@ class MCTSWorkflow:
                                                 current._failed_cte_attempts[idx] = failed_item
                                             else:
                                                 current._failed_cte_attempts[idx] = failed_item
-                                            # 更新deduplicated_failed_info中对应的项
-                                            for d_idx, d_item in enumerate(deduplicated_failed_info):
-                                                if d_item.get('error', '').strip() == error:
-                                                    deduplicated_failed_info[d_idx] = failed_item
-                                                    break   
+                                                # 更新deduplicated_failed_info中对应的项
+                                                for d_idx, d_item in enumerate(deduplicated_failed_info):
+                                                    if d_item.get('error', '').strip() == error:
+                                                        deduplicated_failed_info[d_idx] = failed_item
+                                                        break   
                                         break
                             else:
                                 # 如果错误信息不存在，直接添加
@@ -1398,4 +1402,4 @@ class MCTSWorkflow:
         except Exception:
             pass
         return tree_stats
-
+    
