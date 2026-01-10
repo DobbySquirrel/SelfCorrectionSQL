@@ -557,50 +557,14 @@ class MCTSUtils:
                     is_cte_context = True
         
         # 构建提示信息（英文）
-        # 优先处理：在CTE上下文中且使用了表前缀的情况
-        if has_table_prefix and table_name_in_error and is_cte_context and cte_source:
-            # 在CTE上下文中，且使用了表前缀
-            if len(matching_tables) == 1:
-                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', but it's not included in the '{cte_source}' CTE. You cannot use '{table_name_in_error}.{column_name}' in a CTE that selects from '{cte_source}'. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
-            else:
-                tables_str = ', '.join(matching_tables)
-                hint = f"Column '{column_name}' is located in tables: {tables_str}, but it's not included in the '{cte_source}' CTE. You cannot use table prefixes like '{table_name_in_error}.{column_name}' in a CTE that selects from '{cte_source}'. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
-        elif is_cte_context and cte_source:
-            # 在CTE上下文中：提示需要在CTE定义中添加该列
-            if len(matching_tables) == 1:
-                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', but it's not included in the '{cte_source}' CTE. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition, or access it directly from table '{matching_tables[0]}'"
-            else:
-                tables_str = ', '.join(matching_tables)
-                hint = f"Column '{column_name}' is located in tables: {tables_str}, but it's not included in the '{cte_source}' CTE. Please add '{column_name}' to the SELECT clause in the '{cte_source}' CTE definition"
-        elif has_table_prefix and table_name_in_error and from_table_name:
-            # 从表选择，但使用了错误的表前缀（列在另一个表中）
-            # 检查table_name_in_error是否是别名，如果是则获取对应的表名
-            actual_table_in_error = alias_to_table.get(table_name_in_error.lower(), table_name_in_error)
-            
-            if len(matching_tables) == 1:
-                if actual_table_in_error.lower() == from_table_name.lower():
-                    # 使用了正确的表别名，但列不在这个表中
-                    hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', not in '{from_table_name}'. You need to JOIN table '{matching_tables[0]}' to access this column, or use {matching_tables[0]}.`{column_name}`"
-                else:
-                    # 使用了错误的表别名
-                    hint = f"Column '{column_name}' is located in table '{matching_tables[0]}', not in '{actual_table_in_error}'. You need to JOIN table '{matching_tables[0]}' to access this column, or use {matching_tables[0]}.`{column_name}`"
-            else:
-                tables_str = ', '.join(matching_tables)
-                hint = f"Column '{column_name}' is located in tables: {tables_str}, not in '{actual_table_in_error}'. You need to JOIN one of these tables to access this column"
-        elif has_table_prefix and table_name_in_error:
-            # 错误信息中包含表名，但在CTE中不能使用原始表名（不在CTE上下文中，且不是从表选择）
-            if len(matching_tables) == 1:
-                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}'. However, you cannot use '{table_name_in_error}.{column_name}' in a CTE that selects from another CTE. Please add '{column_name}' to the previous CTE's SELECT clause, or access it directly from table '{matching_tables[0]}'"
-            else:
-                tables_str = ', '.join(matching_tables)
-                hint = f"Column '{column_name}' is located in tables: {tables_str}. However, you cannot use table prefixes in a CTE that selects from another CTE. Please add '{column_name}' to the previous CTE's SELECT clause"
+        # 简化：只告诉LLM列在哪个表里，以及如何访问
+        tables_str = ', '.join(matching_tables) if len(matching_tables) > 1 else None
+        table_ref = matching_tables[0] if len(matching_tables) == 1 else None
+        
+        if table_ref:
+            hint = f"Column '{column_name}' is located in table '{table_ref}'. Please use {table_ref}.`{column_name}` or JOIN table '{table_ref}' to access this column"
         else:
-            # 标准提示
-            if len(matching_tables) == 1:
-                hint = f"Column '{column_name}' is located in table '{matching_tables[0]}'. Please use {matching_tables[0]}.`{column_name}` or access it via JOIN"
-            else:
-                tables_str = ', '.join(matching_tables)
-                hint = f"Column '{column_name}' is located in the following tables: {tables_str}. Please use the correct table name to access this column"
+            hint = f"Column '{column_name}' is located in the following tables: {tables_str}. Please use the correct table name to access this column, or JOIN one of these tables"
         
         return {
             'column': column_name,
