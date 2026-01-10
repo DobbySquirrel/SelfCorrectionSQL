@@ -292,7 +292,7 @@ Note: If the question involves JOINs with N:1 relationships and asks "how many" 
 * **Natural language question**: {node.question}
 * **Database schema**: {enhanced_schema}
 {relationships_info}
-* **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
+* **Additional context**: {node.additional_context}
 * **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
 {preceding_cte_info}
 * **Depth Information**: 
@@ -1079,8 +1079,7 @@ The following CTEs failed during generation or execution in previous attempts. P
 * **Natural language question**: {node.question}
 * **Database schema**: {enhanced_schema}
 {relationships_info}
-* **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
-
+* **Additional context**: {node.additional_context}
 {priority_guidance}
 
 * **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: {preceding_cte_info}
