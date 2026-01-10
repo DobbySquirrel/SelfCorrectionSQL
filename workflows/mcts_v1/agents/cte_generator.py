@@ -13,6 +13,7 @@ import re
 import concurrent.futures
 import threading
 from openai import OpenAI
+from ..utils.mcts_helpers import MCTSUtils
 
 
 class CTEGenerator:
@@ -237,10 +238,11 @@ WITH final_count AS (
     SELECT COUNT(*) AS answer
     FROM t_rows
 )
-Note: If the question involves JOINs with N:1 relationships and asks "how many" entities, use COUNT(DISTINCT entity_id) instead of COUNT(*) to avoid counting duplicates.
 
 Example 6 — Stop
 <END>
+
+Note: If the question involves JOINs with N:1 relationships and asks "how many" entities, use COUNT(DISTINCT entity_id) instead of COUNT(*) to avoid counting duplicates.
 
 /no_think
 """
@@ -446,164 +448,6 @@ Example 6 — Stop
             return '\n'.join(lines)
         except Exception as e:
             print(f"⚠️  移除foreign_key失败: {e}，使用原始schema")
-            return schema_info
-    
-    def _extract_table_order(self, schema_info: str) -> List[str]:
-        """
-        从schema中提取表的顺序
-        
-        Args:
-            schema_info: schema信息
-            
-        Returns:
-            表名列表
-        """
-        table_names = []
-        for line in schema_info.split('\n'):
-            line = line.strip()
-            if line.startswith('#') and '`' in line and '(' in line:
-                match = re.match(r'#\s*(\w+)\(', line)
-                if match:
-                    table_names.append(match.group(1))
-        return table_names
-    
-    def _extract_first_table_columns(self, schema_info: str, max_cols: int = 5) -> str:
-        """
-        提取第一个表的前N列（用于显示列顺序变化）
-        
-        Args:
-            schema_info: schema信息
-            max_cols: 最多显示的列数
-            
-        Returns:
-            列名字符串，例如 "CDSCode, Charter, School, ..."
-        """
-        for line in schema_info.split('\n'):
-            line = line.strip()
-            if line.startswith('#') and '`' in line and '(' in line:
-                match = re.match(r'#\s*\w+\((.*)\)\s*$', line)
-                if match:
-                    columns_str = match.group(1)
-                    # 使用正确的解析方法
-                    columns = self._parse_columns(columns_str)
-                    # 去掉反引号用于显示
-                    columns = [col.strip('`') for col in columns]
-                    if len(columns) > max_cols:
-                        return ', '.join(columns[:max_cols]) + ', ...'
-                    else:
-                        return ', '.join(columns)
-        return "N/A"
-    
-    def _parse_columns(self, columns_str: str) -> List[str]:
-        """
-        正确解析列名，处理反引号包裹的列名（列名内可能包含逗号、括号等特殊字符）
-        
-        Args:
-            columns_str: 列定义字符串，例如: "`col1`, `col2`, `col with (special) chars`, ..."
-            
-        Returns:
-            列名列表（保留反引号）
-        """
-        columns = []
-        current_col = ""
-        in_backtick = False
-        
-        for char in columns_str:
-            if char == '`':
-                in_backtick = not in_backtick
-                current_col += char
-            elif char == ',' and not in_backtick:
-                # 只有在反引号外的逗号才是分隔符
-                if current_col.strip():
-                    columns.append(current_col.strip())
-                current_col = ""
-            else:
-                current_col += char
-        
-        # 添加最后一列
-        if current_col.strip():
-            columns.append(current_col.strip())
-        
-        return columns
-    
-    def _shuffle_schema(self, schema_info: str) -> str:
-        """
-        随机打乱database schema中表和列的顺序，增加生成多样性
-        
-        Args:
-            schema_info: 原始schema信息
-            
-        Returns:
-            打乱后的schema信息
-        """
-        try:
-            # 分离数据库名称和schema主体
-            parts = schema_info.split('\n', 1)
-            if len(parts) < 2:
-                return schema_info
-            
-            db_name_line = parts[0]  # 例如: "db_name:california_schools\n#"
-            rest = parts[1]
-            
-            # 分离表定义和外键定义
-            if 'foreign_key:' in rest:
-                schema_part, fk_part = rest.split('foreign_key:', 1)
-            else:
-                schema_part = rest
-                fk_part = None
-            
-            # 解析表定义（每行格式: # table_name(`col1`, `col2`, ...)）
-            table_lines = []
-            for line in schema_part.split('\n'):
-                line = line.strip()
-                if line.startswith('#') and '`' in line:
-                    # 提取表名和列（使用正确的正则表达式匹配到行尾）
-                    match = re.match(r'#\s*(\w+)\((.*)\)\s*$', line)
-                    if match:
-                        table_name = match.group(1)
-                        columns_str = match.group(2)
-                        
-                        # 使用新的解析方法正确处理列名
-                        columns = self._parse_columns(columns_str)
-                        
-                        # 随机打乱列的顺序
-                        random.shuffle(columns)
-                        
-                        # 重建表定义
-                        new_line = f"# {table_name}({', '.join(columns)})"
-                        table_lines.append(new_line)
-                elif line:  # 保留其他非空行
-                    table_lines.append(line)
-            
-            # 随机打乱表的顺序
-            random.shuffle(table_lines)
-            
-            # 重建schema
-            new_schema = db_name_line + '\n' + '\n'.join(table_lines)
-            
-            # 处理外键（如果有）
-            if fk_part:
-                fk_lines = []
-                for line in fk_part.split('\n'):
-                    line = line.strip()
-                    if line.startswith('#') and 'references' in line:
-                        fk_lines.append(line)
-                    elif line:
-                        fk_lines.append(line)
-                
-                # 随机打乱外键顺序
-                fk_constraints = [l for l in fk_lines if 'references' in l]
-                other_lines = [l for l in fk_lines if 'references' not in l]
-                random.shuffle(fk_constraints)
-                
-                new_fk = '\n'.join(other_lines + fk_constraints)
-                new_schema += '\nforeign_key:' + new_fk
-            
-            return new_schema
-            
-        except Exception as e:
-            # 如果解析失败，返回原始schema
-            print(f"⚠️  Schema打乱失败: {e}，使用原始schema")
             return schema_info
     
     def _find_relevant_values(self, values: List[Any], question: str, top_n: int = 3) -> List[Any]:
@@ -1122,15 +966,9 @@ The following CTEs failed during generation or execution in previous attempts. P
         # 构建用户输入
         # 优先级指导prompt（放在最显眼的位置）
         priority_guidance = """
-### [CRITICAL: INFORMATION PRIORITY]
-
 **Priority: Execution Results > Evidence**
 - **Execution Results** are FACTS - use exact values, formats, column names
 - **Evidence/Additional Context** are hints - verify against execution results first
-- If Evidence mentions a condition, check if the preceding CTE includes the relevant column. If not, add it first, then verify values before applying the condition.
-
-================================================================================
-
 """
         
         # 获取关系信息
@@ -1174,112 +1012,96 @@ The following CTEs failed during generation or execution in previous attempts. P
         # 构建系统消息
         system_message = self._get_cte_system_message()
         
-        try:
-            # 并行为每个temperature组生成变体
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-            import time
+        # 并行为每个temperature组生成变体
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+        
+        total_start_time = time.time()
+        if should_monitor:
+            if self.multi_model_configs:
+                print(f"[CTE生成] 开始并行生成 {num_variants} 个CTE变体（4个temperature组，{len(self.multi_model_configs)} 个模型端点）...")
+            else:
+                print(f"[CTE生成] 开始并行生成 {num_variants} 个CTE变体（4个temperature组）...")
+        variants = []
+        
+        def get_model_config_for_group(group_idx):
+            """为当前组选择模型配置（轮询方式）"""
+            if self.multi_model_configs:
+                # 使用轮询方式选择模型
+                with self._model_counter_lock:
+                    selected_idx = self._model_counter % len(self.multi_model_configs)
+                    self._model_counter += 1
+                    return self.multi_model_configs[selected_idx]
+            else:
+                # 使用默认配置
+                return {'model': model, 'base_url': base_url, 'api_key': api_key}
+        
+        def generate_group(group_idx, temperature, group_size):
+            """生成单个temperature组的CTE变体（每个线程使用独立的client）"""
+            if group_size == 0:
+                return []
+            try:
+                # 为当前组选择模型配置（轮询方式）
+                model_config = get_model_config_for_group(group_idx)
+                selected_base_url = model_config['base_url']
+                selected_api_key = model_config.get('api_key', api_key)
+                selected_model = model_config.get('model', model)
+                
+                # 每个线程创建独立的client（OpenAI client不是线程安全的）
+                # 不设置 timeout，使用默认值（10分钟）或 None（无限制）
+                client = OpenAI(base_url=selected_base_url, api_key=selected_api_key, timeout=None)
+                start_time = time.time()
+                response = client.chat.completions.create(
+                    model=selected_model,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_input}
+                    ],
+                    temperature=temperature,
+                    n=group_size  # 当前组生成group_size个响应
+                )
+                elapsed = time.time() - start_time
+                if should_monitor:
+                    endpoint_info = f" (端点: {selected_base_url.split('/')[-2]})" if self.multi_model_configs else ""
+                    print(f"[CTE生成] temperature={temperature}, group_size={group_size}, 耗时={elapsed:.2f}s{endpoint_info}")
+                
+                # 提取当前组的CTE
+                group_ctes = []
+                for idx, choice in enumerate(response.choices):
+                    content = choice.message.content
+                    cte = self._extract_cte_from_response(content)
+                    if cte:
+                        group_ctes.append(cte)
+                return group_ctes
+            except Exception as e:
+                if should_monitor:
+                    error_type = type(e).__name__
+                    error_msg = str(e)
+                    print(f"[CTE生成] temperature={temperature} 失败: {error_type}: {error_msg}")
+                    # 打印更详细的调试信息
+                    print(f"  端点: {selected_base_url}, 模型: {selected_model}")
+                return []
+        
+        # 并行执行所有temperature组
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {}
+            for group_idx, temperature in enumerate(temperature_groups):
+                group_size = variants_per_group + (1 if group_idx < remainder else 0)
+                if group_size > 0:
+                    future = executor.submit(generate_group, group_idx, temperature, group_size)
+                    futures[future] = (group_idx, temperature)
             
-            total_start_time = time.time()
-            if should_monitor:
-                if self.multi_model_configs:
-                    print(f"[CTE生成] 开始并行生成 {num_variants} 个CTE变体（4个temperature组，{len(self.multi_model_configs)} 个模型端点）...")
-                else:
-                    print(f"[CTE生成] 开始并行生成 {num_variants} 个CTE变体（4个temperature组）...")
-            variants = []
-            
-            def get_model_config_for_group(group_idx):
-                """为当前组选择模型配置（轮询方式）"""
-                if self.multi_model_configs:
-                    # 使用轮询方式选择模型
-                    with self._model_counter_lock:
-                        selected_idx = self._model_counter % len(self.multi_model_configs)
-                        self._model_counter += 1
-                        return self.multi_model_configs[selected_idx]
-                else:
-                    # 使用默认配置
-                    return {'model': model, 'base_url': base_url, 'api_key': api_key}
-            
-            def generate_group(group_idx, temperature, group_size):
-                """生成单个temperature组的CTE变体（每个线程使用独立的client）"""
-                if group_size == 0:
-                    return []
+            # 收集结果
+            for future in as_completed(futures):
+                group_idx, temperature = futures[future]
                 try:
-                    # 为当前组选择模型配置（轮询方式）
-                    model_config = get_model_config_for_group(group_idx)
-                    selected_base_url = model_config['base_url']
-                    selected_api_key = model_config.get('api_key', api_key)
-                    selected_model = model_config.get('model', model)
-                    
-                    # 每个线程创建独立的client（OpenAI client不是线程安全的）
-                    # 不设置 timeout，使用默认值（10分钟）或 None（无限制）
-                    client = OpenAI(base_url=selected_base_url, api_key=selected_api_key, timeout=None)
-                    start_time = time.time()
-                    response = client.chat.completions.create(
-                        model=selected_model,
-                        messages=[
-                            {"role": "system", "content": system_message},
-                            {"role": "user", "content": user_input}
-                        ],
-                        temperature=temperature,
-                        n=group_size  # 当前组生成group_size个响应
-                    )
-                    elapsed = time.time() - start_time
-                    if should_monitor:
-                        endpoint_info = f" (端点: {selected_base_url.split('/')[-2]})" if self.multi_model_configs else ""
-                        print(f"[CTE生成] temperature={temperature}, group_size={group_size}, 耗时={elapsed:.2f}s{endpoint_info}")
-                    
-                    # 提取当前组的CTE
-                    group_ctes = []
-                    for idx, choice in enumerate(response.choices):
-                        content = choice.message.content
-                        cte = self._extract_cte_from_response(content)
-                        if cte:
-                            group_ctes.append(cte)
-                    return group_ctes
+                    group_ctes = future.result()
+                    variants.extend(group_ctes)
                 except Exception as e:
                     if should_monitor:
-                        error_type = type(e).__name__
-                        error_msg = str(e)
-                        print(f"[CTE生成] temperature={temperature} 失败: {error_type}: {error_msg}")
-                        # 打印更详细的调试信息
-                        print(f"  端点: {selected_base_url}, 模型: {selected_model}")
-                    return []
-            
-            # 并行执行所有temperature组
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                futures = {}
-                for group_idx, temperature in enumerate(temperature_groups):
-                    group_size = variants_per_group + (1 if group_idx < remainder else 0)
-                    if group_size > 0:
-                        future = executor.submit(generate_group, group_idx, temperature, group_size)
-                        futures[future] = (group_idx, temperature)
-                
-                # 收集结果
-                for future in as_completed(futures):
-                    group_idx, temperature = futures[future]
-                    try:
-                        group_ctes = future.result()
-                        variants.extend(group_ctes)
-                    except Exception as e:
-                        if should_monitor:
-                            print(f"[CTE生成] temperature={temperature} 执行异常: {e}")
-            
-            total_elapsed = time.time() - total_start_time
-            if should_monitor:
-                print(f"[CTE生成] 完成！共生成 {len(variants)} 个CTE变体，总耗时={total_elapsed:.2f}s")
-            return variants
-            
-        except Exception as e:
-            if should_monitor:
-                print(f"❌ 使用n参数生成CTE变体失败: {e}")
-            # 如果失败，回退到单次调用（但只生成一个）
-            try:
-                self.setup_agent(0.6)  # 使用默认temperature
-                messages = [{"role": "user", "content": user_input}]
-                response = self.cte_agent.generate_reply(messages)
-                cte = self._extract_cte_from_response(response)
-                return [cte] if cte else []
-            except Exception as e2:
-                if should_monitor:
-                    print(f"❌ 回退方案也失败: {e2}")
-                return []
+                        print(f"[CTE生成] temperature={temperature} 执行异常: {e}")
+        
+        total_elapsed = time.time() - total_start_time
+        if should_monitor:
+            print(f"[CTE生成] 完成！共生成 {len(variants)} 个CTE变体，总耗时={total_elapsed:.2f}s")
+        return variants

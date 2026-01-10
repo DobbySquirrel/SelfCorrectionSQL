@@ -55,6 +55,11 @@ class MCTSWorkflow:
         # 范围：5-8个，根据rollouts_per_iteration动态调整
         self.num_sql_variants = 10  # 每个rollout末尾生成的SQL变体数量
 
+        # 统一 SQL 超时配置（秒）
+        self.sql_timeout_s = 40
+        self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
+        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
+
         # 从llm_config中提取multi_model_configs（如果存在config_list）
         multi_model_configs = None
         if 'config_list' in llm_config and len(llm_config['config_list']) > 1:
@@ -96,10 +101,6 @@ class MCTSWorkflow:
         else:
             self.max_workers = max_workers
         
-        # 统一 SQL 超时配置（秒）
-        self.sql_timeout_s = 40
-        self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
-        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         # 分阶段计时统计

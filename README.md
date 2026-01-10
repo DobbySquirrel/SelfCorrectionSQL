@@ -117,7 +117,23 @@ nohup python workflows/mcts_v1/test/test_mcts.py \
    > workflows/mcts_v1/test/out/1_7_test_no_strategy.log 2>&1 &
 ```
 
-**2. 策略模式测试（LLM选择策略1.6测试）**
+**2. 单样本测试（策略2，执行id 479）**
+
+```bash
+nohup python workflows/mcts_v1/test/test_mcts.py \
+   --ppl_file data/subset_ppl_dev_python.json \
+   --qid 479 \
+   --sql_out workflows/mcts_v1/test/out/479_strategy_s2_sql.txt \
+   --json_out workflows/mcts_v1/test/out/479_strategy_s2_result.json \
+   --gold_file data/sub_sampled_bird_dev_set.json \
+   --max_workers 1 \
+   --parallel_workers 5 \
+   --strategy_mode FORCE_S2 \
+   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1" \
+   > workflows/mcts_v1/test/out/479_strategy_s2.log 2>&1 &
+```
+
+**3. 策略模式测试（LLM选择策略1.6测试）**
 
 ```bash
 nohup python workflows/mcts_v1/test/test_mcts.py \
