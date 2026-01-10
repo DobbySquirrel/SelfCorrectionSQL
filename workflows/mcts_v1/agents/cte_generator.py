@@ -1144,7 +1144,7 @@ The following CTEs failed during generation or execution in previous attempts. P
 * **Natural language question**: {node.question}
 * **Database schema**: {schema_without_fk}
 {relationships_info}
-* **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
+* **Additional context**: {node.additional_context} 
 
 {priority_guidance}
 
