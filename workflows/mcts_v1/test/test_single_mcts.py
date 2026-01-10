@@ -52,7 +52,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
     question = sample["question"]
     schema_info = sample["simplified_ddl"]
     foreign_key = sample.get("foreign_key", "")
-    evidence = sample.get("combine_evidence", "")
+    # 只使用 evidence，不使用 combine_evidence（因为 combine_evidence 包含不需要的 "Evidence from other related questions" 部分）
     single_evidence = sample.get("evidence", "")
 
     db = build_db_connector(db_name)
