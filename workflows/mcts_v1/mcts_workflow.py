@@ -80,7 +80,7 @@ class MCTSWorkflow:
         
         # 初始化MCTS组件
         self.mcts_tree = MCTSTree()
-        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, relationships_data=relationships_data)
+        self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, relationships_data=relationships_data, cte_probe_limit=self.cte_probe_limit)
         self.complete_sql_generator = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs)
         self.sql_executor = SQLExecutor(db_connector)
         # 设置sql_executor的cte_generator（用于错误恢复）
@@ -99,6 +99,7 @@ class MCTSWorkflow:
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
         self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
+        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         # 分阶段计时统计

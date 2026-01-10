@@ -18,7 +18,7 @@ from openai import OpenAI
 class CTEGenerator:
     """CTE生成器智能体"""
     
-    def __init__(self, llm_config: Dict, max_depth: int = 5, multi_model_configs: List[Dict] = None, relationships_map: Dict[str, Dict[str, Any]] = None, relationships_data: Dict[str, Any] = None):
+    def __init__(self, llm_config: Dict, max_depth: int = 5, multi_model_configs: List[Dict] = None, relationships_map: Dict[str, Dict[str, Any]] = None, relationships_data: Dict[str, Any] = None, cte_probe_limit: int = 15):
         """
         初始化CTE生成器
         
@@ -28,12 +28,14 @@ class CTEGenerator:
             multi_model_configs: 多个模型配置列表（用于多模型并行加速）
             relationships_map: 关系映射字典，格式: {f"{table1}<->{table2}": {'type': '1:1', ...}, ...}
             relationships_data: 关系数据字典，格式: {db_name: {relationships: [...], metadata: {...}}}
+            cte_probe_limit: CTE探针查询的LIMIT值（默认15）
         """
         self.llm_config = llm_config
         self.max_depth = max_depth
         self.multi_model_configs = multi_model_configs or []
         self.relationships_map = relationships_map or {}
         self.relationships_data = relationships_data or {}
+        self.cte_probe_limit = cte_probe_limit
         # 线程锁：保护 agent 创建过程（避免并行环境下的 Pydantic 冲突）
         self._agent_lock = threading.Lock()
         # 用于轮询选择模型的计数器（线程安全）
@@ -189,15 +191,6 @@ WITH new_cte_name AS (
       2. **Spacing Variants**: `LIKE '% Target %'` (with spaces) or `LIKE 'Target'` (exact)
       3. **Boundary Match**: `LIKE 'Target%'` (starts with) OR `LIKE '%Target'` (ends with)
       4. **Structural Match**: If contains symbols (e.g., "=", "-"), try removing them or adding spaces (e.g., " = " → "=", "%=%")
-    - **BAD Example** (DO NOT DO THIS):
-      ```sql
-      WHERE col LIKE '%Value%' OR col LIKE '%Value%' OR col LIKE '%Value%'  -- All duplicates!
-      ```
-    - **GOOD Example** (DO THIS):
-      ```sql
-      WHERE col LIKE '%Value%'      -- Contains
-      LIMIT 10
-      ```
     - **Important**: The system generates multiple CTE variants in parallel. Each variant should explore **DIFFERENT** LIKE patterns. Do NOT generate the same pattern in multiple variants.
     - **Method 2** (if Method 1 fails): Use SQLite functions (LENGTH, INSTR, SUBSTR, CASE WHEN) to calculate similarity scores and ORDER BY to find the most similar rows.
     - When you see "CRITICAL ALERT: EMPTY RESULT RECOVERY" in the preceding CTE results, prioritize using these fuzzy matching techniques with diverse patterns.
@@ -284,7 +277,7 @@ Example 6 — Stop
 * **Database schema**: {node.schema_info}
 {relationships_info}
 * **Additional context**: {node.additional_context} (syntactical adjustments are acceptable regarding spacing and formatting, based on the actual CTE results)
-* **Preceding CTE and Results (Quick verification with LIMIT)**: 
+* **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
 {preceding_cte_info}
 * **Depth Information**: 
   - Maximum allowed steps: {self.max_depth}
@@ -723,7 +716,7 @@ Example 6 — Stop
     
     def _get_fuzzy_match_hint(self, is_second_empty: bool = False) -> str:
         """
-        生成模糊匹配提示信息（完整字符串格式）
+        生成模糊匹配提示信息（简洁版）
         
         Args:
             is_second_empty: 是否是第二次空结果
@@ -735,93 +728,26 @@ Example 6 — Stop
         other_column_hint = ""
         if is_second_empty:
             other_column_hint = """
-### [CRITICAL: CHECK OTHER COLUMNS]
+### [CHECK OTHER COLUMNS]
+**Empty results after fuzzy matching twice** suggests you may be querying the **wrong column**.
 
-⚠️ **You have tried fuzzy matching on the same column twice and still got empty results.**
-
-**This strongly suggests you may be querying the WRONG COLUMN.**
-
-**ACTION REQUIRED**: 
-1. **Review the question/evidence carefully** - Identify what column names are explicitly mentioned or implied:
-   - If the question mentions a specific column name, use that exact column
-   - If the question mentions an ID, check ID columns (e.g., `*_id`, `id`)
-   - If the question mentions a name/label, check name/label columns (e.g., `name`, `label`, `title`)
-   
-2. **Check the schema** - Look for columns that semantically match what the question asks for:
-   - Primary key columns (often `id`, `*_id`)
-   - Name/label columns (often `name`, `label`, `title`)
-   - Code columns (often `code`, `*_code`)
-   
-3. **Try querying a DIFFERENT column** that matches the semantic meaning in the question:
-   - If you've been querying a name/label column, try the corresponding ID column
-   - If you've been querying an ID column, try the corresponding name/label column
-   - Consider querying multiple relevant columns with OR conditions
-
-4. **Match column semantics to question intent** - Use columns that align with what the question is asking for.
-
-**DO NOT** keep trying the same column with more LIKE patterns - it's likely the wrong column!
+1. **Review the question/evidence**: Check for explicit or implied column names.
+2. **Check the schema**: Look for matching columns like IDs, names, or codes.
+3. **Try a DIFFERENT column** with relevant semantics (e.g., name/ID, code/ID).
 """
         
-        hint_text = f"""### [CRITICAL ALERT: EMPTY RESULT RECOVERY]
-
-The previous CTE executed successfully but returned **0 rows** (Empty Result).
-
-This strongly indicates a **String Literal Mismatch** OR **Wrong Column Selection**. The string values provided in the question/evidence likely differ from the actual formatting in the database (e.g., " Coldsnap" vs "Coldsnap", " = " vs "="), OR you may be querying the wrong column entirely.
+        hint_text = f"""
+This likely indicates a **String Literal Mismatch** OR **Wrong Column Selection**. The format might differ, or the wrong column is being queried.
 
 {other_column_hint}
 
 ### [YOUR TASK]
 
-Create a new, **Exploratory CTE** to find the correct string format OR the correct column.
+Create a **Exploratory CTE with new name** to find the correct format or column.
 
-**DO NOT** simply repeat the previous logic.
-
-**DO NOT** repeat the exact same `LIKE` pattern.
-
-### [STRATEGY: DIVERSE PATTERN MATCHING]
-
-1. **Identify Targets**: Look at ALL string literals used in the previous failed query (in WHERE, JOIN, or CASE WHEN clauses).
-
-2. **Generate Variations**: For EACH string literal, generate 3-5 **distinct** `LIKE` patterns using `OR`.
-
-3. **Cross-Column Check**: If the failed query filtered on multiple columns, include fuzzy checks for ALL of them in this single probe.
-
-### [REQUIRED PATTERN TYPES]
-
-For a target string value (e.g., "Target"), you MUST include:
-
-1. **Broad Match**: `LIKE '%Target%'` (Contains)
-
-2. **Spacing Variants**: `LIKE '% Target %'` (Spaces inside/around) or `LIKE 'Target'` (Exact, if previous was fuzzy)
-
-3. **Boundary Match**: `LIKE 'Target%'` (Starts with) OR `LIKE '%Target'` (Ends with)
-
-4. **Structural Match**: If the string contains symbols (e.g., "=", "-", ":"), try removing them or adding spaces around them (e.g., if target is " = ", try "=" and "%=%").
-
-```
-
-### [GOOD EXAMPLE - DO THIS]
-
-✅ Diverse and exploratory:
-
-```sql
-WHERE 
-   -- Checking Column A (Target: "Value")
-   col1 LIKE '%Value%'       -- Standard contains
-
-   
-   -- Checking Column B (Target: " = ")
-   OR col2 LIKE '%=%'        -- No spaces
-   
-LIMIT 5;
-```
-
-### [IMPORTANT NOTES]
-
-- **Each CTE variant should explore DIFFERENT patterns** - the system generates multiple variants in parallel, so each should try different LIKE patterns.
-- **If the target string is simple (e.g., "TR047")**, try: `'%TR047%'`, `'%TR%047%'` (split), etc.
-- **If the target contains special characters**, try variations with/without spaces, with/without the special characters.
-- **Always include a LIMIT clause** to prevent excessive results.
+1. **Identify Targets**: Check string literals used in the failed query.
+2. **Generate Variations**: Use distinct `LIKE` patterns for each string.
+3. **Cross-Column Check**: Include fuzzy checks for all relevant columns.
 """
         return hint_text
     
@@ -1204,7 +1130,7 @@ The following CTEs failed during generation or execution in previous attempts. P
 
 {priority_guidance}
 
-* **Preceding CTE and Results (Quick verification with LIMIT)**: {preceding_cte_info}
+* **Preceding CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: {preceding_cte_info}
 * {used_names_str}
 {failed_attempts_section}* **Depth Information**: 
   - Maximum allowed steps: {self.max_depth}
