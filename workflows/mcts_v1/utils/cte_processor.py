@@ -16,7 +16,6 @@ class CTEProcessor:
     """CTE处理工具类"""
     
     def __init__(self, sql_executor, cte_probe_timeout_s: float, max_workers: int, timing_dict: Optional[Dict[str, Any]] = None, cte_probe_limit: int = 15):
-    def __init__(self, sql_executor, cte_probe_timeout_s: float, max_workers: int, timing_dict: Optional[Dict[str, Any]] = None, cte_probe_limit: int = 15):
         """
         初始化CTE处理器
         
@@ -88,11 +87,16 @@ class CTEProcessor:
             has_limit = re.search(r'\bLIMIT\s+\d+', exec_sql, re.IGNORECASE) is not None
             # 如果没有LIMIT，添加LIMIT用于探针执行（使用cte_probe_limit，与prompt中的建议一致）
             if exec_sql and not has_limit:
-                # 在最后的SELECT语句前添加LIMIT
-                # 在最后的SELECT语句前添加LIMIT
-                if 'SELECT * FROM' in exec_sql.upper():
-                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', rf'\1 LIMIT {self.cte_probe_limit}\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
-                    exec_sql = re.sub(r'(SELECT \* FROM[^;]+)(;?)$', rf'\1 LIMIT {self.cte_probe_limit}\2', exec_sql, flags=re.IGNORECASE | re.DOTALL)
+                # 在最后的SELECT语句末尾添加LIMIT（在分号之前，或如果没有分号则在末尾）
+                # 匹配整个SELECT语句，包括WHERE、JOIN、GROUP BY、ORDER BY等子句
+                # 使用更精确的正则：匹配SELECT到分号或字符串末尾之间的内容
+                if re.search(r'\bSELECT\s+', exec_sql, re.IGNORECASE):
+                    # 如果SQL以分号结尾，在分号前添加LIMIT
+                    if exec_sql.rstrip().endswith(';'):
+                        exec_sql = exec_sql.rstrip()[:-1].rstrip() + f' LIMIT {self.cte_probe_limit};'
+                    else:
+                        # 如果没有分号，直接在末尾添加LIMIT
+                        exec_sql = exec_sql.rstrip() + f' LIMIT {self.cte_probe_limit}'
             # 2) 直接执行（不再进行自动修复）
             # 使用较短的超时时间进行探针执行（快速检测）
             res = self.sql_executor._execute_single_query(exec_sql, timeout_s=self.cte_probe_timeout_s)

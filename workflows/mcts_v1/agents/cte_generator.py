@@ -739,10 +739,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
             "Expression Types:",
             "S1 Entity-First:",
             "S2 Relation-First:",
-            "S3 Proactive:",
-            "S4 Reactive:",
-            "S4 Custom Strategy:",
-            "S5 Evidence-Based:"
+            "S3 Evidence-Based:"
         ]
         
         # 查找第一个strategy标记的位置

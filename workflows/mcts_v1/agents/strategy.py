@@ -23,7 +23,7 @@ class StrategyConfig:
     lock_after_picked: bool = True
 
 
-GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S4", lock_after_picked=True)
+GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S2", lock_after_picked=True)
 CTE_ACTION_level="""
 
 Expression Types:
@@ -54,47 +54,105 @@ Expression Types:
 7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
 8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
 
-Example:
+Examples:
 
-Question: Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?
-Schema: satscores(cds, AvgScrMath), frpm(CDSCode, School Code, Charter Funding Type), schools(CDSCode, Charter)
+**S1 (Entity-First) Example:**
+Question: List all patients who were born in 1937 whose total cholesterol was beyond the normal range.
+Schema: Patient(ID, Birthday), Laboratory(ID, T_CHO)
+Evidence: The patients' birth year must be 1937. The patients' total cholesterol (T-CHO) must be greater than or equal to 250.
 
-First CTE (Column Selection)
-WITH c_cols AS (
-    SELECT ss.cds, ss.`AvgScrMath`
-    FROM satscores AS ss
+Step 1 (Column Selection): Select the columns from Patient and Laboratory tables to identify relevant fields.
+WITH cte_born_1937 AS (
+    SELECT p.ID, p.Birthday
+    FROM Patient p
+    WHERE STRFTIME('%Y', p.Birthday) = '1937'
 )
 
-Obtained `AvgScrMath` values are [500,501,569,640...]
-Second CTE (Row Filtering)
-WITH c_rows AS (
-    SELECT cds, `AvgScrMath`
-    FROM c_cols
-    WHERE `AvgScrMath` IS NOT NULL AND `AvgScrMath` > 560
+Step 2 (Row Filtering): Filter the patients based on the cholesterol level being greater than or equal to 250.
+WITH cte_tcho_above_normal AS (
+    SELECT p.ID, l.T_CHO
+    FROM cte_born_1937 p
+    LEFT JOIN Laboratory l ON p.ID = l.ID
+    WHERE l.T_CHO >= 250
 )
 
-Third CTE (Table Join)
-WITH t_join AS (
-    SELECT f.`School Code`, f.`Charter Funding Type`
-    FROM c_rows r
-    INNER JOIN frpm f ON r.cds = f.`CDSCode`
+Step 3 (Aggregation): Count the number of patients whose cholesterol exceeds the normal range.
+WITH final_results AS (
+    SELECT p.ID, l.T_CHO
+    FROM cte_tcho_above_normal p
+)
+SELECT COUNT(*) AS total_patients FROM final_results;
+
+<END>
+
+**S2 (Relation-First) Example:**
+Question: Among the cards with converted mana cost higher than 5 in the set Coldsnap, how many of them have unknown power?
+Schema: cards(id, convertedManaCost, power, setCode), sets(code, name)
+Evidence: The card set must be 'Coldsnap'. The converted mana cost must be greater than 5. The power of the card must be unknown (either '*' or NULL).
+
+Step 1 (Table Join): Join the cards table with the sets table to get the set names.
+WITH cte1 AS (
+    SELECT c.id, c.convertedManaCost, c.power, s.name AS setName
+    FROM cards c
+    INNER JOIN sets s ON c.setCode = s.code
 )
 
-Obtained `Charter Funding Type` values are [Directly funded,Somehow funded, w/o funded,...]
-Fourth CTE (Row Filtering)
-WITH t_rows AS (
-    SELECT `School Code`
-    FROM t_join
-    WHERE `Charter Funding Type` = 'Directly funded'
+Step 2 (Row Filtering): Filter cards by set name and converted mana cost greater than 5.
+WITH cte2 AS (
+    SELECT id, convertedManaCost, power, setName
+    FROM cte1
+    WHERE setName = 'Coldsnap' AND convertedManaCost > 5
 )
 
-Fifth CTE (Aggregation)
+Step 3 (Row Filtering): Filter cards with unknown power (either '*' or NULL).
+WITH cte3 AS (
+    SELECT id, power
+    FROM cte2
+    WHERE power = '*' OR power IS NULL
+)
+
+Step 4 (Aggregation): Count the number of cards with unknown power.
 WITH final_count AS (
     SELECT COUNT(*) AS answer
-    FROM t_rows
+    FROM cte3
+)
+SELECT answer FROM final_count;
+
+<END>
+
+**S3 (Evidence-Based) Example:**
+Question: What was Francesco Parravicini's potential on 2010/8/30?
+Schema: Player(player_api_id, player_name), Player_Attributes(player_api_id, potential, date)
+Evidence: The player's name must be 'Francesco Parravicini'. The date must be '2010-08-30 00:00:00'.
+
+Step 1 (Column Selection): Select the relevant player columns from the Player table.
+WITH cte_player AS (
+    SELECT player_api_id, player_name
+    FROM Player
+    WHERE player_name = 'Francesco Parravicini'
 )
 
-Stop
+Step 2 (Row Filtering): Filter Player_Attributes by date (using the evidence: date = '2010-08-30 00:00:00').
+WITH cte_potential AS (
+    SELECT player_api_id, potential, date
+    FROM Player_Attributes
+    WHERE date = '2010-08-30 00:00:00'
+)
+
+Step 3 (Table Join): Join the cte_player and cte_potential CTEs based on player_api_id.
+WITH cte_final AS (
+    SELECT p.player_name, pa.potential
+    FROM cte_player p
+    INNER JOIN cte_potential pa ON p.player_api_id = pa.player_api_id
+)
+
+Step 4 (Aggregation): Extract Francesco Parravicini's potential value.
+WITH final_result AS (
+    SELECT potential
+    FROM cte_final
+)
+SELECT potential FROM final_result;
+
 <END>
 
 """
@@ -111,23 +169,14 @@ _STRATEGY_DESCRIPTIONS = {
 - First ensure join path correctness (use FK hints from schema/foreign_key text).
 - Build join skeleton first, then add filters.""",
     
-    "S3": """S3 Proactive:
-- Upfront disambiguation: if schema is large/ambiguous, create a robust intermediate CTE with only necessary columns.
-- Avoid fancy expressions until you have the correct grain.""",
-    
-    "S4": """S4 Custom:
-- You can choose S4 if you want to create your own custom strategy plan based on the specific question and schema.
-- When selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
-- The "thought" will be used as the strategy guidance in subsequent CTE generation steps.""",
-    
-    "S5": """S5 Evidence-Based:
-Always validate your CTE against the evidence fields in the dataset.
-Use the evidence to verify column names, filter values, join conditions, and constraints.
-Apply specific values, column names, or relationships from the evidence to your CTE.
-Cross-check your CTE logic with the evidence and adjust accordingly.
-If your CTE contradicts the evidence, you MUST revise it before proceeding
-- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps 
-"""
+    "S3": """S3 Evidence-Based:
+- When creating a CTE, ALWAYS validate it against the evidence fields provided in the dataset.
+- Use the evidence information to verify column names, filter values, join conditions, and data constraints.
+- If the evidence contains specific values, column names, or relationships, incorporate them into your CTE.
+- Cross-reference your CTE logic with the evidence to ensure correctness before proceeding.
+- If evidence suggests a different approach, adjust your CTE accordingly.
+- If your CTE contradicts the evidence, you MUST revise it before proceeding.
+- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps."""
 }
 
 # 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
@@ -138,11 +187,6 @@ STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S2']}
 
 {_STRATEGY_DESCRIPTIONS['S3']}
-
-{_STRATEGY_DESCRIPTIONS['S4']}
-
-{_STRATEGY_DESCRIPTIONS['S5']}
-
 """
 
 def build_strategy_injection_text(
@@ -185,12 +229,25 @@ def build_strategy_injection_text(
         
         # depth>0 时只需要已选择策略的说明
         s = picked_strategy or fixed_strategy or "S2"
-        if s == "S4" and picked_strategy_thought:
-            # S4使用LLM自己规划的thought作为策略描述
-            strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
-        else:
-            strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+        strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+        
+        # 对于 S3，添加额外的 evidence 验证说明
+        if s == "S3":
+            return f"""
+{strategy_desc}
 
+**⚠️ CRITICAL: Evidence Validation (S3 Strategy)**
+- If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
+  * Check if column names in your CTE match those mentioned in the evidence
+  * Verify filter values against evidence-provided values
+  * Ensure join conditions align with evidence-suggested relationships
+  * Cross-reference data constraints and constraints mentioned in evidence
+  * If your CTE contradicts the evidence, you MUST revise it before proceeding
+  * The evidence is a critical validation source - do not ignore it
+
+{CTE_ACTION_level}
+"""
+        
         return f"""
 {strategy_desc}
 
@@ -215,7 +272,9 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     """
     return f"""# STRATEGY SELECTION TASK
 
-You need to select ONE strategy from S1, S2, S3, S4, or S5 for solving the following SQL generation task.
+You need to select ONE strategy from S1, S2, or S3 for solving the following SQL generation task.
+
+Note: S3 (Evidence-Based) is recommended when evidence fields are available in the dataset, as it uses evidence to validate CTEs during generation.
 
 **Question**: {question}
 
