@@ -88,13 +88,6 @@ def build_strategy_injection_text(
         return f"""
 [GLOBAL STRATEGY MODE: {mode}]
 {strategy_desc}
-
-**⚠️ CRITICAL: Additional Context Priority**
-- If "Additional context" provides filtering conditions, you MUST:
-  1. Include the relevant column in your first CTE
-  2. Apply the filter condition (WHERE clause) in your first CTE - do NOT defer it to later CTEs
-  3. Do NOT skip these conditions - they are essential requirements
-
 """
 
     # LLM pick once
