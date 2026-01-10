@@ -72,8 +72,7 @@ class CompleteSQLGenerator:
 - Natural language question
 - Database schema
 - Existing CTE (if any)
-- **Additional context** 
-
+- Additional context
 **Output Requirements**:
 1. Generate a complete SQL query with necessary clauses like SELECT, FROM, WHERE, ORDER BY, etc.
 2. If CTE is provided, incorporate it as a subquery or part of WITH clause
@@ -288,7 +287,7 @@ class CompleteSQLGenerator:
 Please generate a complete SQL query
 **Natural language question**: {node.question}
 **Database schema**: {node.schema_info}
-**Additional context**: {node.additional_context} 
+**Additional context**: {node.additional_context}
 
 **Existing CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
 {preceding_cte_info}/no_think
