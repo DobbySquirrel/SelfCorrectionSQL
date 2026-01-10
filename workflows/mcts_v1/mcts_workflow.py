@@ -43,7 +43,7 @@ class MCTSWorkflow:
             llm_config: LLM配置
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数（默认根据实际需求动态计算）
-            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
+            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
@@ -417,23 +417,12 @@ class MCTSWorkflow:
                     # 从JSON响应中提取策略和thought
                     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                     
-                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4", "S5"):
+                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
                         root_node.picked_strategy = picked_strategy
                         root_node.picked_strategy_thought = picked_strategy_thought
-                        if picked_strategy == "S4":
-                            if picked_strategy_thought:
-                                print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
-                                print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
-                            else:
-                                print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
-                                root_node.picked_strategy = "S2"
-                                root_node.picked_strategy_thought = None
-                                picked_strategy = "S2"
-                                picked_strategy_thought = None
-                        else:
-                            print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
-                            if picked_strategy_thought:
-                                print(f"[策略选择] 策略规划: {picked_strategy_thought}")
+                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                        if picked_strategy_thought:
+                            print(f"[策略选择] 策略规划: {picked_strategy_thought}")
                     else:
                         print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
                         root_node.picked_strategy = "S2"

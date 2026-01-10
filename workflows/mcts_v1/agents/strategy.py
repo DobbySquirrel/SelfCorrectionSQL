@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, Literal, Tuple
 
 StrategyMode = Literal[
-    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4", "FORCE_S5",
+    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S4",
     "NONE",
     "LLM_PICK_ONCE",
 ]
@@ -18,12 +18,12 @@ class StrategyConfig:
       - NONE: inject nothing (baseline)
       - LLM_PICK_ONCE: at depth=0 ask model to pick strategy once, then lock for later steps
     """
-    mode: StrategyMode = "FORCE_S4"
+    mode: StrategyMode = "FORCE_S3"
     # 如果你想在一次run中固定策略，不允许后续prompt再出现"可切换"表述，就保持True
     lock_after_picked: bool = True
 
 
-GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S4", lock_after_picked=True)
+GLOBAL_STRATEGY_CONFIG = StrategyConfig(mode="FORCE_S3", lock_after_picked=True)
 
 
 # ---- 策略手册（给 CTE/SQL 生成器看的文本）----
@@ -38,15 +38,11 @@ _STRATEGY_DESCRIPTIONS = {
 - First ensure join path correctness (use FK hints from schema/foreign_key text).
 - Build join skeleton first, then add filters.""",
     
-    "S3": """S3 Proactive:
-- Upfront disambiguation: if schema is large/ambiguous, create a robust intermediate CTE with only necessary columns.
-- Avoid fancy expressions until you have the correct grain.""",
-    
-    "S4": """S4 Reactive:
+    "S3": """S3 Reactive:
 - Try a plausible CTE quickly; keep it simple.
 - Prefer small incremental CTEs; rely on execution feedback.""",
     
-    "S5": """S5 Evidence-Based:
+    "S4": """S4 Evidence-Based:
 - When creating a CTE, ALWAYS validate it against the evidence fields provided in the dataset.
 - Use the evidence information to verify column names, filter values, join conditions, and data constraints.
 - If the evidence contains specific values, column names, or relationships, incorporate them into your CTE.
@@ -54,7 +50,7 @@ _STRATEGY_DESCRIPTIONS = {
 - If evidence suggests a different approach, adjust your CTE accordingly."""
 }
 
-# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段，不包含S4，S4由LLM自己规划）
+# 完整的策略手册（用于 LLM_PICK_ONCE 模式的选择阶段）
 _FULL_STRATEGY_HANDBOOK = f"""
 STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S1']}
@@ -63,12 +59,7 @@ STRATEGYs:
 
 {_STRATEGY_DESCRIPTIONS['S3']}
 
-{_STRATEGY_DESCRIPTIONS['S5']}
-
-S4 Custom:
-- You can choose S4 if you want to create your own custom strategy plan based on the specific question and schema.
-- When selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
-- The "thought" will be used as the strategy guidance in subsequent CTE generation steps.
+{_STRATEGY_DESCRIPTIONS['S4']}
 """
 
 def build_strategy_injection_text(
@@ -94,28 +85,7 @@ def build_strategy_injection_text(
         s = mode.replace("FORCE_", "")
         # 只返回当前策略的说明，不包含其他策略
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
-        # 对于 S5，特别强调使用 evidence 进行验证
-        if s == "S5":
-            return f"""
-[GLOBAL STRATEGY MODE: {mode}]
-{strategy_desc}
-
-**⚠️ CRITICAL: Evidence Validation (S5 Strategy)**
-- If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
-  * Check if column names in your CTE match those mentioned in the evidence
-  * Verify filter values against evidence-provided values
-  * Ensure join conditions align with evidence-suggested relationships
-  * Cross-reference data constraints and constraints mentioned in evidence
-  * If your CTE contradicts the evidence, you MUST revise it before proceeding
-  * The evidence is a critical validation source - do not ignore it
-- If "Additional context" does not contain evidence information, proceed with standard CTE generation while following evidence-based validation principles when evidence becomes available in later steps
-
-**⚠️ CRITICAL: Additional Context Priority**
-- If "Additional context" provides filtering conditions or evidence information, you MUST:
-  1. Include the relevant column in your first CTE
-  2. Apply the filter condition (WHERE clause) in your first CTE - do NOT defer it to later CTEs
-  3. Do NOT skip these conditions - they are essential requirements
-"""
+        # 对于 S4，特别强调使用 evidence 进行验证
         return f"""
 [GLOBAL STRATEGY MODE: {mode}]
 {strategy_desc}
@@ -135,15 +105,14 @@ def build_strategy_injection_text(
             return f"""
 **STRATEGY SELECTION REQUIRED** (Root Node)
 
-You MUST select ONE strategy from S1, S2, S3, S4, or S5 based on the question and schema.
+You MUST select ONE strategy from S1, S2, S3, or S4 based on the question and schema.
 Analyze the question and choose the most appropriate strategy:
 - S1 (Entity-First): Use when you need to verify entity/value constraints first
 - S2 (Relation-First): Use when join paths are uncertain
-- S3 (Proactive): Use when schema is ambiguous or knowledge is thin
-- S5 (Evidence-Based): Use when evidence fields are available in the dataset and you want to validate CTEs against evidence
-- S4 (Custom): Use when you want to create your own custom strategy plan. If selecting S4, you MUST provide a detailed "thought" field explaining your custom strategy plan.
+- S3 (Reactive): Use when you want to try plausible CTEs quickly and rely on execution feedback
+- S4 (Evidence-Based): Use when evidence fields are available in the dataset and you want to validate CTEs against evidence
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S4, or S5). If you choose S4, the "thought" field is REQUIRED and will be used as the strategy guidance.
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4).
 
 Example JSON format:
 ```json
@@ -158,17 +127,13 @@ Example JSON format:
         else:
             # depth>0 时只需要已选择策略的说明
             s = picked_strategy or fixed_strategy or "S2"
-            if s == "S4" and picked_strategy_thought:
-                # S4使用LLM自己规划的thought作为策略描述
-                strategy_desc = f"S4 Custom Strategy:\n{picked_strategy_thought}"
-            else:
-                strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
-            # 对于 S5，添加额外的 evidence 验证说明
-            if s == "S5":
+            strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
+            # 对于 S4，添加额外的 evidence 验证说明
+            if s == "S4":
                 return f"""
 {strategy_desc}
 
-**⚠️ CRITICAL: Evidence Validation (S5 Strategy)**
+**⚠️ CRITICAL: Evidence Validation (S4 Strategy)**
 - If the "Additional context" field contains evidence information from the dataset (look for text starting with "Evidence from other related questions" or similar patterns), you MUST use it to validate your CTE:
   * Check if column names in your CTE match those mentioned in the evidence
   * Verify filter values against evidence-provided values
@@ -200,10 +165,9 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     """
     return f"""# STRATEGY SELECTION TASK
 
-You need to select ONE strategy from S1, S2, S3, S4, or S5 for solving the following SQL generation task.
+You need to select ONE strategy from S1, S2, S3, or S4 for solving the following SQL generation task.
 
-Note: If you choose S4, you must provide a detailed "thought" field with your custom strategy plan. This thought will be used as the strategy guidance in subsequent CTE generation steps.
-Note: S5 (Evidence-Based) is recommended when evidence fields are available in the dataset, as it uses evidence to validate CTEs during generation.
+Note: S4 (Evidence-Based) is recommended when evidence fields are available in the dataset, as it uses evidence to validate CTEs during generation.
 
 **Question**: {question}
 
@@ -216,7 +180,7 @@ Note: S5 (Evidence-Based) is recommended when evidence fields are available in t
 
 {_FULL_STRATEGY_HANDBOOK}
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S4, or S5).
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S4).
 
 Example JSON format:
 ```json
@@ -228,9 +192,8 @@ Example JSON format:
 
 **Output Requirements**:
 - Output MUST be valid JSON wrapped in ```json code block
-- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S4", or "S5"
+- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", or "S4"
 - Include a "thought" field explaining your choice
-- If you choose S4, the "thought" field is REQUIRED and must contain your detailed custom strategy plan
 """
 
 
@@ -242,7 +205,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         response: LLM的JSON响应
         
     Returns:
-        (策略字符串 (S1/S2/S3/S4/S5), thought字符串) 或 (None, None)
+        (策略字符串 (S1/S2/S3/S4), thought字符串) 或 (None, None)
     """
     import json
     import re
@@ -288,7 +251,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
-        valid_strategies = ["S1", "S2", "S3", "S4", "S5"]
+        valid_strategies = ["S1", "S2", "S3", "S4"]
         if strategy_str in valid_strategies:
             return strategy_str, thought_str if thought_str else None
         
