@@ -2,7 +2,7 @@
 """
 批量运行所有策略模式的脚本
 
-自动运行 5 种策略模式（FORCE_S1, FORCE_S2, FORCE_S3, FORCE_S4, LLM_PICK_ONCE），
+自动运行 6 种策略模式（FORCE_S1, FORCE_S2, FORCE_S3, FORCE_S4, FORCE_S5, LLM_PICK_ONCE），
 并为每种模式生成独立的输出文件。
 支持多接口并行运行，自动分配不同的 base_url 给不同策略。
 """
@@ -20,6 +20,7 @@ STRATEGIES = [
     "FORCE_S2", 
     "FORCE_S3",
     "FORCE_S4",
+    "FORCE_S5",
     "LLM_PICK_ONCE"
 ]
 

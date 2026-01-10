@@ -43,7 +43,7 @@ class MCTSWorkflow:
             llm_config: LLM配置
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数（默认根据实际需求动态计算）
-            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
+            strategy_mode: 策略模式（FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
@@ -79,6 +79,9 @@ class MCTSWorkflow:
             except Exception as e:
                 print(f"⚠️ 加载relationships.json失败: {e}")
         
+        # CTE探针配置（需要在初始化CTEGenerator之前定义）
+        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
+        
         # 初始化MCTS组件
         self.mcts_tree = MCTSTree()
         self.cte_generator = CTEGenerator(llm_config, max_depth=self.max_depth, multi_model_configs=multi_model_configs, relationships_data=relationships_data, cte_probe_limit=self.cte_probe_limit)
@@ -100,7 +103,7 @@ class MCTSWorkflow:
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
         self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
-        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
+        # self.cte_probe_limit 已在上面定义（在初始化CTEGenerator之前）
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         # 分阶段计时统计
@@ -412,12 +415,12 @@ class MCTSWorkflow:
                     # 从JSON响应中提取策略和thought
                     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response)
                     
-                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4"):
+                    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S4", "S5"):
                         root_node.picked_strategy = picked_strategy
                         root_node.picked_strategy_thought = picked_strategy_thought
                         if picked_strategy == "S4":
                             if picked_strategy_thought:
-                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+                                print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
                                 print(f"[策略选择] 自定义策略规划: {picked_strategy_thought}")
                             else:
                                 print(f"\n⚠️ [策略选择] 选择了S4但未提供thought，使用默认策略 S2")
@@ -578,12 +581,12 @@ class MCTSWorkflow:
                                                 failed_item['column_tables'] = existing_item.get('column_tables')
                                                 current._failed_cte_attempts[idx] = failed_item
                                             else:
-                                            current._failed_cte_attempts[idx] = failed_item
-                                            # 更新deduplicated_failed_info中对应的项
-                                            for d_idx, d_item in enumerate(deduplicated_failed_info):
-                                                if d_item.get('error', '').strip() == error:
-                                                    deduplicated_failed_info[d_idx] = failed_item
-                                                    break   
+                                                current._failed_cte_attempts[idx] = failed_item
+                                                # 更新deduplicated_failed_info中对应的项
+                                                for d_idx, d_item in enumerate(deduplicated_failed_info):
+                                                    if d_item.get('error', '').strip() == error:
+                                                        deduplicated_failed_info[d_idx] = failed_item
+                                                        break   
                                         break
                             else:
                                 # 如果错误信息不存在，直接添加
@@ -1334,7 +1337,7 @@ class MCTSWorkflow:
                                         attempt['column_tables'] = existing_item.get('column_tables')
                                         failed_attempts[idx] = attempt
                                     else:
-                                    failed_attempts[idx] = attempt
+                                        failed_attempts[idx] = attempt
                                 break
                     else:
                         # 如果错误信息不存在，直接添加

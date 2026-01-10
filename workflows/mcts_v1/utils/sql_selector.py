@@ -51,16 +51,16 @@ class SQLSelector:
         else:
             # 多个rollout具有相同最高reward，计算平均奖励
             print(f"[Selection] 发现 {len(top_reward_rollouts)} 个rollout具有相同最高reward {max_reward:.4f}，计算平均奖励...")
-        best_rollout = None
+            best_rollout = None
             max_avg_reward = -1.0
-        max_sql_bucket = -1
-        
+            max_sql_bucket = -1
+            
             for rollout_stats in top_reward_rollouts:
                 avg_reward = SQLSelector._calculate_avg_reward(rollout_stats)
-            sql_bucket_count = rollout_stats.get('sql_bucket_count', 0)
-            selected_sql = rollout_stats.get('selected_sql')
-            is_quick_path = rollout_stats.get('is_quick_path', False)
-            
+                sql_bucket_count = rollout_stats.get('sql_bucket_count', 0)
+                selected_sql = rollout_stats.get('selected_sql')
+                is_quick_path = rollout_stats.get('is_quick_path', False)
+                
                 # 优先选择平均奖励最高的
                 if avg_reward > max_avg_reward:
                     max_avg_reward = avg_reward
@@ -92,7 +92,7 @@ class SQLSelector:
                             if current_best_is_quick and not is_quick_path:
                                 best_rollout = rollout_stats
                                 print(f"[Selection] 💡 相同平均奖励和一致性下，优先选择CTE rollout而非quick_path")
-        
+            
             if best_rollout:
                 print(f"[Selection] 💡 基于平均奖励选择：avg_reward={max_avg_reward:.4f}, sql_bucket_count={max_sql_bucket}")
         
