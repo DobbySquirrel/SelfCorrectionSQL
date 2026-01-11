@@ -90,6 +90,12 @@ class MCTSNode:
             
         Returns:
             UCB1值
+            
+        Note:
+            UCB1的exploration项 c * sqrt(log(N) / n) 本身就会鼓励探索访问较少的节点：
+            - visit_count越小，exploration项越大
+            - 未访问节点（visit_count=0）返回+∞，确保优先选择
+            增加exploration_constant可以增强探索，通常不需要额外的bonus机制。
         """
         # 如果未指定，自动判断：如果没有LLM打分，则使用average_reward
         if use_average_reward is None:
