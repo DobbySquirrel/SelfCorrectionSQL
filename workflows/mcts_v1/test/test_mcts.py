@@ -95,6 +95,8 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
             w.cte_generator.max_depth = mcts_config['max_depth']
         if 'max_cte_nodes_per_iteration' in mcts_config:
             w.max_cte_nodes_per_iteration = mcts_config['max_cte_nodes_per_iteration']
+        if 'num_sql_variants' in mcts_config:
+            w.num_sql_variants = mcts_config['num_sql_variants']
     
     res = w.solve(
         question=question,
@@ -388,6 +390,7 @@ def main():
     parser.add_argument("--max_cte_nodes", type=int, default=8, help="每次扩展节点时生成的CTE变体数量（默认8）")
     parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
     parser.add_argument("--rollouts_per_iteration", type=int, default=8, help="每次迭代的rollout数量（默认8）")
+    parser.add_argument("--num_sql_variants", type=int, default=10, help="每个rollout末尾生成的SQL变体数量（默认10）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     parser.add_argument("--task_timeout", type=int, default=1800, 
@@ -398,6 +401,7 @@ def main():
     mcts_config = {
         'max_cte_nodes_per_iteration': args.max_cte_nodes,  # 从命令行参数获取
         'rollouts_per_iteration': args.rollouts_per_iteration,  # 从命令行参数获取
+        'num_sql_variants': args.num_sql_variants,  # 从命令行参数获取
     }
     if args.max_depth is not None:
         mcts_config['max_depth'] = args.max_depth

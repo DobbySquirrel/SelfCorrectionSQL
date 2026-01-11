@@ -50,7 +50,7 @@ class MCTSWorkflow:
         self.db_connector = db_connector
         # using rollouts_per_iteration=1 to test 
         self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
-        self.exploration_constant = 2.0  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
+        self.exploration_constant = 2.5  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
         # 注意：UCB1的exploration项本身就会鼓励探索访问较少的节点，增加exploration_constant即可增强探索
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
@@ -61,7 +61,7 @@ class MCTSWorkflow:
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
         self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
-        self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
+        self.cte_probe_limit = 10  # CTE探针查询的LIMIT值
 
         # 从llm_config中提取multi_model_configs（如果存在config_list）
         multi_model_configs = None
