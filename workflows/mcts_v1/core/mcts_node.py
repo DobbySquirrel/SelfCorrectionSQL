@@ -86,7 +86,7 @@ class MCTSNode:
         
         Args:
             exploration_constant: 探索常数，默认为sqrt(2)
-            use_average_reward: 是否使用average_reward而不是q_value（None时自动判断：如果没有LLM打分则用average_reward）
+            use_average_reward: 是否使用average_reward而不是q_value（现在总是使用average_reward，此参数保留用于兼容性）
             
         Returns:
             UCB1值
@@ -102,19 +102,11 @@ class MCTSNode:
             use_average_reward = self.should_use_average_reward_for_ucb()
         
         if self.visit_count == 0:
-            # 未访问节点：尽量使用 LLM 打的分（如果启用且不使用average_reward）
-            if not use_average_reward and self.immediate_score is not None and self.confidence is not None:
-                base_Q = self.confidence * self.immediate_score
-            else:
-                base_Q = 0.0
-            # 返回 +∞ 确保每个孩子至少被选一次
+            # 未访问节点：返回 +∞ 确保每个孩子至少被选一次
             return float('inf')
         
-        # 已访问节点：根据配置选择使用q_value或average_reward
-        if use_average_reward:
-            exploitation = self.average_reward  # 使用average_reward（基于SQL执行结果回传）
-        else:
-            exploitation = self.q_value  # 使用q_value（MASTER框架，包含LLM打分）
+        # 已访问节点：使用average_reward（基于SQL执行结果回传）
+        exploitation = self.average_reward
         
         if self.parent:
             parent_visits = max(1, self.parent.visit_count)  # 避免log(0)
@@ -153,45 +145,19 @@ class MCTSNode:
     @property
     def q_value(self) -> float:
         """
-        MASTER 框架的 Q 值计算：Q = c0 * r0 + (1 - c0) * Q_backup
-        
-        优化：根据深度动态调整confidence权重
-        - 深度 >= 5 时，CTE评分更可靠，提高confidence权重
-        - 深度 < 5 时，CTE评分不太准确，降低confidence权重，更多依赖Q_backup
+        Q 值计算：直接使用 Q_backup（基于SQL执行结果回传的平均奖励）
         
         Returns:
-            Q 值
+            Q 值（等于 q_backup，即 average_reward）
         """
-        # 如果没有即时评分和信心，直接使用 Q_backup
-        if self.immediate_score is None or self.confidence is None:
-            return self.q_backup
-        
-        # 确保 confidence 在 [0, 1] 范围内
-        base_c0 = max(0.0, min(1.0, self.confidence))
-        r0 = self.immediate_score
-        
-        # 根据深度动态调整confidence权重（基于相关性分析：后期CTE评分更可靠）
-        # 深度 >= 5: 提高权重（后期CTE，评分更可靠）
-        # 深度 < 5: 降低权重（早期CTE，评分不太准确）
-        if self.depth >= 5:
-            # 后期CTE：提高confidence权重（最多提高到1.0）
-            adjusted_c0 = min(1.0, base_c0 * 1.2)  # 提高20%
-        elif self.depth >= 3:
-            # 中期CTE：保持原权重
-            adjusted_c0 = base_c0
-        else:
-            # 早期CTE：降低confidence权重，更多依赖Q_backup
-            adjusted_c0 = base_c0 * 0.6  # 降低40%
-        
-        # MASTER 公式: Q = c0 * r0 + (1 - c0) * Q_backup
-        return adjusted_c0 * r0 + (1 - adjusted_c0) * self.q_backup
+        return self.q_backup
     
     def should_use_average_reward_for_ucb(self) -> bool:
         """
         判断UCB计算时是否应该使用average_reward而不是q_value
-        如果节点没有LLM打分（immediate_score为None），则使用average_reward
+        现在总是返回True，因为q_value已经等于q_backup（即average_reward）
         """
-        return self.immediate_score is None or self.confidence is None
+        return True
     
     def get_best_child(self) -> Optional['MCTSNode']:
         """获取最佳子节点（MASTER 框架：使用 q_value）"""

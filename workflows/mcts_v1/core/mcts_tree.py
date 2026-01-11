@@ -69,6 +69,19 @@ class MCTSTree:
                     # print(f"⚠️ 所有子节点都执行失败，返回当前节点")  # 关闭打印
                     return current
                 
+                # 【改进】优先选择未访问的节点（参考Alpha-SQL的实现）
+                # 检查是否有未访问的子节点
+                unvisited_children = [ch for ch in valid_children if ch.visit_count == 0]
+                if unvisited_children:
+                    # 如果有未访问的节点，选择第一个（子节点顺序已在扩展时被打乱）
+                    # 这样既保证了每个未访问节点都有机会被探索，又避免了完全随机的选择
+                    best_child = unvisited_children[0]
+                    print(f"[UCB选择] 优先选择未访问节点 #{getattr(best_child, 'node_id', -1)} (深度={best_child.depth}, 未访问节点数={len(unvisited_children)})")
+                    current = best_child
+                    path.append(current)
+                    continue
+                
+                # 所有子节点都已访问过，使用UCB1公式选择
                 # print(f"📊 当前节点 (深度={current.depth}, 已完全展开, {len(valid_children)}个有效子节点)")  # 关闭打印
                 
                 # 打印所有有效子节点的UCB1值

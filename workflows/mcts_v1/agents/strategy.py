@@ -6,7 +6,7 @@ from typing import Optional, Literal, Tuple
 import threading
 
 StrategyMode = Literal[
-    "FORCE_S1", "FORCE_S2", "FORCE_S3",
+    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S5",
     "NONE",
     "LLM_PICK_ONCE",
 ]
@@ -159,6 +159,71 @@ WITH final_result AS (
 SELECT potential FROM final_result;
 
 <END>
+""",
+    "S5": """
+**S5 (Data Pipeline) Example:**
+Question: Calculate the average order value by customer segment for orders placed in 2023, where segment is 'Premium' for customers with total orders > 10, 'Regular' for 5-10 orders, and 'New' for < 5 orders.
+Schema: Orders(order_id, customer_id, order_date, amount), Customers(customer_id, customer_name)
+
+Step 1 (raw): Extract raw data with necessary joins only, no complex calculations.
+WITH raw_data AS (
+    SELECT o.order_id, o.customer_id, o.order_date, o.amount, c.customer_name
+    FROM Orders o
+    LEFT JOIN Customers c ON o.customer_id = c.customer_id
+)
+
+Step 2 (clean): Filter, handle NULLs, and type conversions.
+WITH clean_data AS (
+    SELECT 
+        order_id,
+        customer_id,
+        CAST(order_date AS DATE) AS order_date,
+        COALESCE(amount, 0) AS amount,
+        COALESCE(customer_name, 'Unknown') AS customer_name
+    FROM raw_data
+    WHERE order_date IS NOT NULL 
+      AND amount IS NOT NULL
+      AND STRFTIME('%Y', order_date) = '2023'
+)
+
+Step 3 (enrich): Add derived fields (customer segment based on order count).
+WITH enrich_data AS (
+    SELECT 
+        cd.*,
+        CASE 
+            WHEN order_count > 10 THEN 'Premium'
+            WHEN order_count >= 5 THEN 'Regular'
+            ELSE 'New'
+        END AS customer_segment
+    FROM clean_data cd
+    LEFT JOIN (
+        SELECT customer_id, COUNT(*) AS order_count
+        FROM clean_data
+        GROUP BY customer_id
+    ) oc ON cd.customer_id = oc.customer_id
+)
+
+Step 4 (agg): Perform aggregation statistics.
+WITH agg_data AS (
+    SELECT 
+        customer_segment,
+        COUNT(*) AS order_count,
+        AVG(amount) AS avg_order_value,
+        SUM(amount) AS total_revenue
+    FROM enrich_data
+    GROUP BY customer_segment
+)
+
+Step 5 (final): Final selection, sorting, and formatting.
+SELECT 
+    customer_segment,
+    ROUND(avg_order_value, 2) AS avg_order_value,
+    order_count,
+    total_revenue
+FROM agg_data
+ORDER BY avg_order_value DESC;
+
+<END>
 """
 }
 
@@ -177,7 +242,17 @@ _STRATEGY_DESCRIPTIONS = {
 - Always validate CTE fields, filter values, and join conditions against the provided dataset evidence.
 - Use evidence to confirm column names, filter values, and relationships.
 - If the evidence suggests a different approach, adjust your CTEs accordingly.
-- If your CTE contradicts the evidence, revise it before proceeding, or continue with standard CTE generation if no evidence is available at the time."""
+- If your CTE contradicts the evidence, revise it before proceeding, or continue with standard CTE generation if no evidence is available at the time.""",
+    
+    "S5": """S5 Data Pipeline:
+- Follow a strict data flow pipeline: raw → clean → enrich → agg → final
+- raw: Only extract data and perform necessary joins, no complex calculations
+- clean: Filter rows, remove duplicates, handle type conversions, process NULL values
+- enrich: Add dimensions, create derived fields (CASE WHEN, classifications, labels)
+- agg: Perform aggregation statistics (GROUP BY, COUNT, SUM, AVG, etc.)
+- final: Only do final SELECT, sorting (ORDER BY), and LIMIT
+- Each layer should be independently queryable (e.g., SELECT * FROM clean LIMIT 100)
+- Best for: ETL/Reporting/Metric calculations, complex field logic, multi-step transformations"""
 }
 
 
@@ -189,6 +264,8 @@ STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S2']}
 
 {_STRATEGY_DESCRIPTIONS['S3']}
+
+{_STRATEGY_DESCRIPTIONS['S5']}
 """
 
 def build_strategy_injection_text(
@@ -264,7 +341,7 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     """
     return f"""# STRATEGY SELECTION TASK
 
-You need to select ONE strategy from S1, S2, or S3 for solving the following SQL generation task.
+You need to select ONE strategy from S1, S2, S3, or S5 for solving the following SQL generation task.
 
 **Question**: {question}
 
@@ -289,7 +366,9 @@ You need to select ONE strategy from S1, S2, or S3 for solving the following SQL
 
 {_STRATEGY_EXAMPLES['S3']}
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, or S3).
+{_STRATEGY_EXAMPLES['S5']}
+
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S5).
 
 Example JSON format:
 ```json
@@ -301,7 +380,7 @@ Example JSON format:
 
 **Output Requirements**:
 - Output MUST be valid JSON wrapped in ```json code block
-- The "strategy" field MUST be exactly one of: "S1", "S2", or "S3"
+- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", or "S5"
 - Include a "thought" field explaining your choice
 """
 
@@ -360,7 +439,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
-        valid_strategies = ["S1", "S2", "S3"]
+        valid_strategies = ["S1", "S2", "S3", "S5"]
         if strategy_str in valid_strategies:
             return strategy_str, thought_str if thought_str else None
         
@@ -394,7 +473,7 @@ def select_strategy_with_llm(
         default_strategy: 默认策略（当选择失败时使用），默认"S2"
         
     Returns:
-        (策略字符串 (S1/S2/S3), thought字符串) 或 (default_strategy, None)
+        (策略字符串 (S1/S2/S3/S5), thought字符串) 或 (default_strategy, None)
     """
     print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
     
@@ -466,7 +545,7 @@ def select_strategy_with_llm(
     # 从JSON响应中提取策略和thought
     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
     
-    if picked_strategy and picked_strategy in ("S1", "S2", "S3"):
+    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S5"):
         print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
         if picked_strategy_thought:
             print(f"[策略选择] 策略规划: {picked_strategy_thought}")

@@ -502,6 +502,9 @@ class SimpleRolloutWorkflow:
         # 执行非<END>的CTE
         non_end_ctes = [cte for cte in cte_variants if cte != "<END>"]
         
+        if non_end_ctes:
+            print(f"[CTE执行] 开始执行 {len(non_end_ctes)} 个CTE变体（并行度: {min(self.max_workers, 3)}）...")
+        
         def worker(one_cte: str):
             # 构建一个简单的node对象用于build_executable_cte_sql
             # build_executable_cte_sql会从node.parent链中提取历史CTE
@@ -681,6 +684,10 @@ class SimpleRolloutWorkflow:
                         buckets[bucket_key]['execution_result'] = cte_result
         
         self._timing['db_exec_s'] += (_time_for_timing.time() - _exec_t0)
+        
+        if non_end_ctes:
+            exec_elapsed = _time_for_timing.time() - _exec_t0
+            print(f"[CTE执行] 完成！共执行 {len(non_end_ctes)} 个CTE变体，耗时={exec_elapsed:.2f}s，成功={len(buckets)} 个桶，失败={len(failed_info)} 个")
         
         return list(buckets.values()), failed_info
     
