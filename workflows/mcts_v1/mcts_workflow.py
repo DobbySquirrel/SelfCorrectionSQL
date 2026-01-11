@@ -1006,6 +1006,9 @@ class MCTSWorkflow:
         """
         MCTS Simulation阶段：对叶节点进行模拟（生成多个SQL并计算自一致性奖励）
         
+        【优化】Reward 复用：如果节点已被访问过，复用已有的平均 reward，减少重复计算
+        参考 Alpha-SQL 的实现：如果节点已被访问过（visit_count > 0），直接使用已有的平均 reward
+        
         Args:
             leaf_node: 叶节点
             
@@ -1018,6 +1021,31 @@ class MCTSWorkflow:
         if not leaf_node.is_terminal and leaf_node.depth < self.max_depth:
             return 0.0, None, {'sql_bucket_count': 0, 'sql_total_variants': 0}
         
+        # 【优化】Reward 复用：如果节点已被访问过，复用已有的平均 reward
+        # 参考 Alpha-SQL：如果节点已被访问过（visit_count > 0），直接使用已有的平均 reward
+        if leaf_node.visit_count > 0:
+            # 节点已被访问过，复用已有的平均 reward
+            reused_reward = leaf_node.average_reward
+            reused_sql = getattr(leaf_node, 'best_simulation_sql', None)
+            
+            # 尝试从节点中获取之前保存的统计信息
+            if hasattr(leaf_node, 'last_simulation_stats'):
+                stats = leaf_node.last_simulation_stats
+                print(f"[模拟] 复用已有 reward: {reused_reward:.4f} (节点已访问 {leaf_node.visit_count} 次)")
+                return reused_reward, reused_sql, stats
+            else:
+                # 如果没有保存统计信息，构建基本的统计信息
+                print(f"[模拟] 复用已有 reward: {reused_reward:.4f} (节点已访问 {leaf_node.visit_count} 次，无详细统计)")
+                return reused_reward, reused_sql, {
+                    'sql_bucket_count': getattr(leaf_node, 'last_sql_bucket_count', 0),
+                    'sql_total_variants': getattr(leaf_node, 'last_sql_total_variants', 0),
+                    'all_sql_variants': getattr(leaf_node, 'last_all_sql_variants', []),
+                    'result_buckets': getattr(leaf_node, 'last_result_buckets', {}),
+                    'valid_count': getattr(leaf_node, 'last_valid_count', 0),
+                    'error_reason': None
+                }
+        
+        # 节点未被访问过，需要计算新的 reward
         # 生成多个SQL（通过temperature和表随机化增加多样性）
         _sqlgen_t0 = _time_for_timing.time()
         # 使用配置的SQL变体数量
@@ -1125,6 +1153,7 @@ class MCTSWorkflow:
             print(best_result)
         
         # [修改点]：保存最佳 SQL 到节点上，用于后续 Max Visit Path 策略
+        # 【优化】同时保存统计信息，用于 Reward 复用
         if selected_sql:
             # 如果该节点已经有记录，且新的 reward 更高，则更新（或者保留最近一次）
             # 这里简单起见，我们保留最后一次模拟的结果，或者逻辑上保留 best_reward 的那次
@@ -1144,6 +1173,13 @@ class MCTSWorkflow:
             'error_reason': None  # 如果sql_bucket_count为0，记录原因
         }
         
+        # 【优化】保存统计信息到节点，用于后续 Reward 复用
+        leaf_node.last_simulation_stats = sql_stats
+        leaf_node.last_sql_bucket_count = sql_bucket_count
+        leaf_node.last_sql_total_variants = len(sql_variants)
+        leaf_node.last_all_sql_variants = all_sql_variants
+        leaf_node.last_result_buckets = dict(result_buckets) if result_buckets else {}
+        leaf_node.last_valid_count = valid_count
         
         return reward, selected_sql, sql_stats
     

@@ -6,7 +6,7 @@ from typing import Optional, Literal, Tuple
 import threading
 
 StrategyMode = Literal[
-    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S5",
+    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S5", "FORCE_S6", "FORCE_S7",
     "NONE",
     "LLM_PICK_ONCE",
 ]
@@ -224,6 +224,169 @@ FROM agg_data
 ORDER BY avg_order_value DESC;
 
 <END>
+""",
+    "S6": """
+**S6 (Business Rules Module) Example:**
+Question: Identify high-risk customers based on multiple rules: (1) customers with overdue payments > 30 days, (2) customers with credit score < 600, (3) customers with transaction amount > 10000 in last month. Return customer_id, risk_level (High/Medium/Low), and which rules triggered.
+Schema: Customers(customer_id, credit_score), Payments(customer_id, payment_date, due_date, amount), Transactions(customer_id, transaction_date, amount)
+
+Step 1 (rule_1_overdue): Rule 1 - Customers with overdue payments > 30 days.
+WITH rule_1_overdue AS (
+    SELECT 
+        p.customer_id,
+        'overdue_30_days' AS rule_name,
+        CASE 
+            WHEN julianday('now') - julianday(p.due_date) > 30 THEN 'High'
+            ELSE NULL
+        END AS risk_level,
+        julianday('now') - julianday(p.due_date) AS days_overdue
+    FROM Payments p
+    WHERE p.due_date < date('now', '-30 days')
+      AND p.payment_date IS NULL
+)
+
+Step 2 (rule_2_low_credit): Rule 2 - Customers with credit score < 600.
+WITH rule_2_low_credit AS (
+    SELECT 
+        c.customer_id,
+        'low_credit_score' AS rule_name,
+        CASE 
+            WHEN c.credit_score < 600 THEN 'High'
+            WHEN c.credit_score < 650 THEN 'Medium'
+            ELSE NULL
+        END AS risk_level,
+        c.credit_score
+    FROM Customers c
+    WHERE c.credit_score < 650
+)
+
+Step 3 (rule_3_large_transaction): Rule 3 - Customers with transaction amount > 10000 in last month.
+WITH rule_3_large_transaction AS (
+    SELECT 
+        t.customer_id,
+        'large_transaction' AS rule_name,
+        CASE 
+            WHEN t.amount > 10000 THEN 'High'
+            ELSE NULL
+        END AS risk_level,
+        t.amount AS transaction_amount
+    FROM Transactions t
+    WHERE t.transaction_date >= date('now', '-1 month')
+      AND t.amount > 10000
+)
+
+Step 4 (merged_rules): Merge all rule results using UNION and aggregate by customer.
+WITH merged_rules AS (
+    SELECT customer_id, rule_name, risk_level, days_overdue AS rule_value
+    FROM rule_1_overdue
+    WHERE risk_level IS NOT NULL
+    
+    UNION ALL
+    
+    SELECT customer_id, rule_name, risk_level, credit_score AS rule_value
+    FROM rule_2_low_credit
+    WHERE risk_level IS NOT NULL
+    
+    UNION ALL
+    
+    SELECT customer_id, rule_name, risk_level, transaction_amount AS rule_value
+    FROM rule_3_large_transaction
+    WHERE risk_level IS NOT NULL
+),
+customer_risk_summary AS (
+    SELECT 
+        customer_id,
+        MAX(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS has_high_risk,
+        MAX(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS has_medium_risk,
+        GROUP_CONCAT(rule_name, ', ') AS triggered_rules
+    FROM merged_rules
+    GROUP BY customer_id
+)
+
+Step 5 (final): Final selection with risk level determination.
+SELECT 
+    crs.customer_id,
+    CASE 
+        WHEN crs.has_high_risk = 1 THEN 'High'
+        WHEN crs.has_medium_risk = 1 THEN 'Medium'
+        ELSE 'Low'
+    END AS risk_level,
+    crs.triggered_rules
+FROM customer_risk_summary crs
+ORDER BY 
+    CASE crs.risk_level
+        WHEN 'High' THEN 1
+        WHEN 'Medium' THEN 2
+        ELSE 3
+    END,
+    crs.customer_id;
+
+<END>
+""",
+    "S7": """
+**S7 (Grain/Key-Based) Example:**
+Question: Calculate total revenue and order count per customer per month, including customer name and region. The result should be at (customer_id, year_month) grain.
+Schema: Orders(order_id, customer_id, order_date, amount), Customers(customer_id, customer_name, region_id), Regions(region_id, region_name)
+
+Step 1 (base_keys): Determine the final result grain (customer_id, year_month).
+WITH base_keys AS (
+    SELECT DISTINCT
+        o.customer_id,
+        STRFTIME('%Y-%m', o.order_date) AS year_month
+    FROM Orders o
+    WHERE o.order_date IS NOT NULL
+)
+
+Step 2 (fact_orders_at_grain): Aggregate Orders fact table to the target grain (customer_id, year_month).
+WITH fact_orders_at_grain AS (
+    SELECT 
+        o.customer_id,
+        STRFTIME('%Y-%m', o.order_date) AS year_month,
+        COUNT(DISTINCT o.order_id) AS order_count,
+        SUM(o.amount) AS total_revenue,
+        AVG(o.amount) AS avg_order_amount
+    FROM Orders o
+    WHERE o.order_date IS NOT NULL
+    GROUP BY o.customer_id, STRFTIME('%Y-%m', o.order_date)
+)
+
+Step 3 (dim_customers): Customer dimension table (already at customer_id grain, no aggregation needed).
+WITH dim_customers AS (
+    SELECT 
+        customer_id,
+        customer_name,
+        region_id
+    FROM Customers
+)
+
+Step 4 (dim_regions): Region dimension table (already at region_id grain, no aggregation needed).
+WITH dim_regions AS (
+    SELECT 
+        region_id,
+        region_name
+    FROM Regions
+)
+
+Step 5 (final): Join all tables at the same grain (customer_id, year_month).
+SELECT 
+    bk.customer_id,
+    bk.year_month,
+    dc.customer_name,
+    dr.region_name,
+    fog.order_count,
+    fog.total_revenue,
+    fog.avg_order_amount
+FROM base_keys bk
+LEFT JOIN fact_orders_at_grain fog 
+    ON bk.customer_id = fog.customer_id 
+    AND bk.year_month = fog.year_month
+LEFT JOIN dim_customers dc 
+    ON bk.customer_id = dc.customer_id
+LEFT JOIN dim_regions dr 
+    ON dc.region_id = dr.region_id
+ORDER BY bk.customer_id, bk.year_month;
+
+<END>
 """
 }
 
@@ -252,7 +415,25 @@ _STRATEGY_DESCRIPTIONS = {
 - agg: Perform aggregation statistics (GROUP BY, COUNT, SUM, AVG, etc.)
 - final: Only do final SELECT, sorting (ORDER BY), and LIMIT
 - Each layer should be independently queryable (e.g., SELECT * FROM clean LIMIT 100)
-- Best for: ETL/Reporting/Metric calculations, complex field logic, multi-step transformations"""
+- Best for: ETL/Reporting/Metric calculations, complex field logic, multi-step transformations""",
+    
+    "S6": """S6 Business Rules Module:
+- Split business logic into independent rule modules: each rule as a separate CTE
+- Naming convention: rule_1_xxx, rule_2_yyy, rule_3_zzz (descriptive names for each rule)
+- merged_rules: Combine rule results using JOIN, UNION, or COALESCE operations
+- final: Final aggregation and selection
+- Each rule CTE should be independently testable (e.g., SELECT * FROM rule_1_xxx LIMIT 100)
+- When an error is found, you can quickly identify which rule produced incorrect output
+- Best for: Risk control, recommendation systems, review/audit systems, customer segmentation, complex multi-rule logic""",
+    
+    "S7": """S7 Grain/Key-Based:
+- First determine the final result grain (base_keys): identify the primary key set for the final result (e.g., user_id, order_id, date+user_id)
+- Aggregate each fact table to the target grain before joining: fact_a_at_grain, fact_b_at_grain
+- Dimension tables (dim_x) can remain at their natural grain or be aggregated to match
+- final: Join all tables at the same grain to avoid data explosion
+- This approach greatly reduces duplicate rows caused by joins and makes metrics more stable
+- Each fact table CTE should be independently testable (e.g., SELECT * FROM fact_orders_at_grain LIMIT 100)
+- Best for: Multi-table joins that cause data explosion, complex fact tables with different grains, metric calculations that need stable aggregation"""
 }
 
 
@@ -266,6 +447,10 @@ STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S3']}
 
 {_STRATEGY_DESCRIPTIONS['S5']}
+
+{_STRATEGY_DESCRIPTIONS['S6']}
+
+{_STRATEGY_DESCRIPTIONS['S7']}
 """
 
 def build_strategy_injection_text(
@@ -341,7 +526,7 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     """
     return f"""# STRATEGY SELECTION TASK
 
-You need to select ONE strategy from S1, S2, S3, or S5 for solving the following SQL generation task.
+You need to select ONE strategy from S1, S2, S3, S5, S6, or S7 for solving the following SQL generation task.
 
 **Question**: {question}
 
@@ -368,7 +553,11 @@ You need to select ONE strategy from S1, S2, S3, or S5 for solving the following
 
 {_STRATEGY_EXAMPLES['S5']}
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, or S5).
+{_STRATEGY_EXAMPLES['S6']}
+
+{_STRATEGY_EXAMPLES['S7']}
+
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S5, S6, or S7).
 
 Example JSON format:
 ```json
@@ -380,7 +569,7 @@ Example JSON format:
 
 **Output Requirements**:
 - Output MUST be valid JSON wrapped in ```json code block
-- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", or "S5"
+- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S5", "S6", or "S7"
 - Include a "thought" field explaining your choice
 """
 
@@ -439,7 +628,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
-        valid_strategies = ["S1", "S2", "S3", "S5"]
+        valid_strategies = ["S1", "S2", "S3", "S5", "S6", "S7"]
         if strategy_str in valid_strategies:
             return strategy_str, thought_str if thought_str else None
         
@@ -473,7 +662,7 @@ def select_strategy_with_llm(
         default_strategy: 默认策略（当选择失败时使用），默认"S2"
         
     Returns:
-        (策略字符串 (S1/S2/S3/S5), thought字符串) 或 (default_strategy, None)
+        (策略字符串 (S1/S2/S3/S5/S6/S7), thought字符串) 或 (default_strategy, None)
     """
     print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
     
@@ -545,7 +734,7 @@ def select_strategy_with_llm(
     # 从JSON响应中提取策略和thought
     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
     
-    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S5"):
+    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S5", "S6", "S7"):
         print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
         if picked_strategy_thought:
             print(f"[策略选择] 策略规划: {picked_strategy_thought}")

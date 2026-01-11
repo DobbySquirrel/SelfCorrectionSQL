@@ -267,8 +267,8 @@ class CompleteSQLGenerator:
             完整SQL变体列表
         """
         # 使用多个temperature值增加多样性
-        # 将变体分成多个temperature组：[0.1, 0.2, 0.3] (降低temperature以提高生成质量)
-        temperature_groups = [0.1, 0.2, 0.3]
+        # 将变体分成多个temperature组：[0.3, 0.6, 0.9]
+        temperature_groups = [0.3, 0.6, 0.9]
         num_groups = len(temperature_groups)
         
         # 计算每组应该生成多少个变体
