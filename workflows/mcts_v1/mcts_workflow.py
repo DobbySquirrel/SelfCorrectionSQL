@@ -60,7 +60,7 @@ class MCTSWorkflow:
 
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
-        self.cte_probe_timeout_s = 40  # CTE探针执行超时（较短，用于快速检测）
+        self.cte_probe_timeout_s = 30  # CTE探针执行超时（从40秒减到30秒，更快失败，避免卡住）
         self.cte_probe_limit = 15  # CTE探针查询的LIMIT值
 
         # 从llm_config中提取multi_model_configs（如果存在config_list）

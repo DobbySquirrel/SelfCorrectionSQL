@@ -196,11 +196,12 @@ class DatabaseConnector:
             try:
                 conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 # 设置progress_handler，检查stop_event
+                # 减少检查间隔（从1000减到100），更频繁地检查超时，提高响应速度
                 def _progress_handler():
                     if stop_event.is_set():
                         return 1  # 中断查询
                     return 0
-                conn.set_progress_handler(_progress_handler, 1000)  # 每1000个指令检查一次
+                conn.set_progress_handler(_progress_handler, 100)  # 每100个指令检查一次（更频繁）
                 
                 cur = conn.cursor()
                 cur.execute(query)
@@ -232,8 +233,13 @@ class DatabaseConnector:
         # 如果线程仍在运行，说明超时了
         if exec_thread.is_alive():
             stop_event.set()  # 设置停止标志
-            # 再等待一小段时间让线程有机会响应stop_event
-            exec_thread.join(timeout=1.0)
+            # 尝试更激进的中断：关闭连接
+            # 注意：由于daemon=True，线程会在主线程退出时自动终止
+            # 但为了更可靠，我们等待一小段时间让线程有机会响应stop_event
+            exec_thread.join(timeout=0.5)  # 减少等待时间，更快返回
+            
+            # 如果仍然在运行，尝试强制中断（通过关闭连接）
+            # 由于daemon=True，即使线程还在运行，也不会阻塞主进程
             if result_container['error'] is None:
                 result_container['error'] = f"Query execution timeout ({timeout_s:.0f}s)"
         

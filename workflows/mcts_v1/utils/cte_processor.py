@@ -141,8 +141,8 @@ class CTEProcessor:
                 total_executed += 1
                 try:
                     # 为future.result()添加超时，避免单个CTE卡住导致整个流程卡住
-                    # 超时时间 = CTE探针超时时间 + 10秒缓冲（用于处理线程调度等开销）
-                    future_timeout = (self.cte_probe_timeout_s + 10.0) if self.cte_probe_timeout_s is not None else None
+                    # 超时时间 = CTE探针超时时间 + 5秒缓冲（减少缓冲时间，更快失败）
+                    future_timeout = (self.cte_probe_timeout_s + 5.0) if self.cte_probe_timeout_s is not None else None
                     if future_timeout:
                         cte_used, cte_result, bucket_key, failed_item, exec_sql = fut.result(timeout=future_timeout)
                     else:
@@ -152,6 +152,15 @@ class CTEProcessor:
                     error_msg = f"CTE执行future超时（>{future_timeout:.1f}秒）" if future_timeout else "CTE执行future超时"
                     print(f"[CTE执行失败] {error_msg}")
                     # 创建一个失败的CTE结果
+                    cte_used = "unknown"
+                    cte_result = {'valid': False, 'error': error_msg}
+                    bucket_key = None
+                    failed_item = {'cte': cte_used, 'error': error_msg}
+                    exec_sql = ""
+                except Exception as e:
+                    # 捕获其他异常（如线程异常等）
+                    error_msg = f"CTE执行异常: {str(e)}"
+                    print(f"[CTE执行失败] {error_msg}")
                     cte_used = "unknown"
                     cte_result = {'valid': False, 'error': error_msg}
                     bucket_key = None
