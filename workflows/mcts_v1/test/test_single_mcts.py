@@ -329,9 +329,9 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_connector: DatabaseC
                     print(f"  Predicted结果示例: {list(predicted_set)[:3]}")
                 
                 # 打印详细的原始结果用于调试
-                print(f"[Gold验证] 详细调试信息:")
-                print(f"  Gold原始结果类型: {type(gold_result)}")
-                print(f"  Predicted原始结果类型: {type(predicted_result)}")
+                # print(f"[Gold验证] 详细调试信息:")
+                # print(f"  Gold原始结果类型: {type(gold_result)}")
+                # print(f"  Predicted原始结果类型: {type(predicted_result)}")
                 if hasattr(gold_result, 'head'):
                     print(f"  Gold结果前3行:\n{gold_result.head(3)}")
                 if hasattr(predicted_result, 'head'):

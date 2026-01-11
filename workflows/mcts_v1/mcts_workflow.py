@@ -50,7 +50,7 @@ class MCTSWorkflow:
         self.db_connector = db_connector
         # using rollouts_per_iteration=1 to test 
         self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
-        self.exploration_constant = 1.414  # sqrt(2)
+        self.exploration_constant = 2.0  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
@@ -330,11 +330,6 @@ class MCTSWorkflow:
             return current, added_nodes
         
         # 循环渐进扩展，直至<END>或达到深度限制
-        # 如果连续三次模糊匹配都返回空结果，才会停止扩展（consecutive_empty_count >= 3）
-        # 第二次空结果时允许继续扩展，但会提示检查其他列
-        # 添加CTE路径长度限制：基于分析结果，路径越长成功率越低（r=-0.2933）
-        # 如果当前节点执行失败，不再展开（但失败节点本身可以继续扩展，因为它们的目的就是让后续节点基于失败历史继续生成CTE）
-        # 失败节点（is_failed=True）允许继续扩展，因为它们的目的就是让后续节点基于失败历史继续生成CTE
         def _should_continue_expansion(node):
             """判断是否应该继续扩展节点"""
             # 如果是失败节点，允许继续扩展
@@ -346,7 +341,6 @@ class MCTSWorkflow:
             return True
         
         while (not current.is_terminal) and (current.depth < self.max_depth) and \
-              (getattr(current, 'consecutive_empty_count', 0) < 3) and \
               _should_continue_expansion(current):
             if current.is_expanded:
                 if current.children:
@@ -380,92 +374,21 @@ class MCTSWorkflow:
             if self.strategy_mode == "LLM_PICK_ONCE" and current.depth == 0:
                 root_node = self.mcts_tree.root if self.mcts_tree else None
                 if root_node and not getattr(root_node, 'picked_strategy', None):
-                    # 单独调用LLM选择策略（JSON格式）
-                    print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
-                    from .agents.strategy import build_strategy_selection_prompt, extract_strategy_from_json
+                    # 使用策略选择函数（封装在strategy.py中）
+                    from .agents.strategy import select_strategy_with_llm
                     
-                    strategy_prompt = build_strategy_selection_prompt(
+                    picked_strategy, picked_strategy_thought = select_strategy_with_llm(
+                        cte_agent=self.cte_generator.cte_agent,
                         question=current.question,
                         schema_info=current.schema_info,
-                        additional_context=current.additional_context
+                        additional_context=current.additional_context,
+                        timeout_s=120.0,
+                        default_strategy="S2"
                     )
                     
-                    print(f"[策略选择] Strategy Selection Prompt:")
-                    print(f"{'='*80}")
-                    print(strategy_prompt)
-                    print(f"{'='*80}")
-                    
-                    # 调用LLM选择策略
-                    strategy_messages = [
-                        {
-                            "role": "system",
-                            "content": "You are a strategy selection assistant. Your task is to analyze the SQL generation task and select the most appropriate strategy."
-                        },
-                        {
-                            "role": "user",
-                            "content": strategy_prompt
-                        }
-                    ]
-                    
-                    # 使用CTE生成器的agent来调用（复用LLM配置）
-                    # 添加超时保护，避免LLM调用卡住
-                    strategy_response = None
-                    strategy_response_error = None
-                    
-                    def call_llm():
-                        nonlocal strategy_response, strategy_response_error
-                        try:
-                            strategy_response = self.cte_generator.cte_agent.generate_reply(strategy_messages)
-                        except Exception as e:
-                            strategy_response_error = str(e)
-                    
-                    # 使用线程包装，添加超时保护（120秒）
-                    llm_thread = threading.Thread(target=call_llm)
-                    llm_thread.daemon = True
-                    llm_thread.start()
-                    llm_thread.join(timeout=120.0)  # 120秒超时
-                    
-                    if llm_thread.is_alive():
-                        # 线程仍在运行，说明超时了
-                        print(f"\n⚠️ [策略选择] LLM调用超时（>120秒），使用默认策略 S2")
-                        strategy_response = None
-                    elif strategy_response_error:
-                        print(f"\n⚠️ [策略选择] LLM调用出错: {strategy_response_error}，使用默认策略 S2")
-                        strategy_response = None
-                    
-                    if strategy_response:
-                        print(f"\n[策略选择] LLM响应:")
-                        print(f"{'='*80}")
-                        print(strategy_response)
-                        print(f"{'='*80}")
-                    else:
-                        print(f"\n[策略选择] 未获得LLM响应，使用默认策略")
-                    
-                    # 处理autogen返回的不同类型：如果是字典，提取content字段
-                    if isinstance(strategy_response, dict):
-                        strategy_response_text = strategy_response.get('content', '') or str(strategy_response)
-                    elif not isinstance(strategy_response, str):
-                        strategy_response_text = str(strategy_response)
-                    else:
-                        strategy_response_text = strategy_response
-                    
-                    # 从JSON响应中提取策略和thought
-                    picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
-                    
-                    if picked_strategy and picked_strategy in ("S1", "S2", "S3"):
-                        root_node.picked_strategy = picked_strategy
-                        root_node.picked_strategy_thought = picked_strategy_thought
-                        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
-                        if picked_strategy_thought:
-                            print(f"[策略选择] 策略规划: {picked_strategy_thought}")
-                    else:
-                        print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 S2")
-                        root_node.picked_strategy = "S2"
-                        root_node.picked_strategy_thought = None
-                        picked_strategy = "S2"
-                        picked_strategy_thought = None
-                    
-                    print(f"[策略选择] ========== 策略选择完成 ==========\n")
+                    # 保存选择的策略到根节点
+                    root_node.picked_strategy = picked_strategy
+                    root_node.picked_strategy_thought = picked_strategy_thought
             
             # 1) 生成多个CTE变体（计时：CTE 生成）
             # 注意：此时如果已选择策略，会在_generate_cte_variants中使用已选择的策略
@@ -835,22 +758,7 @@ class MCTSWorkflow:
                     child.execution_results['bucket_variants'] = info.get('variants', [])
                     child.execution_results['is_empty_result'] = True
                     
-                    # 检查父节点是否也是空结果节点
-                    parent_is_empty = False
-                    if current.parent and hasattr(current.parent, 'execution_results'):
-                        parent_is_empty = current.parent.execution_results.get('is_empty_result', False)
-                    
-                    # 跟踪连续空结果的次数
-                    if parent_is_empty:
-                        parent_consecutive_empty = getattr(current.parent, 'consecutive_empty_count', 0)
-                        if parent_consecutive_empty >= 2:
-                            child.consecutive_empty_count = 3
-                            child.is_terminal = True
-                        else:
-                            child.consecutive_empty_count = 2
-                    else:
-                        child.consecutive_empty_count = 1
-                    
+                    # 空结果节点允许继续扩展（不再基于连续空结果次数停止）
                     children_to_create.append((child, cte_text, info, None))
                 # else: 执行失败/超时：不创建子节点，直接过滤掉
 

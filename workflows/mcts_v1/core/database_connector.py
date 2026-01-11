@@ -1,6 +1,8 @@
 import sqlite3
 import pandas as pd
 import os
+import threading
+import time as _time
 from typing import Tuple
 from pathlib import Path
 
@@ -171,6 +173,7 @@ class DatabaseConnector:
     def execute_query_parallel_safe(self, query: str, timeout_s: float = None) -> Tuple[pd.DataFrame, str]:
         """
         并行安全执行：为每次调用建立独立连接，避免多线程共享同一连接的问题。
+        使用线程级超时机制，确保即使progress_handler失效也能可靠中断。
         """
         if not query or not isinstance(query, str):
             return None, "无效的查询"
@@ -179,20 +182,73 @@ class DatabaseConnector:
         if not os.path.exists(self.db_path):
             return None, f"Database file does not exist: {self.db_path}"
 
+        # 如果没有超时，直接执行（保持向后兼容）
+        if timeout_s is None:
+            return self._execute_query_simple(query)
+        
+        # 使用线程级超时机制
+        result_container = {'df': None, 'error': None, 'exception': None}
+        stop_event = threading.Event()
+        
+        def execute_in_thread():
+            """在独立线程中执行查询"""
+            conn = None
+            try:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                # 设置progress_handler，检查stop_event
+                def _progress_handler():
+                    if stop_event.is_set():
+                        return 1  # 中断查询
+                    return 0
+                conn.set_progress_handler(_progress_handler, 1000)  # 每1000个指令检查一次
+                
+                cur = conn.cursor()
+                cur.execute(query)
+                rows = cur.fetchall()
+                cols = [d[0] for d in cur.description] if cur.description else []
+                result_container['df'] = pd.DataFrame(rows, columns=cols)
+            except Exception as e:
+                result_container['exception'] = e
+                msg = str(e)
+                if 'interrupted' in msg.lower() or stop_event.is_set():
+                    result_container['error'] = f"Query execution timeout ({timeout_s:.0f}s)"
+                else:
+                    result_container['error'] = f"{e}"
+            finally:
+                if conn is not None:
+                    try:
+                        conn.set_progress_handler(None, 0)
+                        conn.close()
+                    except Exception:
+                        pass
+        
+        # 启动执行线程
+        exec_thread = threading.Thread(target=execute_in_thread, daemon=True)
+        exec_thread.start()
+        
+        # 等待线程完成或超时
+        exec_thread.join(timeout=timeout_s)
+        
+        # 如果线程仍在运行，说明超时了
+        if exec_thread.is_alive():
+            stop_event.set()  # 设置停止标志
+            # 再等待一小段时间让线程有机会响应stop_event
+            exec_thread.join(timeout=1.0)
+            if result_container['error'] is None:
+                result_container['error'] = f"Query execution timeout ({timeout_s:.0f}s)"
+        
+        # 返回结果
+        if result_container['df'] is not None:
+            return result_container['df'], None
+        else:
+            error_msg = result_container['error'] or str(result_container['exception']) or "Unknown error"
+            return None, error_msg
+    
+    def _execute_query_simple(self, query: str) -> Tuple[pd.DataFrame, str]:
+        """简单执行查询（无超时）"""
         conn = None
         try:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            # 可选超时中断
-            cancel_handler_set = False
-            if timeout_s is not None:
-                import time as _time
-                start_ts = _time.time()
-                def _progress_handler():
-                    if _time.time() - start_ts > timeout_s:
-                        return 1
-                    return 0
-                conn.set_progress_handler(_progress_handler, 1000)
-                cancel_handler_set = True
             cur = conn.cursor()
             cur.execute(query)
             rows = cur.fetchall()
@@ -200,15 +256,10 @@ class DatabaseConnector:
             df = pd.DataFrame(rows, columns=cols)
             return df, None
         except Exception as e:
-            msg = str(e)
-            if 'interrupted' in msg.lower() and timeout_s is not None:
-                return None, f"Query execution timeout ({timeout_s:.0f}s)"
             return None, f"{e}"
         finally:
             if conn is not None:
                 try:
-                    if 'cancel_handler_set' in locals() and cancel_handler_set:
-                        conn.set_progress_handler(None, 0)
                     conn.close()
                 except Exception:
                     pass

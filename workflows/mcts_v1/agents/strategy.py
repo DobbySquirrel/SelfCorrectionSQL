@@ -3,6 +3,7 @@
 # ==========================================================
 from dataclasses import dataclass
 from typing import Optional, Literal, Tuple
+import threading
 
 StrategyMode = Literal[
     "FORCE_S1", "FORCE_S2", "FORCE_S3",
@@ -215,10 +216,9 @@ def build_strategy_injection_text(
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
         strategy_example = _STRATEGY_EXAMPLES.get(s, "")
         return f"""
-{strategy_desc}
 
 {CTE_ACTION_TYPES}
-
+{strategy_desc}
 {strategy_example}
 """
 
@@ -236,12 +236,12 @@ def build_strategy_injection_text(
         strategy_desc = _STRATEGY_DESCRIPTIONS.get(s, "")
         strategy_example = _STRATEGY_EXAMPLES.get(s, "")
         
-        # 对于 S3，添加额外的 evidence 验证说明
         
         return f"""
+{CTE_ACTION_TYPES}
+
 {strategy_desc}
 
-{CTE_ACTION_TYPES}
 
 {strategy_example}
 """
@@ -273,13 +273,15 @@ You need to select ONE strategy from S1, S2, or S3 for solving the following SQL
 
 {f"**Additional Context**: {additional_context}" if additional_context else ""}
 
+{CTE_ACTION_TYPES}
+
 **Available Strategies**:
 
 {_FULL_STRATEGY_HANDBOOK}
 
 **Strategy Examples** (to help you understand how each strategy works):
 
-{CTE_ACTION_TYPES}
+
 
 {_STRATEGY_EXAMPLES['S1']}
 
@@ -370,4 +372,108 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
     except Exception as e:
         print(f"[策略提取] 提取策略时出错: {e}")
         return None, None
+
+
+def select_strategy_with_llm(
+    cte_agent,
+    question: str,
+    schema_info: str,
+    additional_context: str = "",
+    timeout_s: float = 120.0,
+    default_strategy: str = "S2"
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    使用LLM选择策略（LLM_PICK_ONCE模式）
+    
+    Args:
+        cte_agent: CTE生成器的agent对象（用于调用LLM）
+        question: 自然语言问题
+        schema_info: 数据库schema信息
+        additional_context: 额外上下文
+        timeout_s: LLM调用超时时间（秒），默认120秒
+        default_strategy: 默认策略（当选择失败时使用），默认"S2"
+        
+    Returns:
+        (策略字符串 (S1/S2/S3), thought字符串) 或 (default_strategy, None)
+    """
+    print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
+    
+    # 构建策略选择prompt
+    strategy_prompt = build_strategy_selection_prompt(
+        question=question,
+        schema_info=schema_info,
+        additional_context=additional_context
+    )
+    
+    print(f"[策略选择] Strategy Selection Prompt:")
+    print(f"{'='*80}")
+    print(strategy_prompt)
+    print(f"{'='*80}")
+    
+    # 调用LLM选择策略
+    strategy_messages = [
+        {
+            "role": "system",
+            "content": "You are a strategy selection assistant. Your task is to analyze the SQL generation task and select the most appropriate strategy."
+        },
+        {
+            "role": "user",
+            "content": strategy_prompt
+        }
+    ]
+    
+    # 使用线程包装，添加超时保护
+    strategy_response = None
+    strategy_response_error = None
+    
+    def call_llm():
+        nonlocal strategy_response, strategy_response_error
+        try:
+            strategy_response = cte_agent.generate_reply(strategy_messages)
+        except Exception as e:
+            strategy_response_error = str(e)
+    
+    # 使用线程包装，添加超时保护
+    llm_thread = threading.Thread(target=call_llm)
+    llm_thread.daemon = True
+    llm_thread.start()
+    llm_thread.join(timeout=timeout_s)
+    
+    if llm_thread.is_alive():
+        # 线程仍在运行，说明超时了
+        print(f"\n⚠️ [策略选择] LLM调用超时（>{timeout_s}秒），使用默认策略 {default_strategy}")
+        strategy_response = None
+    elif strategy_response_error:
+        print(f"\n⚠️ [策略选择] LLM调用出错: {strategy_response_error}，使用默认策略 {default_strategy}")
+        strategy_response = None
+    
+    if strategy_response:
+        print(f"\n[策略选择] LLM响应:")
+        print(f"{'='*80}")
+        print(strategy_response)
+        print(f"{'='*80}")
+    else:
+        print(f"\n[策略选择] 未获得LLM响应，使用默认策略")
+    
+    # 处理autogen返回的不同类型：如果是字典，提取content字段
+    if isinstance(strategy_response, dict):
+        strategy_response_text = strategy_response.get('content', '') or str(strategy_response)
+    elif not isinstance(strategy_response, str):
+        strategy_response_text = str(strategy_response)
+    else:
+        strategy_response_text = strategy_response
+    
+    # 从JSON响应中提取策略和thought
+    picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
+    
+    if picked_strategy and picked_strategy in ("S1", "S2", "S3"):
+        print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
+        if picked_strategy_thought:
+            print(f"[策略选择] 策略规划: {picked_strategy_thought}")
+        print(f"[策略选择] ========== 策略选择完成 ==========\n")
+        return picked_strategy, picked_strategy_thought
+    else:
+        print(f"\n⚠️ [策略选择] 未能从JSON中提取到有效策略，使用默认策略 {default_strategy}")
+        print(f"[策略选择] ========== 策略选择完成 ==========\n")
+        return default_strategy, None
 
