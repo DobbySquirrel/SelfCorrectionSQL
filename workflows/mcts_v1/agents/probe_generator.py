@@ -59,7 +59,7 @@ class ProbeGenerator:
             traceback.print_exc()
         return []
     
-    def setup_agent(self, temperature: float = 0.7):
+    def setup_agent(self, temperature: float = 0.2):
         """
         设置Probe生成智能体（线程安全）
         

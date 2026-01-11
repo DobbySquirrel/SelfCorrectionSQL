@@ -55,7 +55,7 @@ def get_llm_config(
     model: str = None,
     base_url: str = None,
     api_key: str = None,
-    temperature: float = 0.7,
+    temperature: float = 0.2,  # 降低temperature以提高生成质量
     auto_select: bool = True
 ) -> dict:
     """

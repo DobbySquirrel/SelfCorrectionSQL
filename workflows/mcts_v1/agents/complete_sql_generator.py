@@ -34,7 +34,7 @@ class CompleteSQLGenerator:
         self._model_counter = 0
         self.setup_agent()
     
-    def setup_agent(self, temperature: float = 0.7):
+    def setup_agent(self, temperature: float = 0.2):
         """
         设置完整SQL生成智能体（线程安全）
         
@@ -267,8 +267,8 @@ class CompleteSQLGenerator:
             完整SQL变体列表
         """
         # 使用多个temperature值增加多样性
-        # 将变体分成多个temperature组：[0.3, 0.6, 0.9] (移除0.0，因为贪婪采样时n必须为1)
-        temperature_groups = [0.3, 0.6, 0.9]
+        # 将变体分成多个temperature组：[0.1, 0.2, 0.3] (降低temperature以提高生成质量)
+        temperature_groups = [0.1, 0.2, 0.3]
         num_groups = len(temperature_groups)
         
         # 计算每组应该生成多少个变体

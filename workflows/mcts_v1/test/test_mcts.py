@@ -76,11 +76,11 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
             })
         llm_config = {
             "config_list": config_list,
-            "temperature": 0.7,
+            "temperature": 0.2,  # 降低temperature以提高生成质量
         }
     else:
         # 使用单个端点（默认行为）
-        llm_config = get_llm_config(temperature=0.7, auto_select=True)
+        llm_config = get_llm_config(temperature=0.2, auto_select=True)  # 降低temperature以提高生成质量
 
     # 使用parallel_workers参数设置MCTS内部的max_workers
     w = MCTSWorkflow(llm_config, db, max_workers=parallel_workers, strategy_mode=strategy_mode)
