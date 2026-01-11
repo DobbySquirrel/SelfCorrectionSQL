@@ -634,13 +634,33 @@ class SimpleRolloutWorkflow:
             return one_cte, res, bucket_key, None
         
         # 并行执行
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
         
         _exec_t0 = _time_for_timing.time()
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        # 限制CTE执行的并行数，避免过多并发导致数据库连接竞争
+        # 即使外层有多个问题并行处理，每个问题内部的CTE执行也应该限制在较小值
+        cte_exec_max_workers = min(self.max_workers, 3)  # 最多3个CTE并行执行，避免数据库连接竞争
+        
+        with ThreadPoolExecutor(max_workers=cte_exec_max_workers) as executor:
             futures = [executor.submit(worker, c) for c in non_end_ctes]
             for fut in as_completed(futures):
-                cte_used, cte_result, bucket_key, failed_item = fut.result()
+                try:
+                    # 为future.result()添加超时，避免单个CTE卡住导致整个流程卡住
+                    # 超时时间 = CTE探针超时时间 + 10秒缓冲（用于处理线程调度等开销）
+                    future_timeout = (self.cte_probe_timeout_s + 10.0) if self.cte_probe_timeout_s is not None else None
+                    if future_timeout:
+                        cte_used, cte_result, bucket_key, failed_item = fut.result(timeout=future_timeout)
+                    else:
+                        cte_used, cte_result, bucket_key, failed_item = fut.result()
+                except FutureTimeoutError:
+                    # 如果future本身超时，记录错误
+                    error_msg = f"CTE执行future超时（>{future_timeout:.1f}秒）" if future_timeout else "CTE执行future超时"
+                    print(f"[CTE执行失败] {error_msg}")
+                    # 创建一个失败的CTE结果
+                    cte_used = "unknown"
+                    cte_result = {'valid': False, 'error': error_msg}
+                    bucket_key = None
+                    failed_item = {'cte': cte_used, 'error': error_msg}
                 
                 if failed_item:
                     failed_info.append(failed_item)
@@ -753,14 +773,17 @@ class SimpleRolloutWorkflow:
     
     def _execute_and_evaluate_sqls(self, sql_variants: List[str]) -> Tuple[float, Optional[str], Dict[str, Any]]:
         """执行SQL并计算奖励"""
-        print(f"[SQL执行] 正在并行执行 {len(sql_variants)} 个SQL（超时={self.sql_timeout_s}s）...")
+        # 限制SQL执行的并行数，避免过多并发导致数据库连接竞争
+        # 即使外层有多个问题并行处理，每个问题内部的SQL执行也应该限制在较小值
+        sql_exec_max_workers = min(self.max_workers, 3)  # 最多3个SQL并行执行，避免数据库连接竞争
+        print(f"[SQL执行] 正在并行执行 {len(sql_variants)} 个SQL（超时={self.sql_timeout_s}s，最大并行数={sql_exec_max_workers}）...")
         # 并行执行
         exec_start = _time_for_timing.time()
         parallel_results = execute_sqls_parallel(
             self.db_connector, 
             sql_variants, 
             timeout_s=self.sql_timeout_s, 
-            max_workers=self.max_workers
+            max_workers=sql_exec_max_workers
         )
         exec_elapsed = _time_for_timing.time() - exec_start
         self._timing['db_exec_s'] += exec_elapsed

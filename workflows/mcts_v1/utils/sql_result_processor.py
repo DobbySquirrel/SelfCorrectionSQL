@@ -28,17 +28,21 @@ class SQLResultProcessor:
             db_connector: 数据库连接器
             sql_variants: SQL变体列表
             timeout_s: 超时时间（秒）
-            max_workers: 最大并行工作线程数
+            max_workers: 最大并行工作线程数（建议不超过5，避免数据库连接竞争）
             context_prefix: 日志前缀
             
         Returns:
             (execution_results, elapsed_time, timeout_count)
         """
-        print(f"{context_prefix} 正在并行执行 {len(sql_variants)} 个SQL（超时={timeout_s}s，最大并行数={max_workers}）...")
+        # 限制SQL执行的并行数，避免过多并发导致数据库连接竞争
+        # 即使外层有多个问题并行处理，每个问题内部的SQL执行也应该限制在较小值
+        sql_exec_max_workers = min(max_workers, 3)  # 最多3个SQL并行执行，避免数据库连接竞争
+        
+        print(f"{context_prefix} 正在并行执行 {len(sql_variants)} 个SQL（超时={timeout_s}s，最大并行数={sql_exec_max_workers}）...")
         
         execution_results = []
         exec_start = _time_for_timing.time()
-        parallel_results = execute_sqls_parallel(db_connector, sql_variants, timeout_s=timeout_s, max_workers=max_workers)
+        parallel_results = execute_sqls_parallel(db_connector, sql_variants, timeout_s=timeout_s, max_workers=sql_exec_max_workers)
         exec_elapsed = _time_for_timing.time() - exec_start
         
         timeout_count = 0

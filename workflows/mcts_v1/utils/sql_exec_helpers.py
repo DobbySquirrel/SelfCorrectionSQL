@@ -10,7 +10,7 @@
 """
 
 from typing import List, Tuple, Optional, Dict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 import hashlib
 
 # 尝试导入 sqlglot 用于 SQL 标准化
@@ -199,10 +199,36 @@ def execute_sqls_parallel(
         return idx, (df, err)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_once, i, sql) for i, sql in enumerate(sqls)]
+        # 创建future到索引的映射
+        future_to_idx = {}
+        futures = []
+        for i, sql in enumerate(sqls):
+            fut = executor.submit(run_once, i, sql)
+            futures.append(fut)
+            future_to_idx[fut] = i
+        
         for fut in as_completed(futures):
-            idx, pair = fut.result()
-            results[idx] = pair
+            try:
+                # 为future.result()添加超时，避免单个SQL卡住导致整个流程卡住
+                # 超时时间 = SQL超时时间 + 10秒缓冲（用于处理线程调度等开销）
+                future_timeout = (timeout_s + 10.0) if timeout_s is not None else None
+                if future_timeout:
+                    idx, pair = fut.result(timeout=future_timeout)
+                else:
+                    idx, pair = fut.result()
+                results[idx] = pair
+            except FutureTimeoutError:
+                # 如果future本身超时，记录错误
+                sql_idx = future_to_idx.get(fut, None)
+                error_msg = f"SQL执行future超时（>{future_timeout:.1f}秒）" if future_timeout else "SQL执行future超时"
+                if sql_idx is not None:
+                    results[sql_idx] = (None, error_msg)
+                else:
+                    # 如果无法确定索引，找一个空位
+                    for i, r in enumerate(results):
+                        if r == (None, None):
+                            results[i] = (None, error_msg)
+                            break
 
     return results
 

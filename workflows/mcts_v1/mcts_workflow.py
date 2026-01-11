@@ -12,11 +12,12 @@ MCTS Workflow主控制器
 """
 
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 import random
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any, Set
 from pathlib import Path
+import threading
 from .core.mcts_tree import MCTSTree
 from .core.mcts_node import MCTSNode
 from .core.database_connector import DatabaseConnector
@@ -407,12 +408,38 @@ class MCTSWorkflow:
                     ]
                     
                     # 使用CTE生成器的agent来调用（复用LLM配置）
-                    strategy_response = self.cte_generator.cte_agent.generate_reply(strategy_messages)
+                    # 添加超时保护，避免LLM调用卡住
+                    strategy_response = None
+                    strategy_response_error = None
                     
-                    print(f"\n[策略选择] LLM响应:")
-                    print(f"{'='*80}")
-                    print(strategy_response)
-                    print(f"{'='*80}")
+                    def call_llm():
+                        nonlocal strategy_response, strategy_response_error
+                        try:
+                            strategy_response = self.cte_generator.cte_agent.generate_reply(strategy_messages)
+                        except Exception as e:
+                            strategy_response_error = str(e)
+                    
+                    # 使用线程包装，添加超时保护（120秒）
+                    llm_thread = threading.Thread(target=call_llm)
+                    llm_thread.daemon = True
+                    llm_thread.start()
+                    llm_thread.join(timeout=120.0)  # 120秒超时
+                    
+                    if llm_thread.is_alive():
+                        # 线程仍在运行，说明超时了
+                        print(f"\n⚠️ [策略选择] LLM调用超时（>120秒），使用默认策略 S2")
+                        strategy_response = None
+                    elif strategy_response_error:
+                        print(f"\n⚠️ [策略选择] LLM调用出错: {strategy_response_error}，使用默认策略 S2")
+                        strategy_response = None
+                    
+                    if strategy_response:
+                        print(f"\n[策略选择] LLM响应:")
+                        print(f"{'='*80}")
+                        print(strategy_response)
+                        print(f"{'='*80}")
+                    else:
+                        print(f"\n[策略选择] 未获得LLM响应，使用默认策略")
                     
                     # 处理autogen返回的不同类型：如果是字典，提取content字段
                     if isinstance(strategy_response, dict):

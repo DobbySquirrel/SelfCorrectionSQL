@@ -6,7 +6,7 @@ CTE处理器
 
 import re
 from typing import Dict, List, Any, Tuple, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from .mcts_helpers import MCTSUtils
 from ..core.mcts_node import MCTSNode
 import time as _time_for_timing
@@ -131,11 +131,32 @@ class CTEProcessor:
         invalid_count = 0
         valid_count = 0
         
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        # 限制CTE执行的并行数，避免过多并发导致数据库连接竞争
+        # 即使外层有多个问题并行处理，每个问题内部的CTE执行也应该限制在较小值
+        cte_exec_max_workers = min(self.max_workers, 3)  # 最多3个CTE并行执行，避免数据库连接竞争
+        
+        with ThreadPoolExecutor(max_workers=cte_exec_max_workers) as executor:
             futures = [executor.submit(worker, c) for c in non_end_ctes]
             for fut in as_completed(futures):
                 total_executed += 1
-                cte_used, cte_result, bucket_key, failed_item, exec_sql = fut.result()
+                try:
+                    # 为future.result()添加超时，避免单个CTE卡住导致整个流程卡住
+                    # 超时时间 = CTE探针超时时间 + 10秒缓冲（用于处理线程调度等开销）
+                    future_timeout = (self.cte_probe_timeout_s + 10.0) if self.cte_probe_timeout_s is not None else None
+                    if future_timeout:
+                        cte_used, cte_result, bucket_key, failed_item, exec_sql = fut.result(timeout=future_timeout)
+                    else:
+                        cte_used, cte_result, bucket_key, failed_item, exec_sql = fut.result()
+                except FutureTimeoutError:
+                    # 如果future本身超时，记录错误
+                    error_msg = f"CTE执行future超时（>{future_timeout:.1f}秒）" if future_timeout else "CTE执行future超时"
+                    print(f"[CTE执行失败] {error_msg}")
+                    # 创建一个失败的CTE结果
+                    cte_used = "unknown"
+                    cte_result = {'valid': False, 'error': error_msg}
+                    bucket_key = None
+                    failed_item = {'cte': cte_used, 'error': error_msg}
+                    exec_sql = ""
                 # 保存可执行SQL
                 exec_sql_map[cte_used] = exec_sql
                 # 收集所有失败信息（进行去重）

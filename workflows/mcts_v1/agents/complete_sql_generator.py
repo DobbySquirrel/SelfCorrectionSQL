@@ -337,8 +337,8 @@ class CompleteSQLGenerator:
                     selected_model = model_config.get('model', model)
                     
                     # 每个线程创建独立的client（OpenAI client不是线程安全的）
-                    # 不设置 timeout，使用默认值（10分钟）或 None（无限制）
-                    client = OpenAI(base_url=selected_base_url, api_key=selected_api_key, timeout=None)
+                    # 设置超时为120秒，避免LLM调用卡住
+                    client = OpenAI(base_url=selected_base_url, api_key=selected_api_key, timeout=120.0)
                     start_time = time.time()
                     response = client.chat.completions.create(
                         model=selected_model,

@@ -17,7 +17,7 @@ import threading
 import os
 from pathlib import Path
 from typing import List, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
@@ -387,13 +387,17 @@ def main():
     parser.add_argument("--multi_base_urls", type=str, default=None, help="多个模型端点URL，用逗号分隔，例如：'http://localhost:8009/v1,http://localhost:8010/v1'")
     parser.add_argument("--max_cte_nodes", type=int, default=8, help="每次扩展节点时生成的CTE变体数量（默认8）")
     parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
+    parser.add_argument("--rollouts_per_iteration", type=int, default=8, help="每次迭代的rollout数量（默认8）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
+    parser.add_argument("--task_timeout", type=int, default=1800, 
+                       help="单个任务的最大超时时间（秒），默认1800秒（30分钟）。8个rollout时建议设置为1800秒以上")
     args = parser.parse_args()
     
     # MCTS配置
     mcts_config = {
         'max_cte_nodes_per_iteration': args.max_cte_nodes,  # 从命令行参数获取
+        'rollouts_per_iteration': args.rollouts_per_iteration,  # 从命令行参数获取
     }
     if args.max_depth is not None:
         mcts_config['max_depth'] = args.max_depth
@@ -490,7 +494,30 @@ def main():
         completed_count = 0
         for future in tqdm(as_completed(future_to_task), total=len(tasks), desc="处理样本"):
             try:
-                result_dict = future.result()
+                # 添加超时处理，避免任务卡住
+                try:
+                    result_dict = future.result(timeout=args.task_timeout)
+                except FutureTimeoutError:
+                    # 获取任务信息以便记录
+                    task = future_to_task.get(future)
+                    if task:
+                        idx = task[0]
+                        qid = str(task[1].get('question_id', idx))
+                        print(f"\n⏱️ [样本#{idx}] 任务超时（>{args.task_timeout}秒），跳过该样本")
+                        result_dict = {
+                            'idx': idx,
+                            'qid': qid,
+                            'sql': '',
+                            'stats': {},
+                            'gold_match': None,
+                            'error': f'任务超时（>{args.task_timeout}秒）',
+                            'all_sqls_with_attributes': [],
+                            'rollout_stats': [],
+                        }
+                    else:
+                        # 如果无法获取任务信息，创建一个默认的错误结果
+                        print(f"\n⏱️ 任务超时（>{args.task_timeout}秒），跳过该任务")
+                        continue
                 
                 idx = result_dict['idx']
                 qid = result_dict['qid']
