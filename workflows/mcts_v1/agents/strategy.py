@@ -6,7 +6,7 @@ from typing import Optional, Literal, Tuple
 import threading
 
 StrategyMode = Literal[
-    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S5", "FORCE_S6", "FORCE_S7",
+    "FORCE_S1", "FORCE_S2", "FORCE_S3", "FORCE_S5", "FORCE_S6", "FORCE_S7", "FORCE_S8",
     "NONE",
     "LLM_PICK_ONCE",
 ]
@@ -387,6 +387,111 @@ LEFT JOIN dim_regions dr
 ORDER BY bk.customer_id, bk.year_month;
 
 <END>
+""",
+    "S8": """
+**S8 (Audit/Validation) Example:**
+Question: Calculate monthly revenue per customer, including customer name. Ensure no data loss or duplication occurs.
+Schema: Orders(order_id, customer_id, order_date, amount), Customers(customer_id, customer_name)
+
+Step 1 (raw): Extract raw data.
+WITH raw AS (
+    SELECT 
+        o.order_id,
+        o.customer_id,
+        o.order_date,
+        o.amount,
+        c.customer_name
+    FROM Orders o
+    LEFT JOIN Customers c ON o.customer_id = c.customer_id
+)
+
+Step 2 (raw_check): Check raw data quality - count rows, distinct IDs, NULL values.
+WITH raw_check AS (
+    SELECT 
+        'raw' AS step_name,
+        COUNT(*) AS total_rows,
+        COUNT(DISTINCT order_id) AS distinct_order_ids,
+        COUNT(DISTINCT customer_id) AS distinct_customer_ids,
+        SUM(CASE WHEN order_id IS NULL THEN 1 ELSE 0 END) AS null_order_ids,
+        SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END) AS null_customer_ids,
+        SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) AS null_amounts,
+        SUM(CASE WHEN order_date IS NULL THEN 1 ELSE 0 END) AS null_dates
+    FROM raw
+)
+
+Step 3 (clean): Filter and clean data.
+WITH clean AS (
+    SELECT 
+        order_id,
+        customer_id,
+        STRFTIME('%Y-%m', order_date) AS year_month,
+        amount,
+        customer_name
+    FROM raw
+    WHERE order_date IS NOT NULL
+      AND customer_id IS NOT NULL
+      AND amount IS NOT NULL
+)
+
+Step 4 (clean_check): Check clean data - verify row count changes, distinct counts, NULL handling.
+WITH clean_check AS (
+    SELECT 
+        'clean' AS step_name,
+        COUNT(*) AS total_rows,
+        COUNT(DISTINCT order_id) AS distinct_order_ids,
+        COUNT(DISTINCT customer_id) AS distinct_customer_ids,
+        COUNT(DISTINCT year_month) AS distinct_months,
+        SUM(CASE WHEN order_id IS NULL THEN 1 ELSE 0 END) AS null_order_ids,
+        SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END) AS null_customer_ids,
+        SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) AS null_amounts,
+        SUM(amount) AS total_amount
+    FROM clean
+)
+
+Step 5 (agg): Aggregate to monthly revenue per customer.
+WITH agg AS (
+    SELECT 
+        customer_id,
+        year_month,
+        customer_name,
+        COUNT(DISTINCT order_id) AS order_count,
+        SUM(amount) AS monthly_revenue,
+        AVG(amount) AS avg_order_amount
+    FROM clean
+    GROUP BY customer_id, year_month, customer_name
+)
+
+Step 6 (agg_check): Check aggregation - verify row count reduction, revenue totals, no duplicates.
+WITH agg_check AS (
+    SELECT 
+        'agg' AS step_name,
+        COUNT(*) AS total_rows,
+        COUNT(DISTINCT customer_id) AS distinct_customer_ids,
+        COUNT(DISTINCT year_month) AS distinct_months,
+        SUM(order_count) AS total_order_count,
+        SUM(monthly_revenue) AS total_revenue,
+        SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END) AS null_customer_ids,
+        SUM(CASE WHEN monthly_revenue IS NULL THEN 1 ELSE 0 END) AS null_revenues
+    FROM agg
+)
+
+Step 7 (final): Final selection.
+SELECT 
+    customer_id,
+    year_month,
+    customer_name,
+    order_count,
+    monthly_revenue,
+    avg_order_amount
+FROM agg
+ORDER BY customer_id, year_month;
+
+-- Audit check: Uncomment to view all check CTEs
+-- SELECT * FROM raw_check;
+-- SELECT * FROM clean_check;
+-- SELECT * FROM agg_check;
+
+<END>
 """
 }
 
@@ -433,7 +538,15 @@ _STRATEGY_DESCRIPTIONS = {
 - final: Join all tables at the same grain to avoid data explosion
 - This approach greatly reduces duplicate rows caused by joins and makes metrics more stable
 - Each fact table CTE should be independently testable (e.g., SELECT * FROM fact_orders_at_grain LIMIT 100)
-- Best for: Multi-table joins that cause data explosion, complex fact tables with different grains, metric calculations that need stable aggregation"""
+- Best for: Multi-table joins that cause data explosion, complex fact tables with different grains, metric calculations that need stable aggregation""",
+    
+    "S8": """S8 Audit/Validation:
+- Add a *_check CTE after each critical CTE to validate data quality
+- Each check CTE should calculate: row count (COUNT(*)), distinct count (COUNT(DISTINCT key)), NULL counts for critical fields
+- Naming convention: raw_check, clean_check, join_check, agg_check (matching the corresponding CTE name)
+- Check CTEs help identify where data explosion or data loss occurs (e.g., row count suddenly increases after join, or decreases unexpectedly)
+- You can temporarily run SELECT * FROM *_check to view differences during development (remove before production)
+- Best for: Report metrics, data quality validation, detecting missing data or duplicates, scenarios where errors are hard to spot but critical"""
 }
 
 
@@ -451,6 +564,8 @@ STRATEGYs:
 {_STRATEGY_DESCRIPTIONS['S6']}
 
 {_STRATEGY_DESCRIPTIONS['S7']}
+
+{_STRATEGY_DESCRIPTIONS['S8']}
 """
 
 def build_strategy_injection_text(
@@ -526,7 +641,7 @@ def build_strategy_selection_prompt(question: str, schema_info: str, additional_
     """
     return f"""# STRATEGY SELECTION TASK
 
-You need to select ONE strategy from S1, S2, S3, S5, S6, or S7 for solving the following SQL generation task.
+You need to select ONE strategy from S1, S2, S3, S5, S6, S7, or S8 for solving the following SQL generation task.
 
 **Question**: {question}
 
@@ -557,7 +672,9 @@ You need to select ONE strategy from S1, S2, S3, S5, S6, or S7 for solving the f
 
 {_STRATEGY_EXAMPLES['S7']}
 
-**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S5, S6, or S7).
+{_STRATEGY_EXAMPLES['S8']}
+
+**CRITICAL**: You MUST output your response in JSON format with a "strategy" field containing your chosen strategy (S1, S2, S3, S5, S6, S7, or S8).
 
 Example JSON format:
 ```json
@@ -569,7 +686,7 @@ Example JSON format:
 
 **Output Requirements**:
 - Output MUST be valid JSON wrapped in ```json code block
-- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S5", "S6", or "S7"
+- The "strategy" field MUST be exactly one of: "S1", "S2", "S3", "S5", "S6", "S7", or "S8"
 - Include a "thought" field explaining your choice
 """
 
@@ -628,7 +745,7 @@ def extract_strategy_from_json(response: str) -> Tuple[Optional[str], Optional[s
         thought_str = data.get("thought", "").strip()
         
         # 5. 验证策略
-        valid_strategies = ["S1", "S2", "S3", "S5", "S6", "S7"]
+        valid_strategies = ["S1", "S2", "S3", "S5", "S6", "S7", "S8"]
         if strategy_str in valid_strategies:
             return strategy_str, thought_str if thought_str else None
         
@@ -662,7 +779,7 @@ def select_strategy_with_llm(
         default_strategy: 默认策略（当选择失败时使用），默认"S2"
         
     Returns:
-        (策略字符串 (S1/S2/S3/S5/S6/S7), thought字符串) 或 (default_strategy, None)
+        (策略字符串 (S1/S2/S3/S5/S6/S7/S8), thought字符串) 或 (default_strategy, None)
     """
     print(f"\n[策略选择] ========== 开始单独选择策略 ==========")
     
@@ -734,7 +851,7 @@ def select_strategy_with_llm(
     # 从JSON响应中提取策略和thought
     picked_strategy, picked_strategy_thought = extract_strategy_from_json(strategy_response_text)
     
-    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S5", "S6", "S7"):
+    if picked_strategy and picked_strategy in ("S1", "S2", "S3", "S5", "S6", "S7", "S8"):
         print(f"\n✅ [策略选择] 成功选择策略: {picked_strategy}")
         if picked_strategy_thought:
             print(f"[策略选择] 策略规划: {picked_strategy_thought}")

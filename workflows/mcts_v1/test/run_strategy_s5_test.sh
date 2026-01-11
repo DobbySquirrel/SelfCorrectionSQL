@@ -5,7 +5,7 @@
 # 示例: ./run_strategy_s5_test.sh FORCE_S5
 #        ./workflows/mcts_v1/test/run_strategy_s5_test.sh FORCE_S6
 #        ./run_strategy_s5_test.sh LLM_PICK_ONCE
-# 可用策略: FORCE_S1, FORCE_S2, FORCE_S3, FORCE_S5, FORCE_S6, FORCE_S7, LLM_PICK_ONCE, NONE
+# 可用策略: FORCE_S1, FORCE_S2, FORCE_S3, FORCE_S5, FORCE_S6, FORCE_S7, FORCE_S8, LLM_PICK_ONCE, NONE
 
 # 颜色输出
 GREEN='\033[0;32m'
@@ -27,6 +27,7 @@ if [ $# -eq 0 ]; then
     echo "  FORCE_S5      - 数据流流水线策略"
     echo "  FORCE_S6      - 业务规则模块策略"
     echo "  FORCE_S7      - 粒度/主键策略"
+    echo "  FORCE_S8      - 对照/审计型策略"
     echo "  LLM_PICK_ONCE - LLM自动选择策略"
     echo "  NONE          - 无策略（基线）"
     echo ""
@@ -41,7 +42,7 @@ fi
 STRATEGY="$1"
 
 # 验证策略是否有效
-VALID_STRATEGIES=("FORCE_S1" "FORCE_S2" "FORCE_S3" "FORCE_S5" "FORCE_S6" "FORCE_S7" "LLM_PICK_ONCE" "NONE")
+VALID_STRATEGIES=("FORCE_S1" "FORCE_S2" "FORCE_S3" "FORCE_S5" "FORCE_S6" "FORCE_S7" "FORCE_S8" "LLM_PICK_ONCE" "NONE")
 VALID=false
 for valid_strategy in "${VALID_STRATEGIES[@]}"; do
     if [ "$STRATEGY" == "$valid_strategy" ]; then
