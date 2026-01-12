@@ -138,42 +138,77 @@ def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
     """
     all_sqls = []
     
-    # 1. 提取selected_sql（MCTS最终选择的SQL）
+    # 先收集所有rollout的信息，用于查找selected_sql的来源
+    rollout_stats = result_data.get('rollout_stats', [])
     selected_sql = result_data.get('sql')
+    
+    # 1. 提取selected_sql（MCTS最终选择的SQL）
+    # 需要找到selected_sql来自哪个rollout，使用该rollout的reward
     if selected_sql:
-        stats = result_data.get('stats', {})
-        reward = stats.get('average_reward', 0.0)
+        selected_reward = 0.0
+        # 在所有rollout中查找selected_sql
+        for rollout_idx, rollout in enumerate(rollout_stats):
+            selected_sql_in_rollout = rollout.get('selected_sql')
+            if selected_sql_in_rollout and selected_sql_in_rollout.strip() == selected_sql.strip():
+                # 找到了selected_sql的来源rollout，使用该rollout的reward
+                selected_reward = rollout.get('reward', 0.0)
+                break
+        
+        # 如果没找到，使用stats中的average_reward作为fallback
+        if selected_reward == 0.0:
+            stats = result_data.get('stats', {})
+            selected_reward = stats.get('average_reward', 0.0)
+        
         all_sqls.append({
             'sql': selected_sql,
             'source': 'selected',
-            'reward': reward,
+            'reward': selected_reward,
             'rollout_id': None
         })
     
     # 2. 提取所有rollout中的SQL
-    rollout_stats = result_data.get('rollout_stats', [])
     for rollout_idx, rollout in enumerate(rollout_stats):
+        rollout_reward = rollout.get('reward', 0.0)
+        result_buckets = rollout.get('result_buckets', {})
+        all_sql_variants = rollout.get('all_sql_variants', [])
+        total_variants = len(all_sql_variants)
+        
+        # 2.1 提取rollout的selected_sql
         selected_sql_in_rollout = rollout.get('selected_sql')
         if selected_sql_in_rollout:
-            reward = rollout.get('reward', 0.0)
             all_sqls.append({
                 'sql': selected_sql_in_rollout,
                 'source': f'rollout_{rollout_idx + 1}',
-                'reward': reward,
+                'reward': rollout_reward,  # rollout的selected_sql使用rollout的reward
                 'rollout_id': rollout_idx + 1
             })
         
-        # 也提取所有SQL变体（用于分析）
-        all_sql_variants = rollout.get('all_sql_variants', [])
+        # 2.2 提取所有SQL变体，计算每个SQL的实际reward（基于它所属的bucket）
         for sql_var in all_sql_variants:
-            sql_text = sql_var.get('sql')
-            if sql_text:
-                all_sqls.append({
-                    'sql': sql_text,
-                    'source': f'rollout_{rollout_idx + 1}_variant',
-                    'reward': reward,  # 使用rollout的reward
-                    'rollout_id': rollout_idx + 1
-                })
+            sql_text = sql_var.get('sql', '').strip()
+            if not sql_text:
+                continue
+            
+            # 计算该SQL的reward（基于它所属的bucket）
+            sql_signature = sql_var.get('result_signature')
+            if sql_signature and sql_signature in result_buckets and total_variants > 0:
+                # 该SQL的reward = 它所属bucket的计数 / 总变体数
+                bucket_count = result_buckets[sql_signature]
+                sql_reward = bucket_count / float(total_variants)
+            else:
+                # 如果没有结果签名或不在buckets中，使用rollout的reward
+                sql_reward = rollout_reward
+            
+            # 避免重复添加selected_sql（已经在上面添加了）
+            if sql_text == selected_sql_in_rollout:
+                continue
+            
+            all_sqls.append({
+                'sql': sql_text,
+                'source': f'rollout_{rollout_idx + 1}_variant',
+                'reward': sql_reward,  # 使用基于bucket计算的reward
+                'rollout_id': rollout_idx + 1
+            })
     
     return all_sqls
 
