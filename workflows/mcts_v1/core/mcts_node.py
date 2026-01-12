@@ -41,13 +41,6 @@ class MCTSNode:
         self.total_reward = 0.0
         self.average_reward = 0.0
         
-        # MASTER 框架：即时评分和信心
-        self.immediate_score: Optional[float] = None  # r0: 初始评分，范围 0-1（None 表示未评估）
-        self.confidence: Optional[float] = None  # c0: 信心分数，范围 0-1（None 表示未评估）
-        # MASTER 框架：backup 奖励统计（来自 Simulation 阶段的奖励）
-        self.backup_reward_sum = 0.0  # 累积的 backup 奖励总和
-        self.backup_visits = 0  # backup 奖励的访问次数
-        
         # 子节点
         self.children: List['MCTSNode'] = []
         self.untried_actions: List[str] = []  # 未尝试的动作（CTE变体）
@@ -120,37 +113,24 @@ class MCTSNode:
     
     def update_reward(self, reward: float):
         """
-        更新奖励值（MASTER 框架：只更新 backup 统计和 visit_count）
-        Q 值通过 property 动态计算
+        更新奖励值
+        
+        Args:
+            reward: 奖励值
         """
         self.visit_count += 1
-        self.backup_reward_sum += reward
-        self.backup_visits += 1
-        # 保持向后兼容：同时更新 total_reward 和 average_reward
         self.total_reward += reward
         self.average_reward = self.total_reward / self.visit_count
     
     @property
-    def q_backup(self) -> float:
-        """
-        MASTER 框架：计算 Q_backup（来自 Simulation 阶段的平均奖励）
-        
-        Returns:
-            Q_backup 值
-        """
-        if self.backup_visits == 0:
-            return 0.0
-        return self.backup_reward_sum / self.backup_visits
-    
-    @property
     def q_value(self) -> float:
         """
-        Q 值计算：直接使用 Q_backup（基于SQL执行结果回传的平均奖励）
+        Q 值计算：直接使用 average_reward（基于SQL执行结果回传的平均奖励）
         
         Returns:
-            Q 值（等于 q_backup，即 average_reward）
+            Q 值（等于 average_reward）
         """
-        return self.q_backup
+        return self.average_reward
     
     def should_use_average_reward_for_ucb(self) -> bool:
         """
@@ -160,7 +140,7 @@ class MCTSNode:
         return True
     
     def get_best_child(self) -> Optional['MCTSNode']:
-        """获取最佳子节点（MASTER 框架：使用 q_value）"""
+        """获取最佳子节点（使用 q_value，即 average_reward）"""
         if not self.children:
             return None
         
@@ -180,12 +160,7 @@ class MCTSNode:
             'visit_count': self.visit_count,
             'total_reward': self.total_reward,
             'average_reward': self.average_reward,
-            'q_value': self.q_value,  # MASTER 框架
-            'q_backup': self.q_backup,  # MASTER 框架
-            'immediate_score': self.immediate_score,  # MASTER 框架 (r0)
-            'confidence': self.confidence,  # MASTER 框架 (c0)
-            'backup_reward_sum': self.backup_reward_sum,  # MASTER 框架
-            'backup_visits': self.backup_visits,  # MASTER 框架
+            'q_value': self.q_value,  # Q值（等于average_reward）
             'depth': self.depth,
             'is_expanded': self.is_expanded,
             'is_terminal': self.is_terminal,

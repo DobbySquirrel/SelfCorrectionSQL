@@ -1199,18 +1199,12 @@ class MCTSWorkflow:
         for node in path:
             old_visits = node.visit_count
             old_q = node.q_value
-            old_backup_sum = node.backup_reward_sum
-            old_backup_visits = node.backup_visits
             
-            # 更新 backup 统计和 visit_count
+            # 更新统计信息
             node.visit_count += 1
-            node.backup_reward_sum += reward
-            node.backup_visits += 1
-            # 保持向后兼容：同时更新 total_reward 和 average_reward
             node.total_reward += reward
             node.average_reward = node.total_reward / node.visit_count
             new_q = node.q_value
-            q_backup = node.q_backup
             
     
     
