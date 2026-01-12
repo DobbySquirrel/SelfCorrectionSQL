@@ -119,41 +119,46 @@ def classify_error_type(gold_sql: str, predicted_sql: str, eval_result: Dict, or
     pred_fields = extract_select_fields(predicted_sql)
     
     # 1. 检查执行错误（最高优先级）
+    # 只检查selected_sql（source为"selected"）的执行错误，不检查其他variants
     matches = eval_result.get('matches', [])
     execution_error = None
     execution_error_type = None
     
+    # 找到selected_sql的评估结果
+    selected_match = None
     for m in matches:
-        if m.get('error'):
-            error_msg = m.get('error', '').lower()
-            if 'no such column' in error_msg:
-                execution_error = m.get('error', '')
-                execution_error_type = '列名错误'
-                error_info['error_category'] = '语法错误'
-                error_info['primary_issue'] = '列名不存在或引用错误'
-                # 提取列名
-                col_match = re.search(r"no such column:\s*([^\s]+)", error_msg, re.IGNORECASE)
-                if col_match:
-                    error_info['error_details']['missing_column'] = col_match.group(1)
-                error_info['fix_suggestions'].append('检查列名拼写和表别名')
-                break
-            elif 'ambiguous' in error_msg:
-                execution_error = m.get('error', '')
-                execution_error_type = '列名歧义'
-                error_info['error_category'] = '语法错误'
-                error_info['primary_issue'] = '列名在多表中存在，需要指定表别名'
-                col_match = re.search(r"ambiguous column name:\s*([^\s]+)", error_msg, re.IGNORECASE)
-                if col_match:
-                    error_info['error_details']['ambiguous_column'] = col_match.group(1)
-                error_info['fix_suggestions'].append('在列名前添加表别名（如 table.column）')
-                break
-            elif 'syntax error' in error_msg or 'syntax' in error_msg:
-                execution_error = m.get('error', '')
-                execution_error_type = '语法错误'
-                error_info['error_category'] = '语法错误'
-                error_info['primary_issue'] = 'SQL语法错误'
-                error_info['fix_suggestions'].append('检查SQL语法，特别是括号、引号、关键字等')
-                break
+        if m.get('source') == 'selected':
+            selected_match = m
+            break
+    
+    # 只检查selected_sql的错误
+    if selected_match and selected_match.get('error'):
+        error_msg = selected_match.get('error', '').lower()
+        if 'no such column' in error_msg:
+            execution_error = selected_match.get('error', '')
+            execution_error_type = '列名错误'
+            error_info['error_category'] = '语法错误'
+            error_info['primary_issue'] = '列名不存在或引用错误'
+            # 提取列名
+            col_match = re.search(r"no such column:\s*([^\s]+)", error_msg, re.IGNORECASE)
+            if col_match:
+                error_info['error_details']['missing_column'] = col_match.group(1)
+            error_info['fix_suggestions'].append('检查列名拼写和表别名')
+        elif 'ambiguous' in error_msg:
+            execution_error = selected_match.get('error', '')
+            execution_error_type = '列名歧义'
+            error_info['error_category'] = '语法错误'
+            error_info['primary_issue'] = '列名在多表中存在，需要指定表别名'
+            col_match = re.search(r"ambiguous column name:\s*([^\s]+)", error_msg, re.IGNORECASE)
+            if col_match:
+                error_info['error_details']['ambiguous_column'] = col_match.group(1)
+            error_info['fix_suggestions'].append('在列名前添加表别名（如 table.column）')
+        elif 'syntax error' in error_msg or 'syntax' in error_msg:
+            execution_error = selected_match.get('error', '')
+            execution_error_type = '语法错误'
+            error_info['error_category'] = '语法错误'
+            error_info['primary_issue'] = 'SQL语法错误'
+            error_info['fix_suggestions'].append('检查SQL语法，特别是括号、引号、关键字等')
     
     if execution_error:
         error_info['error_type'] = execution_error_type
@@ -362,11 +367,12 @@ def analyze_all_no_match_cases(error_analysis_file: str, result_file: str, eval_
             if selected_sql_error is not None:
                 break
         
-        # 也检查评估阶段的执行错误
+        # 也检查评估阶段的执行错误（只检查selected_sql，不检查其他variants）
         matches = eval_result.get('matches', [])
         eval_error = None
+        # 只检查source为"selected"的SQL的执行错误
         for m in matches:
-            if m.get('error'):
+            if m.get('source') == 'selected' and m.get('error'):
                 eval_error = m.get('error', '')
                 if 'no such column' in eval_error.lower() or 'ambiguous' in eval_error.lower():
                     execution_errors.append({
