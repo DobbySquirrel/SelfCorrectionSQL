@@ -52,6 +52,7 @@ class MCTSWorkflow:
         self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 2.5  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
         # 注意：UCB1的exploration项本身就会鼓励探索访问较少的节点，增加exploration_constant即可增强探索
+        self.cold_start_strategy = "FIRST_UNVISITED"  # 冷启动策略：FIRST_UNVISITED, RANDOM_UNVISITED, UCB_UNVISITED, ROUND_ROBIN, BEST_PRIOR
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 8  # 每次扩展节点时生成的CTE变体数量
         # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
@@ -306,9 +307,8 @@ class MCTSWorkflow:
             # 检查是否有未访问的子节点
             unvisited_children = [ch for ch in non_terminal_children if ch.visit_count == 0]
             if unvisited_children:
-                # 如果有未访问的节点，选择第一个（子节点顺序已在扩展时被打乱）
-                # 这样既保证了每个未访问节点都有机会被探索，又避免了完全随机的选择
-                best_child = unvisited_children[0]
+                # 根据冷启动策略选择未访问的节点
+                best_child = self._select_unvisited_child(unvisited_children, current_node)
             else:
                 # 所有子节点都已访问过，使用UCB1公式选择
                 best_child = max(
@@ -320,6 +320,82 @@ class MCTSWorkflow:
             path.append(current_node)
         
         return path
+    
+    def _select_unvisited_child(self, unvisited_children: List[MCTSNode], parent_node: MCTSNode) -> MCTSNode:
+        """
+        根据冷启动策略选择未访问的子节点
+        
+        Args:
+            unvisited_children: 未访问的子节点列表
+            parent_node: 父节点
+            
+        Returns:
+            选择的子节点
+        """
+        if not unvisited_children:
+            raise ValueError("unvisited_children 不能为空")
+        
+        if self.cold_start_strategy == "FIRST_UNVISITED":
+            # 策略1: 选择第一个未访问的节点（子节点顺序已在扩展时被打乱）
+            return unvisited_children[0]
+        
+        elif self.cold_start_strategy == "RANDOM_UNVISITED":
+            # 策略2: 随机选择未访问的节点
+            import random
+            return random.choice(unvisited_children)
+        
+        elif self.cold_start_strategy == "UCB_UNVISITED":
+            # 策略3: 对未访问节点也使用UCB（给一个很大的初始值，但会根据先验信息区分）
+            # 使用一个很大的exploration_constant来确保未访问节点优先，但可以根据bucket_count等先验信息区分
+            def get_unvisited_ucb_value(child: MCTSNode) -> float:
+                # 基础值：基于先验信息（bucket_count）
+                prior_value = 0.0
+                if hasattr(child, 'execution_results') and child.execution_results:
+                    bucket_count = child.execution_results.get('bucket_count', 0)
+                    # 归一化bucket_count到0-1（假设最大为8）
+                    prior_value = min(1.0, bucket_count / 8.0)
+                
+                # 使用一个很大的exploration bonus，但加上先验信息
+                # 这样bucket_count高的未访问节点会优先被选择
+                return 1000.0 + prior_value
+            
+            return max(unvisited_children, key=get_unvisited_ucb_value)
+        
+        elif self.cold_start_strategy == "ROUND_ROBIN":
+            # 策略4: 轮询选择未访问的节点（按节点ID顺序）
+            # 需要跟踪每个父节点已选择的未访问节点索引
+            if not hasattr(parent_node, '_unvisited_selection_index'):
+                parent_node._unvisited_selection_index = 0
+            
+            # 按节点ID排序，确保顺序一致
+            sorted_unvisited = sorted(unvisited_children, key=lambda ch: ch.node_id)
+            selected = sorted_unvisited[parent_node._unvisited_selection_index % len(sorted_unvisited)]
+            parent_node._unvisited_selection_index += 1
+            return selected
+        
+        elif self.cold_start_strategy == "BEST_PRIOR":
+            # 策略5: 基于先验信息（bucket_count）选择未访问的节点
+            def get_prior_score(child: MCTSNode) -> float:
+                # 基于bucket_count的先验分数
+                if hasattr(child, 'execution_results') and child.execution_results:
+                    bucket_count = child.execution_results.get('bucket_count', 0)
+                    return float(bucket_count)
+                return 0.0
+            
+            # 选择先验分数最高的，如果有平票则随机选择
+            max_prior = max(get_prior_score(ch) for ch in unvisited_children)
+            best_candidates = [ch for ch in unvisited_children if get_prior_score(ch) == max_prior]
+            
+            if len(best_candidates) == 1:
+                return best_candidates[0]
+            else:
+                # 平票时随机选择
+                import random
+                return random.choice(best_candidates)
+        
+        else:
+            # 默认使用FIRST_UNVISITED
+            return unvisited_children[0]
 
     def _mcts_expansion(self, leaf_node: MCTSNode) -> Tuple[MCTSNode, List[MCTSNode]]:
         """
