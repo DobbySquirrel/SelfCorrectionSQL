@@ -132,9 +132,10 @@ def compare_with_gold_timeout(predicted_sql: str, gold_sql: str, db_connector: D
 def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
     """
     从结果中提取所有SQL（包括selected_sql和所有rollout中的SQL）
+    直接从原始结果文件读取执行状态，确保reward准确
     
     Returns:
-        List[Dict]: 每个元素包含 {'sql': str, 'source': str, 'reward': float, 'rollout_id': int}
+        List[Dict]: 每个元素包含 {'sql': str, 'source': str, 'reward': float, 'rollout_id': int, 'valid': bool}
     """
     all_sqls = []
     
@@ -143,27 +144,48 @@ def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
     selected_sql = result_data.get('sql')
     
     # 1. 提取selected_sql（MCTS最终选择的SQL）
-    # 需要找到selected_sql来自哪个rollout，使用该rollout的reward
+    # 需要找到selected_sql来自哪个rollout，并检查它的执行状态
     if selected_sql:
         selected_reward = 0.0
+        selected_valid = False
+        
         # 在所有rollout中查找selected_sql
         for rollout_idx, rollout in enumerate(rollout_stats):
             selected_sql_in_rollout = rollout.get('selected_sql')
             if selected_sql_in_rollout and selected_sql_in_rollout.strip() == selected_sql.strip():
-                # 找到了selected_sql的来源rollout，使用该rollout的reward
-                selected_reward = rollout.get('reward', 0.0)
+                # 找到了selected_sql的来源rollout
+                # 检查该SQL在all_sql_variants中的执行状态
+                all_sql_variants = rollout.get('all_sql_variants', [])
+                for sql_var in all_sql_variants:
+                    if sql_var.get('sql', '').strip() == selected_sql.strip():
+                        selected_valid = sql_var.get('valid', False)
+                        # 如果SQL无效，reward应该为0
+                        if not selected_valid:
+                            selected_reward = 0.0
+                        else:
+                            # 如果有效，使用rollout的reward
+                            selected_reward = rollout.get('reward', 0.0)
+                        break
+                else:
+                    # 如果没在all_sql_variants中找到，使用rollout的reward（可能是selected_sql本身）
+                    selected_reward = rollout.get('reward', 0.0)
+                    selected_valid = True  # 假设selected_sql是有效的
                 break
         
         # 如果没找到，使用stats中的average_reward作为fallback
-        if selected_reward == 0.0:
+        if selected_reward == 0.0 and not selected_valid:
             stats = result_data.get('stats', {})
             selected_reward = stats.get('average_reward', 0.0)
+            # 但需要检查是否真的有效
+            # 如果找不到执行状态，假设有效（保持原有逻辑）
+            selected_valid = True
         
         all_sqls.append({
             'sql': selected_sql,
             'source': 'selected',
             'reward': selected_reward,
-            'rollout_id': None
+            'rollout_id': None,
+            'valid': selected_valid
         })
     
     # 2. 提取所有rollout中的SQL
@@ -172,15 +194,27 @@ def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
         result_buckets = rollout.get('result_buckets', {})
         all_sql_variants = rollout.get('all_sql_variants', [])
         total_variants = len(all_sql_variants)
+        valid_count = rollout.get('valid_count', sum(1 for sv in all_sql_variants if sv.get('valid', False)))
         
         # 2.1 提取rollout的selected_sql
         selected_sql_in_rollout = rollout.get('selected_sql')
         if selected_sql_in_rollout:
+            # 检查selected_sql的执行状态
+            selected_valid = False
+            for sql_var in all_sql_variants:
+                if sql_var.get('sql', '').strip() == selected_sql_in_rollout.strip():
+                    selected_valid = sql_var.get('valid', False)
+                    break
+            
+            # 如果SQL无效，reward应该为0
+            selected_reward = rollout_reward if selected_valid else 0.0
+            
             all_sqls.append({
                 'sql': selected_sql_in_rollout,
                 'source': f'rollout_{rollout_idx + 1}',
-                'reward': rollout_reward,  # rollout的selected_sql使用rollout的reward
-                'rollout_id': rollout_idx + 1
+                'reward': selected_reward,
+                'rollout_id': rollout_idx + 1,
+                'valid': selected_valid
             })
         
         # 2.2 提取所有SQL变体，计算每个SQL的实际reward（基于它所属的bucket）
@@ -189,15 +223,21 @@ def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
             if not sql_text:
                 continue
             
-            # 计算该SQL的reward（基于它所属的bucket）
-            sql_signature = sql_var.get('result_signature')
-            if sql_signature and sql_signature in result_buckets and total_variants > 0:
-                # 该SQL的reward = 它所属bucket的计数 / 总变体数
-                bucket_count = result_buckets[sql_signature]
-                sql_reward = bucket_count / float(total_variants)
+            sql_valid = sql_var.get('valid', False)
+            
+            # 如果SQL无效，reward应该为0
+            if not sql_valid:
+                sql_reward = 0.0
             else:
-                # 如果没有结果签名或不在buckets中，使用rollout的reward
-                sql_reward = rollout_reward
+                # 计算该SQL的reward（基于它所属的bucket）
+                sql_signature = sql_var.get('result_signature')
+                if sql_signature and sql_signature in result_buckets and valid_count > 0:
+                    # 该SQL的reward = 它所属bucket的计数 / 有效变体数（而不是总变体数）
+                    bucket_count = result_buckets[sql_signature]
+                    sql_reward = bucket_count / float(valid_count) if valid_count > 0 else 0.0
+                else:
+                    # 如果没有结果签名或不在buckets中，使用rollout的reward（但需要确保SQL是有效的）
+                    sql_reward = rollout_reward if sql_valid else 0.0
             
             # 避免重复添加selected_sql（已经在上面添加了）
             if sql_text == selected_sql_in_rollout:
@@ -206,20 +246,27 @@ def extract_all_sqls_from_result(result_data: Dict) -> List[Dict]:
             all_sqls.append({
                 'sql': sql_text,
                 'source': f'rollout_{rollout_idx + 1}_variant',
-                'reward': sql_reward,  # 使用基于bucket计算的reward
-                'rollout_id': rollout_idx + 1
+                'reward': sql_reward,
+                'rollout_id': rollout_idx + 1,
+                'valid': sql_valid
             })
     
     return all_sqls
 
 
-def evaluate_single_question(question_id: str, result_data: Dict, gold_sql: str, db_name: str, timeout_s: float = 30.0) -> Dict:
+def evaluate_single_question(question_id: str, result_data: Dict, gold_sql: str, db_name: str, timeout_s: float = 30.0, max_total_timeout_s: float = None) -> Dict:
     """
     评估单个问题的所有SQL
+    
+    Args:
+        timeout_s: 单个SQL执行超时时间（秒）
+        max_total_timeout_s: 整个问题评估的最大总超时时间（秒），None表示不限制
     
     Returns:
         Dict包含评估结果
     """
+    import time
+    
     # 提取所有SQL
     all_sqls = extract_all_sqls_from_result(result_data)
     
@@ -246,35 +293,70 @@ def evaluate_single_question(question_id: str, result_data: Dict, gold_sql: str,
         }
     
     try:
+        # 记录开始时间
+        start_time = time.time()
+        
         # 评估每个SQL
         evaluation_results = []
         selected_match = False
+        evaluated_count = 0
+        skipped_count = 0
         
         for sql_text, sql_info in unique_sqls.items():
+            # 检查总超时
+            if max_total_timeout_s is not None:
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= max_total_timeout_s:
+                    skipped_count = len(unique_sqls) - evaluated_count
+                    print(f"[警告] 问题 {question_id} 评估超时（已用时 {elapsed_time:.1f}s，限制 {max_total_timeout_s}s），跳过剩余 {skipped_count} 个SQL")
+                    break
+            
             is_match, error = compare_with_gold_timeout(
                 sql_text, gold_sql, db_connector, timeout_s=timeout_s
             )
             
+            evaluated_count += 1
+            
+            # 从原始结果文件读取的执行状态
+            rollout_valid = sql_info.get('valid', True)  # 默认为True以保持兼容性
+            
+            # 如果SQL在rollout阶段无效，reward应该为0
+            # 如果SQL在评估阶段执行失败，reward也应该为0
+            final_reward = sql_info['reward']
+            if not rollout_valid:
+                final_reward = 0.0
+            elif error:
+                # 评估阶段执行失败，reward设为0
+                final_reward = 0.0
+            
             evaluation_results.append({
                 'sql': sql_text,
                 'source': sql_info['source'],
-                'reward': sql_info['reward'],
+                'reward': final_reward,  # 使用修正后的reward
                 'rollout_id': sql_info['rollout_id'],
                 'matches_gold': is_match,
-                'error': error
+                'error': error,
+                'rollout_valid': rollout_valid  # 保存rollout阶段的执行状态
             })
             
             # 检查selected_sql是否匹配
             if sql_info['source'] == 'selected' and is_match:
                 selected_match = True
         
-        return {
+        result = {
             'question_id': question_id,
             'total_sqls': len(unique_sqls),
+            'evaluated_sqls': evaluated_count,
+            'skipped_sqls': skipped_count,
             'matches': evaluation_results,
             'selected_match': selected_match,
             'has_match': any(r['matches_gold'] for r in evaluation_results)
         }
+        
+        if skipped_count > 0:
+            result['timeout_warning'] = f'评估超时，只评估了 {evaluated_count}/{len(unique_sqls)} 个SQL'
+        
+        return result
         
     finally:
         db_connector.disconnect()
@@ -282,10 +364,10 @@ def evaluate_single_question(question_id: str, result_data: Dict, gold_sql: str,
 
 def process_single_question(args_tuple) -> Dict:
     """处理单个问题的包装函数（用于并行执行）"""
-    question_id, result_data, gold_sql, db_name, timeout_s = args_tuple
+    question_id, result_data, gold_sql, db_name, timeout_s, max_total_timeout_s = args_tuple
     
     try:
-        result = evaluate_single_question(question_id, result_data, gold_sql, db_name, timeout_s)
+        result = evaluate_single_question(question_id, result_data, gold_sql, db_name, timeout_s, max_total_timeout_s)
         return result
     except Exception as e:
         return {
@@ -368,7 +450,9 @@ def main():
     parser.add_argument('--gold_file', type=str, default=None,
                         help='Gold SQL文件路径（可选，如果结果文件中已包含gold_sql）')
     parser.add_argument('--timeout_s', type=float, default=30.0,
-                        help='SQL执行超时时间（秒）')
+                        help='单个SQL执行超时时间（秒）')
+    parser.add_argument('--max_total_timeout_s', type=float, default=300.0,
+                        help='整个问题评估的最大总超时时间（秒），默认300秒（5分钟）')
     parser.add_argument('--max_workers', type=int, default=10,
                         help='最大并行工作线程数')
     parser.add_argument('--output_file', type=str, default=None,
@@ -431,7 +515,7 @@ def main():
             continue
         
         db_name = db_mapping[qid]
-        tasks.append((qid_str, result_data, gold_sql, db_name, args.timeout_s))
+        tasks.append((qid_str, result_data, gold_sql, db_name, args.timeout_s, args.max_total_timeout_s))
     
     print(f"\n[准备] 共 {len(tasks)} 个问题需要评估")
     

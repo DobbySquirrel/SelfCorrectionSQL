@@ -329,6 +329,8 @@ class CompleteSQLGenerator:
                 """生成单个temperature组的SQL变体（每个线程使用独立的client）"""
                 if group_size == 0:
                     return []
+                selected_base_url = None
+                selected_model = None
                 try:
                     # 为当前组选择模型配置（轮询方式）
                     model_config = get_model_config_for_group(group_idx)
@@ -366,10 +368,16 @@ class CompleteSQLGenerator:
                     error_msg = str(e)
                     print(f"[SQL生成] temperature={temperature} 失败: {error_type}: {error_msg}")
                     # 打印更详细的调试信息
-                    print(f"  端点: {selected_base_url}, 模型: {selected_model}")
+                    if selected_base_url and selected_model:
+                        print(f"  端点: {selected_base_url}, 模型: {selected_model}")
+                    else:
+                        print(f"  模型配置获取失败")
                     return []
             
             # 并行执行所有temperature组
+            # 设置总体超时时间（比单个OpenAI client的120秒超时稍长，给一些缓冲）
+            overall_timeout = 150.0  # 秒
+            
             with ThreadPoolExecutor(max_workers=3) as executor:
                 futures = {}
                 for group_idx, temperature in enumerate(temperature_groups):
@@ -378,14 +386,28 @@ class CompleteSQLGenerator:
                         future = executor.submit(generate_group, group_idx, temperature, group_size)
                         futures[future] = (group_idx, temperature)
                 
-                # 收集结果
+                # 收集结果，为每个future设置超时，避免卡住
+                completed_count = 0
+                total_groups = len(futures)
                 for future in as_completed(futures):
                     group_idx, temperature = futures[future]
                     try:
-                        group_sqls = future.result()
+                        # 为每个future.result()设置超时，避免某个组卡住导致整个程序挂起
+                        group_sqls = future.result(timeout=overall_timeout)
                         sql_variants.extend(group_sqls)
+                        completed_count += 1
+                        print(f"[SQL生成] temperature={temperature} 组完成 ({completed_count}/{total_groups})")
+                    except TimeoutError:
+                        print(f"[SQL生成] ⚠️ temperature={temperature} 组超时（>{overall_timeout}秒），跳过此组")
+                        completed_count += 1
                     except Exception as e:
-                        print(f"[SQL生成] temperature={temperature} 执行异常: {e}")
+                        error_type = type(e).__name__
+                        error_msg = str(e)
+                        print(f"[SQL生成] ⚠️ temperature={temperature} 组执行异常: {error_type}: {error_msg}")
+                        completed_count += 1
+                    finally:
+                        if completed_count < total_groups:
+                            print(f"[SQL生成] 进度: {completed_count}/{total_groups} 组已完成，等待剩余组...")
             
             total_elapsed = time.time() - total_start_time
             print(f"[SQL生成] 完成！共生成 {len(sql_variants)} 个SQL变体，总耗时={total_elapsed:.2f}s")
