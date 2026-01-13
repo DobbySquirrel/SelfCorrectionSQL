@@ -33,6 +33,7 @@ except ImportError:
 from workflows.mcts_v1.mcts_workflow import MCTSWorkflow
 from workflows.mcts_v1.core.database_connector import DatabaseConnector
 from workflows.mcts_v1.utils.model_utils import get_llm_config, pick_model
+from workflows.mcts_v1.utils.execution_logger import init_global_logger, get_global_logger, set_global_logger
 import logging
 logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
 
@@ -118,12 +119,21 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
 
 def process_single_task(args_tuple):
     """处理单个任务的包装函数，用于并行执行"""
-    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode = args_tuple
+    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode, log_dir = args_tuple
     try:
         qid = str(sample.get('question_id', idx))
         print(f"\n{'='*80}")
         print(f">>> 样本#{idx} (question_id={qid}) | DB={sample['db']}")
         print(f"{'='*80}")
+
+        # 使用统一的日志文件（所有任务共享一个文件）
+        log_file = None
+        if log_dir:
+            # 统一使用一个JSON文件记录所有错误和空结果
+            log_file = str(Path(log_dir) / "execution_logs.json")
+        logger = init_global_logger(log_file=log_file)
+        logger.set_context(question_id=qid, db_name=sample['db'])
+        set_global_logger(logger)
 
         result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, mcts_config=mcts_config, strategy_mode=strategy_mode)
 
@@ -188,6 +198,14 @@ def process_single_task(args_tuple):
             stats_obj['gold_match'] = gold_match
             stats_obj['gold_sql'] = gold_sqls[qid]
         
+        # 保存日志（只记录空结果）
+        logger = get_global_logger()
+        execution_logs = None
+        if logger:
+            execution_logs = logger.get_logs()
+            summary = logger.get_summary()
+            print(f"[日志统计] 总日志数: {summary['total_logs']}, 空结果: {summary['empty_results']}")
+        
         return {
             'idx': idx,
             'qid': qid,
@@ -196,11 +214,15 @@ def process_single_task(args_tuple):
             'gold_match': gold_match,
             'all_sqls_with_attributes': all_sqls_with_gold,  # 包含gold验证结果的所有SQL
             'rollout_stats': result.get('rollout_stats', []),  # 每个rollout的详细统计信息
+            'execution_logs': execution_logs,  # 执行日志
         }
     except Exception as e:
         print(f"\n❌ [样本#{idx}] 处理失败: {e}")
         import traceback
         traceback.print_exc()
+        
+        # 不记录错误，只记录空结果
+        
         return {
             'idx': idx,
             'qid': str(sample.get('question_id', idx)),
@@ -208,6 +230,7 @@ def process_single_task(args_tuple):
             'stats': {},
             'gold_match': None,
             'error': str(e),
+            'execution_logs': logger.get_logs() if logger else None,
         }
 
 
@@ -395,6 +418,8 @@ def main():
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     parser.add_argument("--task_timeout", type=int, default=1800, 
                        help="单个任务的最大超时时间（秒），默认1800秒（30分钟）。8个rollout时建议设置为1800秒以上")
+    parser.add_argument("--log_dir", type=str, default=None,
+                       help="执行日志保存目录（如果提供，将保存所有错误和空结果的日志）")
     args = parser.parse_args()
     
     # MCTS配置
@@ -481,11 +506,18 @@ def main():
     correct_count = 0
     total_count = 0
     
+    # 创建日志目录（如果提供）
+    log_dir = None
+    if args.log_dir:
+        log_dir = Path(args.log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[配置] 执行日志将保存到: {log_dir}")
+    
     # 准备任务列表
     tasks = []
     for idx in indices:
         sample = load_sample(args.ppl_file, idx)
-        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode))
+        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode, log_dir))
     
     # 统一使用并行处理模式（max_workers=1时也是并行处理，只是单线程）
     print(f"\n处理 {len(tasks)} 个样本（{args.max_workers} 个worker）...")
@@ -508,6 +540,9 @@ def main():
                         idx = task[0]
                         qid = str(task[1].get('question_id', idx))
                         print(f"\n⏱️ [样本#{idx}] 任务超时（>{args.task_timeout}秒），跳过该样本")
+                        
+                        # 不记录错误，只记录空结果
+                        
                         result_dict = {
                             'idx': idx,
                             'qid': qid,
@@ -517,6 +552,7 @@ def main():
                             'error': f'任务超时（>{args.task_timeout}秒）',
                             'all_sqls_with_attributes': [],
                             'rollout_stats': [],
+                            'execution_logs': logger.get_logs() if logger else [],
                         }
                     else:
                         # 如果无法获取任务信息，创建一个默认的错误结果
@@ -531,6 +567,7 @@ def main():
                     'stats': result_dict['stats'],
                     'all_sqls_with_attributes': result_dict.get('all_sqls_with_attributes', []),  # 保存所有SQL及其属性
                     'rollout_stats': result_dict.get('rollout_stats', []),  # 保存每个rollout的详细统计信息
+                    'execution_logs': result_dict.get('execution_logs', []),  # 保存执行日志
                 }
                 processed_indices.append(idx)
                 completed_count += 1
@@ -562,16 +599,36 @@ def main():
                                     fw.write(str(sql) + "\n")
                             print(f"[保存] SQL -> {args.sql_out} (已处理 {len(processed_indices)}/{len(all_indices_for_output)})")
 
-                        # 保存JSON
+                        # 保存JSON（排除execution_logs，因为包含timestamp和错误信息，不需要保存到结果文件）
                         if args.json_out:
                             Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
                             out_obj = {}
                             for j in processed_indices:
                                 key = str(ppls[j].get('question_id', j))
-                                out_obj[key] = results_with_stats.get(key, {'sql': '', 'stats': {}})
+                                result_data = results_with_stats.get(key, {'sql': '', 'stats': {}})
+                                # 创建不包含execution_logs的副本
+                                result_data_clean = {k: v for k, v in result_data.items() if k != 'execution_logs'}
+                                out_obj[key] = result_data_clean
                             with open(args.json_out, 'w', encoding='utf-8') as fw:
                                 json.dump(out_obj, fw, ensure_ascii=False, indent=2)
                             print(f"[保存] JSON -> {args.json_out} (已处理 {len(processed_indices)})")
+                        
+                        # 日志已经实时追加到统一的JSON文件中，这里只需要打印统计信息
+                        if log_dir and completed_count == len(tasks):
+                            # 读取统一的日志文件并统计
+                            log_file = log_dir / "execution_logs.json"
+                            if log_file.exists():
+                                try:
+                                    with open(log_file, 'r', encoding='utf-8') as f:
+                                        all_logs = json.load(f)
+                                    if isinstance(all_logs, list):
+                                        # 统计信息
+                                        errors = [log for log in all_logs if log.get('type') == 'error']
+                                        empty_results = [log for log in all_logs if log.get('type') == 'empty_result']
+                                        print(f"[日志统计] 总日志数: {len(all_logs)}, 错误: {len(errors)}, 空结果: {len(empty_results)}")
+                                        print(f"[保存] 执行日志已保存到 -> {log_file}")
+                                except Exception as e:
+                                    print(f"⚠️ 读取日志文件失败: {e}")
                         
             except Exception as e:
                 print(f"\n❌ 处理任务时出错: {e}")
@@ -642,5 +699,20 @@ if __name__ == "__main__":
 #   --parallel_workers 5 \
 #   --strategy_mode NONE \
 #   --multi_base_urls "http://localhost:8009/v1,http://localhost:8010/v1,http://localhost:8012/v1"
+#
+# 启用执行日志记录（记录所有错误和空结果）：
+# python workflows/mcts_v1/test/test_mcts.py \
+#   --ppl_file data/subset_ppl_dev_python.json \
+#   --sql_out workflows/mcts_v1/test/out/test_with_logs_sql.txt \
+#   --json_out workflows/mcts_v1/test/out/test_with_logs_result.json \
+#   --gold_file data/sub_sampled_bird_dev_set.json \
+#   --parallel_workers 5 \
+#   --log_dir workflows/mcts_v1/test/out/execution_logs \
+#   --qid 25
+# 
+# 日志文件说明：
+# - 每个问题会生成独立的日志文件：execution_log_{question_id}.jsonl
+# - 所有任务完成后会生成汇总文件：execution_logs_summary.json
+# - 日志包含：错误信息、空结果、对应的SQL语句、执行上下文等
 
 

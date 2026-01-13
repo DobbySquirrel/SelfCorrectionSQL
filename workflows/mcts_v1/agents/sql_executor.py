@@ -3,6 +3,7 @@ SQL执行器智能体（轻量实现）
 """
 from typing import Dict, Any, Optional, List, Tuple
 from ..core.database_connector import DatabaseConnector
+from ..utils.execution_logger import get_global_logger
 import re
 import Levenshtein
 import time
@@ -36,6 +37,7 @@ class SQLExecutor:
 
     def _execute_single_query(self, sql: str, timeout_s: Optional[float] = None, schema_info: Optional[str] = None) -> Dict[str, Any]:
         start_ts = time.time()
+        logger = get_global_logger()
         try:
             # 使用带缓存的执行函数（优化1和2：SQL缓存和标准化）
             from workflows.mcts_v1.utils.sql_exec_helpers import _execute_with_cache
@@ -43,17 +45,63 @@ class SQLExecutor:
             duration = time.time() - start_ts
             # print(f"[监控] SQL执行耗时: {duration:.3f}s, rows={len(df) if df is not None else 0}")
             if df is not None:
+                result_count = len(df)
+                # 记录空结果
+                if result_count == 0 and logger:
+                    logger.log_empty_result(
+                        sql=sql,
+                        execution_type="SQL",
+                        context={'duration': duration, 'schema_info': schema_info}
+                    )
+                # 记录成功执行
+                elif logger:
+                    logger.log_execution(
+                        sql=sql,
+                        result_count=result_count,
+                        execution_type="SQL",
+                        success=True,
+                        context={'duration': duration}
+                    )
                 return {'valid': True, 'query_result': df.to_dict(orient='records'), 'error': None}
             
             # 如果执行失败，检查是否是列名错误，添加列名建议
             error_msg = err if err else "Unknown error"
             enhanced_error = self._enhance_column_error_message(error_msg, schema_info, sql)
+            # 记录数据库执行错误（包含原始错误信息和增强后的错误信息）
+            if logger:
+                logger.log_error(
+                    sql=sql,
+                    error=error_msg,  # 记录原始错误信息，便于分析
+                    execution_type="SQL",
+                    context={
+                        'duration': time.time() - start_ts, 
+                        'schema_info': schema_info, 
+                        'original_error': error_msg,
+                        'enhanced_error': enhanced_error,  # 同时保存增强后的错误信息
+                        'error_type': self._classify_error_type(error_msg)  # 错误类型分类
+                    }
+                )
             return {'valid': False, 'query_result': [], 'error': enhanced_error}
         except Exception as e:
             duration = time.time() - start_ts
             # print(f"[监控] SQL执行异常，耗时: {duration:.3f}s, error={e}")
             error_msg = str(e)
             enhanced_error = self._enhance_column_error_message(error_msg, schema_info, sql)
+            # 记录异常错误（包含原始错误信息和增强后的错误信息）
+            if logger:
+                logger.log_error(
+                    sql=sql,
+                    error=error_msg,  # 记录原始错误信息
+                    execution_type="SQL",
+                    context={
+                        'duration': duration, 
+                        'schema_info': schema_info, 
+                        'original_error': error_msg,
+                        'enhanced_error': enhanced_error,
+                        'exception_type': type(e).__name__,
+                        'error_type': self._classify_error_type(error_msg)
+                    }
+                )
             return {'valid': False, 'query_result': [], 'error': enhanced_error}
     
     def execute_with_auto_fix(self, node, cte: str, schema_info: str, timeout_s: Optional[float] = None) -> Tuple[Dict[str, Any], Optional[str]]:
@@ -125,6 +173,35 @@ class SQLExecutor:
             return None
     
     
+    
+    def _classify_error_type(self, error_msg: str) -> str:
+        """
+        分类错误类型
+        
+        Args:
+            error_msg: 错误消息
+            
+        Returns:
+            错误类型：'no_such_column', 'no_such_table', 'ambiguous', 'timeout', 'syntax_error', 'other'
+        """
+        error_lower = error_msg.lower()
+        
+        if 'no such column' in error_lower:
+            return 'no_such_column'
+        elif 'no such table' in error_lower or 'table' in error_lower and 'not found' in error_lower:
+            return 'no_such_table'
+        elif 'ambiguous' in error_lower:
+            return 'ambiguous'
+        elif 'timeout' in error_lower or 'timed out' in error_lower or '超时' in error_msg:
+            return 'timeout'
+        elif 'syntax error' in error_lower or 'syntax' in error_lower:
+            return 'syntax_error'
+        elif 'foreign key' in error_lower:
+            return 'foreign_key_error'
+        elif 'unique constraint' in error_lower or 'duplicate' in error_lower:
+            return 'constraint_error'
+        else:
+            return 'other'
     
     def _enhance_column_error_message(self, error_msg: str, schema_info: Optional[str] = None, sql: str = "") -> str:
         """

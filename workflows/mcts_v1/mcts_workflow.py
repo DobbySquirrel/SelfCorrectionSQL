@@ -497,8 +497,7 @@ class MCTSWorkflow:
                             # 尝试从错误信息中提取列名，并查找该列在schema中的实际位置
                             # 检查是否是列名错误（支持多种错误格式）
                             is_column_error = (
-                                'no such column' in error.lower() or 
-                                ('column' in error.lower() and ('not found' in error.lower() or 'unknown' in error.lower()))
+                                'no such column' in error.lower()
                             )
                             
                             if is_column_error:

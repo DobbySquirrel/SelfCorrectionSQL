@@ -5,7 +5,7 @@
 """
 
 import autogen
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import Levenshtein
 import concurrent.futures
 import threading
@@ -103,6 +103,64 @@ class CompleteSQLGenerator:
 14. **SQLite Functions Only:** Use only functions available in SQLite.
 15. **Date Processing:** Utilize `STRFTIME()` for date manipulation (e.g., `STRFTIME('%Y', SOMETIME)` to extract the year)."""
 
+    def _sort_string_values(self, values: List[Any]) -> List[Any]:
+        """
+        智能排序字符串值
+        
+        对于时间格式（如 '1:40.119'），按时间顺序排序
+        对于其他字符串，按字母顺序排序
+        
+        Args:
+            values: 字符串值列表
+            
+        Returns:
+            排序后的值列表
+        """
+        if not values:
+            return []
+        
+        def try_parse_time(value_str: str) -> Optional[float]:
+            """
+            尝试解析时间格式字符串（如 '1:40.119'）
+            返回秒数，如果无法解析则返回None
+            """
+            try:
+                # 匹配时间格式：M:SS.mmm 或 MM:SS.mmm
+                import re
+                time_pattern = r'(\d+):(\d+)\.(\d+)'
+                match = re.match(time_pattern, value_str)
+                if match:
+                    minutes = int(match.group(1))
+                    seconds = int(match.group(2))
+                    milliseconds = int(match.group(3))
+                    total_seconds = minutes * 60 + seconds + milliseconds / 1000.0
+                    return total_seconds
+            except Exception:
+                pass
+            return None
+        
+        # 尝试解析时间格式
+        time_values = []
+        non_time_values = []
+        
+        for v in values:
+            v_str = str(v)
+            time_seconds = try_parse_time(v_str)
+            if time_seconds is not None:
+                time_values.append((v, time_seconds))
+            else:
+                non_time_values.append(v)
+        
+        # 时间值按时间顺序排序
+        time_values.sort(key=lambda x: x[1])
+        sorted_time_values = [v for v, _ in time_values]
+        
+        # 非时间值按字母顺序排序
+        non_time_values.sort(key=lambda x: str(x).lower())
+        
+        # 合并：先返回时间值，再返回非时间值
+        return sorted_time_values + non_time_values
+    
     def _find_relevant_values(self, values: List[Any], question: str, top_n: int = 3) -> List[Any]:
         """
         找到与自然语言问题最相关的数据值
@@ -229,17 +287,19 @@ class CompleteSQLGenerator:
                             # 收集该列的所有值（仅从前20行）
                             col_values = [row[col] for row in query_result_limited if row.get(col) is not None]
                             if col_values:
-                                # 判断列的数据类型：如果是数字类型，直接排序；如果是字符串，使用相似度
-                                is_numeric = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in col_values)
+                                # 获取所有唯一值（不限制数量，用于排序）
+                                unique_values = list(set(col_values))
+                                
+                                # 判断列的数据类型：如果是数字类型，直接排序；如果是字符串，先排序
+                                is_numeric = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in unique_values)
                                 
                                 if is_numeric:
-                                    # 数字类型：按顺序排序，取前3个
-                                    unique_values = list(set(col_values))
-                                    sorted_values = sorted(unique_values)[:3]
-                                    relevant_values = sorted_values
+                                    # 数字类型：按顺序排序，展示所有值
+                                    relevant_values = sorted(unique_values)
                                 else:
-                                    # 字符串类型：使用相似度计算选择最相关的值
-                                    relevant_values = self._find_relevant_values(col_values, question, top_n=3)
+                                    # 字符串类型：先排序所有值，展示所有值
+                                    # 尝试智能排序：对于时间格式等特殊字符串，按时间排序；其他按字母顺序
+                                    relevant_values = self._sort_string_values(unique_values)
                                 
                                 # 如果是字符串类型，用单引号括起来
                                 formatted_values = [f"'{v}'" if isinstance(v, str) else str(v) for v in relevant_values]

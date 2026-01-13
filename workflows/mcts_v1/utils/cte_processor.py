@@ -8,6 +8,7 @@ import re
 from typing import Dict, List, Any, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from .mcts_helpers import MCTSUtils
+from .execution_logger import get_global_logger
 from ..core.mcts_node import MCTSNode
 import time as _time_for_timing
 
@@ -33,6 +34,35 @@ class CTEProcessor:
         self.timing_dict = timing_dict
         self.cte_probe_limit = cte_probe_limit
         self.cte_probe_limit = cte_probe_limit
+    
+    def _classify_error_type(self, error_msg: str) -> str:
+        """
+        分类错误类型
+        
+        Args:
+            error_msg: 错误消息
+            
+        Returns:
+            错误类型：'no_such_column', 'no_such_table', 'ambiguous', 'timeout', 'syntax_error', 'other'
+        """
+        error_lower = error_msg.lower()
+        
+        if 'no such column' in error_lower:
+            return 'no_such_column'
+        elif 'no such table' in error_lower or 'table' in error_lower and 'not found' in error_lower:
+            return 'no_such_table'
+        elif 'ambiguous' in error_lower:
+            return 'ambiguous'
+        elif 'timeout' in error_lower or 'timed out' in error_lower or '超时' in error_msg:
+            return 'timeout'
+        elif 'syntax error' in error_lower or 'syntax' in error_lower:
+            return 'syntax_error'
+        elif 'foreign key' in error_lower:
+            return 'foreign_key_error'
+        elif 'unique constraint' in error_lower or 'duplicate' in error_lower:
+            return 'constraint_error'
+        else:
+            return 'other'
     
     def deduplicate_cte_variants(
         self, 
@@ -118,7 +148,32 @@ class CTEProcessor:
                     error_msg = "执行失败或超时"
                 # 打印简化的错误信息
                 print(f"[CTE执行失败] 错误: {error_msg}")
+                # 记录CTE执行错误（包含原始错误信息和错误类型）
+                logger = get_global_logger()
+                if logger:
+                    # 分类错误类型
+                    error_type = self._classify_error_type(error_msg)
+                    logger.log_error(
+                        sql=exec_sql,
+                        error=error_msg,  # 记录原始错误信息
+                        execution_type="CTE",
+                        context={
+                            'cte': cte_used, 
+                            'node_depth': node.depth if node else None,
+                            'error_type': error_type,
+                            'original_error': error_msg
+                        }
+                    )
                 return cte_used, res, None, {'cte': cte_used, 'error': error_msg}, exec_sql
+            # 记录空结果
+            if bucket_key == "empty_result":
+                logger = get_global_logger()
+                if logger:
+                    logger.log_empty_result(
+                        sql=exec_sql,
+                        execution_type="CTE",
+                        context={'cte': cte_used, 'node_depth': node.depth if node else None}
+                    )
             return cte_used, res, bucket_key, None, exec_sql
         
         # 并行执行所有非 <END> CTE
@@ -133,7 +188,7 @@ class CTEProcessor:
         
         # 限制CTE执行的并行数，避免过多并发导致数据库连接竞争
         # 即使外层有多个问题并行处理，每个问题内部的CTE执行也应该限制在较小值
-        cte_exec_max_workers = min(self.max_workers, 3)  # 最多3个CTE并行执行，避免数据库连接竞争
+        cte_exec_max_workers = min(self.max_workers, 5)  # 最多5个CTE并行执行，避免数据库连接竞争
         
         with ThreadPoolExecutor(max_workers=cte_exec_max_workers) as executor:
             futures = [executor.submit(worker, c) for c in non_end_ctes]

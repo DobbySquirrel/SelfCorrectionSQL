@@ -7,11 +7,42 @@ SQL结果处理器
 from typing import Dict, List, Optional, Tuple, Any
 from .mcts_helpers import MCTSUtils
 from .sql_exec_helpers import execute_sqls_parallel
+from .execution_logger import get_global_logger
 import time as _time_for_timing
 
 
 class SQLResultProcessor:
     """SQL结果处理工具类"""
+    
+    @staticmethod
+    def _classify_error_type(error_msg: str) -> str:
+        """
+        分类错误类型
+        
+        Args:
+            error_msg: 错误消息
+            
+        Returns:
+            错误类型：'no_such_column', 'no_such_table', 'ambiguous', 'timeout', 'syntax_error', 'other'
+        """
+        error_lower = error_msg.lower()
+        
+        if 'no such column' in error_lower:
+            return 'no_such_column'
+        elif 'no such table' in error_lower or 'table' in error_lower and 'not found' in error_lower:
+            return 'no_such_table'
+        elif 'ambiguous' in error_lower:
+            return 'ambiguous'
+        elif 'timeout' in error_lower or 'timed out' in error_lower or '超时' in error_msg:
+            return 'timeout'
+        elif 'syntax error' in error_lower or 'syntax' in error_lower:
+            return 'syntax_error'
+        elif 'foreign key' in error_lower:
+            return 'foreign_key_error'
+        elif 'unique constraint' in error_lower or 'duplicate' in error_lower:
+            return 'constraint_error'
+        else:
+            return 'other'
     
     @staticmethod
     def execute_and_process_sqls(
@@ -36,7 +67,7 @@ class SQLResultProcessor:
         """
         # 限制SQL执行的并行数，避免过多并发导致数据库连接竞争
         # 即使外层有多个问题并行处理，每个问题内部的SQL执行也应该限制在较小值
-        sql_exec_max_workers = min(max_workers, 3)  # 最多3个SQL并行执行，避免数据库连接竞争
+        sql_exec_max_workers = min(max_workers, 5)  # 最多5个SQL并行执行，避免数据库连接竞争
         
         print(f"{context_prefix} 正在并行执行 {len(sql_variants)} 个SQL（超时={timeout_s}s，最大并行数={sql_exec_max_workers}）...")
         
@@ -46,12 +77,51 @@ class SQLResultProcessor:
         exec_elapsed = _time_for_timing.time() - exec_start
         
         timeout_count = 0
-        for (result, error) in parallel_results:
+        logger = get_global_logger()
+        for idx, (result, error) in enumerate(parallel_results):
+            sql = sql_variants[idx] if idx < len(sql_variants) else ""
             if result is not None and not error:
+                # 检查结果是否为空
+                try:
+                    result_list = result.to_dict(orient='records') if hasattr(result, 'to_dict') else []
+                    result_count = len(result_list) if isinstance(result_list, list) else 0
+                    # 记录空结果
+                    if result_count == 0 and logger:
+                        logger.log_empty_result(
+                            sql=sql,
+                            execution_type="SQL_VARIANT",
+                            context={'context_prefix': context_prefix, 'variant_index': idx}
+                        )
+                    # 记录成功执行
+                    elif logger:
+                        logger.log_execution(
+                            sql=sql,
+                            result_count=result_count,
+                            execution_type="SQL_VARIANT",
+                            success=True,
+                            context={'context_prefix': context_prefix, 'variant_index': idx}
+                        )
+                except Exception:
+                    pass
                 execution_results.append({'valid': True, 'query_result': result})
             else:
                 error_msg = str(error) if error else 'unknown error'
                 execution_results.append({'valid': False, 'error': error_msg})
+                # 记录SQL执行错误（包含原始错误信息和错误类型）
+                if logger:
+                    # 分类错误类型
+                    error_type = SQLResultProcessor._classify_error_type(error_msg)
+                    logger.log_error(
+                        sql=sql,
+                        error=error_msg,  # 记录原始错误信息
+                        execution_type="SQL_VARIANT",
+                        context={
+                            'context_prefix': context_prefix, 
+                            'variant_index': idx,
+                            'error_type': error_type,
+                            'original_error': error_msg
+                        }
+                    )
                 # 检查是否为超时错误
                 error_lower = error_msg.lower()
                 if '超时' in error_msg or 'timeout' in error_lower or 'timed out' in error_lower:

@@ -503,7 +503,7 @@ class SimpleRolloutWorkflow:
         non_end_ctes = [cte for cte in cte_variants if cte != "<END>"]
         
         if non_end_ctes:
-            print(f"[CTE执行] 开始执行 {len(non_end_ctes)} 个CTE变体（并行度: {min(self.max_workers, 3)}）...")
+            print(f"[CTE执行] 开始执行 {len(non_end_ctes)} 个CTE变体（并行度: {min(self.max_workers, 5)}）...")
         
         def worker(one_cte: str):
             # 构建一个简单的node对象用于build_executable_cte_sql
@@ -642,7 +642,7 @@ class SimpleRolloutWorkflow:
         _exec_t0 = _time_for_timing.time()
         # 限制CTE执行的并行数，避免过多并发导致数据库连接竞争
         # 即使外层有多个问题并行处理，每个问题内部的CTE执行也应该限制在较小值
-        cte_exec_max_workers = min(self.max_workers, 3)  # 最多3个CTE并行执行，避免数据库连接竞争
+        cte_exec_max_workers = min(self.max_workers, 5)  # 最多5个CTE并行执行，避免数据库连接竞争
         
         with ThreadPoolExecutor(max_workers=cte_exec_max_workers) as executor:
             futures = [executor.submit(worker, c) for c in non_end_ctes]
@@ -782,7 +782,7 @@ class SimpleRolloutWorkflow:
         """执行SQL并计算奖励"""
         # 限制SQL执行的并行数，避免过多并发导致数据库连接竞争
         # 即使外层有多个问题并行处理，每个问题内部的SQL执行也应该限制在较小值
-        sql_exec_max_workers = min(self.max_workers, 3)  # 最多3个SQL并行执行，避免数据库连接竞争
+        sql_exec_max_workers = min(self.max_workers, 5)  # 最多5个SQL并行执行，避免数据库连接竞争
         print(f"[SQL执行] 正在并行执行 {len(sql_variants)} 个SQL（超时={self.sql_timeout_s}s，最大并行数={sql_exec_max_workers}）...")
         # 并行执行
         exec_start = _time_for_timing.time()
