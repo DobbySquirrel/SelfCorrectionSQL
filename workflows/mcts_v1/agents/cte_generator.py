@@ -88,20 +88,63 @@ class CTEGenerator:
 
 **Task: Based on the provided natural language question, database schema and Evidence/Additional Context, do the generation.
 
-**Two Possible Outputs**:
-1. **If the last CTE's returned content answers the question** → Output:
+**CRITICAL: Always check the execution results of the last CTE before deciding to output <END>.**
+- If the last CTE execution FAILED or returned EMPTY results, you MUST generate a new CTE to fix the issue
+- Execution results are FACTS - if they show errors or empty results, the question is NOT answered yet
+- Only when the last CTE executed successfully AND contains all required information should you consider outputting <END>
+
+**Decision Logic - When to Output <END> vs Generate New CTE**:
+
+**ONLY output <END> when ALL of the following conditions are met:**
+1. The last CTE executed SUCCESSFULLY (no errors, no empty results)
+2. The last CTE contains ALL information needed to answer the question COMPLETELY
+3. For compound questions requiring multiple pieces of information, the last CTE must be a MERGING CTE that JOINs all separate CTEs together in a single result set
+4. All required information is present and correctly formatted in the final result
+
+**MUST generate a new CTE (DO NOT output <END>) when ANY of the following is true:**
+1. The last CTE execution FAILED (SQL error) → 
+   - **If the error is a CTE column reference error** (column doesn't exist in preceding CTEs): You MUST regenerate the COMPLETE CTE chain from Step 0 to the current step, ensuring all columns are properly propagated through the chain
+   - **If the error is other types** (e.g., table/column not found in schema, syntax error): Generate a repair/exploratory CTE
+2. The last CTE returned EMPTY results unexpectedly → Generate an exploratory CTE to find the correct format/column
+3. You have separate CTEs for different parts of a compound question but NO merging CTE yet → Generate a merging CTE that JOINs all separate CTEs
+4. The last CTE only contains PARTIAL information → Continue generating CTEs until ALL information is gathered and merged
+5. Execution results indicate string literal mismatch or wrong column selection → Generate an exploratory CTE
+
+**Example - When NOT to output <END>:**
+- Question: "Which bond type is majority AND is it carcinogenic?"
+- You have: `majority_bond_type` CTE (successful) and `carcinogenic_status` CTE (returned empty result)
+- **WRONG**: Outputting <END> because you have majority_bond_type
+- **CORRECT**: Generate a new exploratory CTE to fix the carcinogenic_status query (check correct column name, format, etc.), then generate a merging CTE, then output <END>
+
+**Output Format**:
+
+1. **If ALL conditions for <END> are met** → Output:
 ```sql
 <END>
 ```
 
-2. **If continuation is needed** → Generate a new CTE.
-```sql
-WITH new_cte_name AS (
-    SELECT ...
-    FROM ...
-    ...
-)
-```
+2. **If ANY condition requires continuation** → Generate a new CTE:
+   - **Normal case**: Generate a single new CTE:
+   ```sql
+   WITH new_cte_name AS (
+       SELECT ...
+       FROM ...
+       ...
+   )
+   ```
+   - **Special case - CTE column reference error**: If the error indicates a column was referenced that doesn't exist in preceding CTEs, you MUST regenerate the COMPLETE CTE chain from Step 0:
+   ```sql
+   WITH cte1 AS (
+       SELECT ...
+       FROM ...
+   ),
+   cte2 AS (
+       SELECT ...
+       FROM cte1
+       ...
+   ),
+   ...
+   ```
 
 **Generation Rules**:
 - Priority: Execution Results > Evidence. Execution Results are FACTS - use exact values, formats, column names. Evidence/Additional Context are hints - verify against execution results first
@@ -109,6 +152,11 @@ WITH new_cte_name AS (
 - You can reference preceding CTE names. I will add them in the executor, you don't need to repeat them.
 - You MUST use a NEW, UNUSED CTE name for each CTE you generate.
 - Must use the complete column names provided in the schema. Column names containing spaces, parentheses, or other special characters must be wrapped in backticks
+- **CRITICAL: Do NOT use table aliases for CTEs.** When referencing a CTE in FROM clause, use the CTE name directly without aliasing (e.g., `FROM cte1` NOT `FROM cte1 c`). Only use column names directly from the CTE (e.g., `SELECT column_name FROM cte1` NOT `SELECT c.column_name FROM cte1 c`).
+- **CRITICAL: NEVER output <END> if the last CTE failed or returned empty results.** You MUST generate a new exploratory/repair CTE to fix the issue.
+- **CRITICAL: For CTE column reference errors** (when a column doesn't exist in preceding CTEs), you MUST regenerate the COMPLETE CTE chain from Step 0, ensuring all columns are properly propagated. This is different from generating a single new CTE.
+- **CRITICAL: For compound questions requiring multiple pieces of information, you MUST generate a final merging CTE that combines all required information before outputting <END>.** If the question asks for multiple things (e.g., "What is X AND what is Y?"), and you have separate CTEs for each part, you MUST create a final CTE that JOINs all the separate CTEs together to produce a single result set containing all required information.
+- **CRITICAL: If execution results show "String Literal Mismatch" or "Wrong Column Selection" or "returned empty result set", you MUST generate an exploratory CTE to investigate and fix the issue. DO NOT output <END> in this case.**
 
 **Database Admin Instructions (Must Strictly Adhere):**
 1.  **SELECT Clause:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values. When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps. Do NOT drop columns that are required for later operations.
@@ -147,17 +195,21 @@ WITH new_cte_name AS (
         
         # 首先检查是否包含<END>标记
         if "<END>" in response:
+            print(f"[CTE提取] 检测到<END>标记")
             return "<END>"
         
         # 尝试从代码块中提取
         code_block_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL)
         if code_block_match:
             raw_text = code_block_match.group(1).strip()
+            print(f"[CTE提取] 从SQL代码块中提取，代码块长度: {len(raw_text)} 字符")
         else:
             # 如果没有代码块，使用整个响应文本
             raw_text = response.strip()
+            print(f"[CTE提取] 未找到SQL代码块，使用整个响应文本，长度: {len(raw_text)} 字符")
         
         if not raw_text or 'WITH' not in raw_text.upper():
+            print(f"[CTE提取] ⚠️ 未找到WITH关键字或文本为空")
             return ""
         
         # 清理：移除末尾的分号
@@ -167,9 +219,11 @@ WITH new_cte_name AS (
         # 找到 WITH name AS ( 的位置
         with_match = re.search(r'WITH\s+(\w+)\s+AS\s*\(', raw_text, re.IGNORECASE)
         if not with_match:
+            print(f"[CTE提取] ⚠️ 未找到WITH name AS (模式")
             return ""
         
         cte_name = with_match.group(1)
+        print(f"[CTE提取] 找到CTE名称: {cte_name}")
         paren_start = with_match.end() - 1  # AS 后面的 ( 的位置
         
         # 使用平衡括号算法找到匹配的右括号（考虑字符串中的括号）
@@ -222,8 +276,133 @@ WITH new_cte_name AS (
         
         # 系统自动添加SELECT语句
         full_cte = f"{cte_text}\nSELECT * FROM {cte_name};"
+        print(f"[CTE提取] 成功提取CTE，CTE文本长度: {len(cte_text)} 字符，完整CTE长度: {len(full_cte)} 字符")
         
         return full_cte
+    
+    def _extract_and_split_cte_chain(self, response) -> List[str]:
+        """
+        从响应中提取完整的CTE链，并拆分为多个单独的CTE
+        
+        当LLM返回完整的CTE链时（如 WITH cte1 AS (...), cte2 AS (...), cte3 AS (...)），
+        需要拆分成多个单独的CTE，每个CTE单独执行，保持格式统一。
+        
+        Args:
+            response: LLM响应内容
+            
+        Returns:
+            CTE列表，每个CTE都是独立的（包含WITH ... AS (...) SELECT * FROM ...）
+        """
+        # 处理autogen返回的不同类型
+        if isinstance(response, dict):
+            response = response.get('content', '') or str(response)
+        elif not isinstance(response, str):
+            response = str(response)
+        
+        # 首先检查是否包含<END>标记
+        if "<END>" in response:
+            print(f"[CTE链提取] 检测到<END>标记")
+            return ["<END>"]
+        
+        # 尝试从代码块中提取
+        code_block_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL)
+        if code_block_match:
+            raw_text = code_block_match.group(1).strip()
+            print(f"[CTE链提取] 从SQL代码块中提取，代码块长度: {len(raw_text)} 字符")
+        else:
+            # 如果没有代码块，使用整个响应文本
+            raw_text = response.strip()
+            print(f"[CTE链提取] 未找到SQL代码块，使用整个响应文本，长度: {len(raw_text)} 字符")
+        
+        if not raw_text or 'WITH' not in raw_text.upper():
+            print(f"[CTE链提取] ⚠️ 未找到WITH关键字或文本为空")
+            return []
+        
+        # 清理：移除末尾的分号
+        raw_text = raw_text.rstrip(';').strip()
+        
+        # 查找第一个WITH关键字的位置
+        first_with_match = re.search(r'WITH\s+', raw_text, re.IGNORECASE)
+        if not first_with_match:
+            return []
+        
+        # 从第一个WITH开始提取
+        cte_chain_text = raw_text[first_with_match.start():]
+        
+        # 查找所有CTE定义：name AS (...)
+        # 第一个CTE有WITH关键字，后续CTE用逗号分隔
+        cte_pattern = r'(?:WITH\s+)?(\w+)\s+AS\s*\('
+        cte_matches = list(re.finditer(cte_pattern, cte_chain_text, re.IGNORECASE))
+        
+        if not cte_matches:
+            print(f"[CTE链提取] ⚠️ 未找到任何CTE定义")
+            return []
+        
+        print(f"[CTE链提取] 找到 {len(cte_matches)} 个CTE定义")
+        cte_list = []
+        
+        # 提取每个CTE
+        for i, match in enumerate(cte_matches):
+            cte_name = match.group(1)
+            paren_start = match.end() - 1  # AS 后面的 ( 的位置
+            
+            # 使用平衡括号算法找到匹配的右括号
+            paren_count = 0
+            in_string = False
+            string_char = None
+            
+            paren_end = None
+            # 从当前CTE的括号开始，找到匹配的右括号
+            for j in range(paren_start, len(cte_chain_text)):
+                char = cte_chain_text[j]
+                
+                # 处理字符串边界
+                if char in ("'", '"'):
+                    if not in_string:
+                        in_string = True
+                        string_char = char
+                    elif char == string_char:
+                        # 检查是否是转义的引号（SQL中单引号用 '' 转义，双引号用 "" 转义）
+                        if j + 1 < len(cte_chain_text) and cte_chain_text[j + 1] == string_char:
+                            j += 1  # 跳过转义的引号
+                        else:
+                            in_string = False
+                            string_char = None
+                
+                # 只在非字符串状态下计算括号
+                if not in_string:
+                    if char == '(':
+                        paren_count += 1
+                    elif char == ')':
+                        paren_count -= 1
+                        if paren_count == 0:
+                            paren_end = j
+                            break
+            
+            if paren_end is None:
+                # 括号不匹配，跳过这个CTE
+                print(f"⚠️ _extract_and_split_cte_chain: CTE {cte_name} 括号不匹配，跳过")
+                continue
+            
+            # 提取完整的CTE定义
+            # 第一个CTE包含WITH关键字，后续CTE不包含
+            if i == 0:
+                # 第一个CTE：包含WITH关键字
+                cte_text = cte_chain_text[match.start():paren_end + 1].strip()
+            else:
+                # 后续CTE：不包含WITH关键字，需要添加
+                cte_def = cte_chain_text[match.start():paren_end + 1].strip()
+                # 移除可能的逗号前缀
+                cte_def = re.sub(r'^,\s*', '', cte_def)
+                cte_text = f"WITH {cte_def}"
+            
+            # 系统自动添加SELECT语句
+            full_cte = f"{cte_text}\nSELECT * FROM {cte_name};"
+            print(f"[CTE链提取] CTE #{i+1} ({cte_name}): CTE文本长度 {len(cte_text)} 字符，完整CTE长度 {len(full_cte)} 字符")
+            cte_list.append(full_cte)
+        
+        print(f"[CTE链提取] 成功提取 {len(cte_list)} 个CTE")
+        return cte_list
     
     def _remove_foreign_key(self, schema_info: str) -> str:
         """
@@ -511,20 +690,6 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     formatted_info.append(f"**[CRITICAL LOGIC ERROR] Type: {error_type or 'Unknown'}**")
                     formatted_info.append(f"--------------------------------------------------")
                     formatted_info.append(f"**Diagnosis**: {feedback}")
-                    
-                    # 根据错误类型给出具体的"处方" (Actionable Advice)
-                    advice = ""
-                    if error_type and ("Fan-out" in str(error_type) or "1:N" in str(error_type) or "1:N" in str(feedback)):
-                        advice = ("**How to Fix**: You are joining a 'One' side table with a 'Many' side table without aggregation. "
-                                  "This causes row duplication.\n"
-                                  "   1. Use `GROUP BY` on the primary key of the 'One' side table.\n"
-                                  "   2. Or use aggregation functions (SUM, AVG) on the 'Many' side columns.")
-                    elif error_type and "Cartesian" in str(error_type):
-                        advice = ("**How to Fix**: The result size is explosively large. "
-                                  "You likely missed a JOIN condition or joined unrelated tables. Please check your `ON` clause.")
-                    
-                    if advice:
-                        formatted_info.append(advice)
                 # 如果有警告但通过检查
                 if is_valid and feedback and feedback != "Pass" and "warnings" in feedback.lower():
                     formatted_info.append(f"**Note**: {feedback}")
@@ -840,6 +1005,7 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         # 构建失败尝试提示（如果有）
         failed_attempts_section = ""
         column_hints = []  # 收集所有列名到表的映射提示
+        requires_full_cte_chain = False  # 是否需要重新生成完整CTE链
         
         if failed_attempts and len(failed_attempts) > 0:
             # 处理失败信息：可能是字符串（旧格式）或字典（新格式，包含错误信息）
@@ -853,6 +1019,11 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     # 过滤掉无效的重复命名错误
                     if error and error.lower().find('duplicate with table name') != -1:
                         continue
+                    
+                    # 检查是否需要重新生成完整CTE链
+                    if item.get('requires_full_cte_chain', False):
+                        requires_full_cte_chain = True
+                        print(f"[CTE生成] ✅ 检测到 requires_full_cte_chain=True，将重新生成完整CTE链")
                     
                     # 检查是否有列名到表的映射提示
                     column_hint = item.get('column_hint')
@@ -885,11 +1056,52 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     unique_hints = list(set(column_hints))
                     column_hints_section = f"\n\n**⚠️ Column Location Hints (CRITICAL):**\n" + "\n".join(f"- {hint}" for hint in unique_hints)
                 
+                # 如果需要重新生成完整CTE链，添加特殊提示
+                full_chain_instruction = ""
+                if requires_full_cte_chain:
+                    print(f"[CTE生成] ✅ 添加完整CTE链重新生成指令到prompt")
+                    full_chain_instruction = """
+**⚠️ CRITICAL INSTRUCTION - OVERRIDES GENERAL RULES ⚠️**
+
+The error indicates that a column was referenced that doesn't exist in the preceding CTEs. This is a **CTE column reference error**.
+
+**You MUST regenerate the COMPLETE CTE chain from Step 0 to the current step** (NOT just a single new CTE). This instruction OVERRIDES the general rule of "generating a new CTE" - in this case, you must regenerate the ENTIRE chain.
+
+**Requirements:**
+1. Generate ALL CTEs from the first step to the current step in a single response
+2. Each CTE must select all columns that will be needed in subsequent CTEs
+3. Do NOT use table aliases for CTEs (e.g., use `FROM cte1` NOT `FROM cte1 c`)
+4. When referencing columns from CTEs, use the column name directly (e.g., `SELECT column_name FROM cte1` NOT `SELECT c.column_name FROM cte1 c`)
+5. Ensure column names are correctly propagated through the entire CTE chain
+
+**Output Format**: Generate the COMPLETE CTE chain starting from the first CTE:
+```sql
+WITH cte1 AS (
+    SELECT ...
+    FROM ...
+),
+cte2 AS (
+    SELECT ...
+    FROM cte1
+    ...
+),
+cte3 AS (
+    SELECT ...
+    FROM cte2
+    ...
+),
+...
+```
+
+**DO NOT output just a single new CTE. You MUST output the complete chain.**
+
+"""
+                
                 failed_attempts_section = f"""
 * **Previous Failed Attempts (Please avoid generating similar CTEs)**:
 The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
 
-{failed_list}{column_hints_section}
+{failed_list}{column_hints_section}{full_chain_instruction}
 
 """
                 
@@ -975,7 +1187,7 @@ The following CTEs failed during generation or execution in previous attempts. P
                 # 使用默认配置
                 return {'model': model, 'base_url': base_url, 'api_key': api_key}
         
-        def generate_group(group_idx, temperature, group_size):
+        def generate_group(group_idx, temperature, group_size, requires_full_chain_flag):
             """生成单个temperature组的CTE变体（每个线程使用独立的client）"""
             if group_size == 0:
                 return []
@@ -1007,10 +1219,74 @@ The following CTEs failed during generation or execution in previous attempts. P
                 # 提取当前组的CTE
                 group_ctes = []
                 for idx, choice in enumerate(response.choices):
+                    # 打印完整的响应对象信息
+                    print(f"\n{'='*80}")
+                    print(f"[CTE生成] ===== 完整LLM响应对象信息 (temperature={temperature}, choice_idx={idx}) =====")
+                    print(f"{'='*80}")
+                    print(f"Response ID: {response.id}")
+                    print(f"Model: {response.model}")
+                    print(f"Created: {response.created}")
+                    print(f"Choice Index: {idx}")
+                    print(f"Choice Finish Reason: {choice.finish_reason}")
+                    print(f"Choice Index in response: {choice.index}")
+                    
+                    # 打印完整的choice对象信息
+                    print(f"\n[CTE生成] Choice对象完整信息:")
+                    print(f"  - choice对象类型: {type(choice)}")
+                    print(f"  - choice对象属性: {dir(choice)}")
+                    
+                    # 打印完整的message对象信息
+                    print(f"\n[CTE生成] Message对象完整信息:")
+                    print(f"  - message对象类型: {type(choice.message)}")
+                    print(f"  - message对象属性: {dir(choice.message)}")
+                    print(f"  - message.role: {choice.message.role}")
+                    
+                    # 获取完整的消息内容
                     content = choice.message.content
-                    cte = self._extract_cte_from_response(content)
-                    if cte:
-                        group_ctes.append(cte)
+                    print(f"\n[CTE生成] ===== Choice Message Content (原始repr格式，显示所有字符) =====")
+                    print(f"{'='*80}")
+                    print(repr(content))  # 使用repr显示原始字符串，包括所有转义字符、换行符等
+                    print(f"{'='*80}")
+                    print(f"[CTE生成] ===== Choice Message Content (可读格式) =====")
+                    print(f"{'='*80}")
+                    print(content)  # 打印完整内容，不缩略
+                    print(f"{'='*80}")
+                    print(f"[CTE生成] 内容统计信息:")
+                    print(f"  - 总长度: {len(content)} 字符")
+                    print(f"  - 类型: {type(content)}")
+                    print(f"  - 是否包含<END>: {'<END>' in content}")
+                    print(f"  - 是否包含<think>: {'<think>' in content}")
+                    print(f"  - 是否包含WITH: {'WITH' in content.upper() if content else False}")
+                    print(f"  - 行数: {len(content.splitlines()) if content else 0}")
+                    print(f"{'='*80}")
+                    
+                    # 如果需要重新生成完整CTE链，拆分CTE链为多个单独的CTE
+                    if requires_full_chain_flag:
+                        print(f"\n[修正CTE] 检测到 requires_full_chain_flag=True，将拆分CTE链")
+                        cte_list = self._extract_and_split_cte_chain(content)
+                        
+                        print(f"[修正CTE] 拆分后的CTE列表（共 {len(cte_list)} 个，完整格式，不缩略）:")
+                        for i, cte in enumerate(cte_list, 1):
+                            print(f"\n--- CTE #{i} (完整格式) ---")
+                            print(cte)  # 打印完整CTE，不缩略
+                            print(f"--- CTE #{i} 总长度: {len(cte)} 字符 ---\n")
+                        print(f"{'='*80}\n")
+                        
+                        group_ctes.extend(cte_list)
+                    else:
+                        print(f"\n[CTE生成] 正常模式，提取单个CTE")
+                        cte = self._extract_cte_from_response(content)
+                        if cte:
+                            print(f"[CTE生成] 提取后的CTE（完整格式，不缩略）:")
+                            print(f"{'='*80}")
+                            print(cte)  # 打印完整CTE，不缩略
+                            print(f"{'='*80}")
+                            print(f"[CTE生成] 提取后CTE总长度: {len(cte)} 字符\n")
+                            group_ctes.append(cte)
+                        else:
+                            print(f"[CTE生成] ⚠️ 未能从响应中提取CTE")
+                            print(f"[CTE生成] 原始内容预览（前500字符）: {content[:500]}")
+                            print(f"{'='*80}\n")
                 return group_ctes
             except Exception as e:
                 if should_monitor:
@@ -1027,7 +1303,7 @@ The following CTEs failed during generation or execution in previous attempts. P
             for group_idx, temperature in enumerate(temperature_groups):
                 group_size = variants_per_group + (1 if group_idx < remainder else 0)
                 if group_size > 0:
-                    future = executor.submit(generate_group, group_idx, temperature, group_size)
+                    future = executor.submit(generate_group, group_idx, temperature, group_size, requires_full_cte_chain)
                     futures[future] = (group_idx, temperature)
             
             # 收集结果

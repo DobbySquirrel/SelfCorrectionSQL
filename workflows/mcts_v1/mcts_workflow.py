@@ -30,6 +30,7 @@ from .utils.mcts_helpers import MCTSUtils
 from .utils.sql_result_processor import SQLResultProcessor
 from .utils.sql_selector import SQLSelector
 from .utils.cte_processor import CTEProcessor
+from .utils.cte_error_handler import CTEErrorHandler
 from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
 import time as _time_for_timing
 
@@ -229,6 +230,7 @@ class MCTSWorkflow:
         cte_depths = []
         visit_counts = []
         cte_buckets_per_node = []  # 每个节点生成的所有CTE桶信息（用于计算信息熵）
+        repair_info = []  # 记录修正信息：哪些CTE是修正后的，以及修正原因
         
         for node in path:
             if node.cte and node.cte != "<END>":
@@ -237,6 +239,16 @@ class MCTSWorkflow:
                 cte_bucket_counts.append(bucket_count)
                 cte_depths.append(node.depth)
                 visit_counts.append(node.visit_count)
+                
+                # 检查是否是修正后的CTE
+                is_repaired = getattr(node, 'is_repaired', False)
+                repair_reason = getattr(node, 'repair_reason', None)
+                if is_repaired:
+                    repair_info.append({
+                        'cte_index': len(cte_path) - 1,  # CTE在路径中的索引
+                        'depth': node.depth,
+                        'repair_reason': repair_reason or 'CTE列名引用错误，需要重新生成完整CTE链'
+                    })
                 
                 # 收集该节点生成的所有CTE桶信息
                 all_buckets = node.execution_results.get('all_cte_buckets', [])
@@ -281,7 +293,9 @@ class MCTSWorkflow:
             'all_sql_variants': sql_stats.get('all_sql_variants', []),  # 所有SQL变体及其执行结果
             'result_buckets': sql_stats.get('result_buckets', {}),  # SQL结果分桶信息
             'valid_count': sql_stats.get('valid_count', 0),  # 有效SQL数量
-            'error_reason': sql_stats.get('error_reason', None)  # 如果sql_bucket_count为0，记录原因
+            'error_reason': sql_stats.get('error_reason', None),  # 如果sql_bucket_count为0，记录原因
+            'repair_info': repair_info  # 修正信息：记录哪些CTE是修正后的，以及修正原因
+            # 格式：[{'cte_index': int, 'depth': int, 'repair_reason': str}, ...]
         }
         
         return reward, selected_sql, rollout_stats
@@ -478,6 +492,7 @@ class MCTSWorkflow:
                         parent_has_empty_result = (not parent_query_result or len(parent_query_result) == 0)
                 
                 # 记录本次失败的CTE和执行错误（从去重函数返回的失败信息中获取）
+                print(f"[MCTS扩展] 收到failed_info: {len(failed_info)} 条失败记录")
                 if failed_info:
                         # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
                         existing_errors = {
@@ -494,58 +509,46 @@ class MCTSWorkflow:
                                 error = '未知错误'
                             cte = failed_item.get('cte', '').strip()
                             
-                            # 尝试从错误信息中提取列名，并查找该列在schema中的实际位置
-                            # 检查是否是列名错误（支持多种错误格式）
-                            is_column_error = (
-                                'no such column' in error.lower() or 
-                                ('column' in error.lower() and ('not found' in error.lower() or 'unknown' in error.lower()))
-                            )
+                            # 处理列名错误（使用CTEErrorHandler）
+                            if CTEErrorHandler.is_column_error(error):
+                                print(f"[错误处理] 检测到列名错误: {error}")
+                                failed_item = CTEErrorHandler.process_column_error(
+                                    failed_item, current, self.mcts_tree.root
+                                )
+                                # 检查是否标记了requires_full_cte_chain
+                                if failed_item.get('requires_full_cte_chain', False):
+                                    print(f"[错误处理] ✅ 已标记 requires_full_cte_chain=True")
+                                else:
+                                    print(f"[错误处理] ⚠️ 未标记 requires_full_cte_chain (可能是普通列名错误，不是CTE列名引用错误)")
                             
-                            if is_column_error:
-                                # 使用根节点的schema_info（确保使用最新的schema）
-                                schema_info = None
-                                if hasattr(current, 'schema_info') and current.schema_info:
-                                    schema_info = current.schema_info
-                                elif self.mcts_tree.root and hasattr(self.mcts_tree.root, 'schema_info'):
-                                    schema_info = self.mcts_tree.root.schema_info
-                                
-                                if schema_info:
-                                    # 传入CTE以便生成更准确的提示（检测是否在CTE上下文中）
-                                    column_mapping = MCTSUtils.find_column_table_mapping(error, schema_info, cte=cte)
-                                    if column_mapping:
-                                        # 在失败信息中添加列名到表的映射提示
-                                        if 'column_hint' not in failed_item:
-                                            failed_item['column_hint'] = column_mapping['hint']
-                                            failed_item['column_name'] = column_mapping['column']
-                                            failed_item['column_tables'] = column_mapping['tables']
-                                            print(f"[错误处理] ✅ 找到列名映射: {column_mapping['column']} -> {column_mapping['tables']}")
-                                    # else: 未找到映射，可能是列名确实不存在或schema格式问题
-                                # else: 无schema_info可用
-                            
-                            # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
+                            # 基于错误信息去重：如果错误信息已存在，保留已有的（不需要比较CTE长度）
+                            # 失败信息会被传递到失败节点，rollout时会触发修正prompt
                             if error in existing_errors:
-                                # 查找已存在的相同错误信息的项
+                                # 如果错误信息已存在，检查是否需要更新标记（保留requires_full_cte_chain和column_hint）
+                                # 不需要比较CTE长度，错误信息相同就够了，失败信息会被传递到失败节点
                                 for idx, existing_item in enumerate(current._failed_cte_attempts):
                                     if existing_item.get('error', '').strip() == error:
-                                        existing_cte = existing_item.get('cte', '').strip()
-                                        # 如果新的CTE更短，替换（同时保留列名映射信息）
-                                        if len(cte) < len(existing_cte):
-                                            # 如果新项有column_hint但旧项没有，保留新项；如果旧项有但新项没有，保留旧项的column_hint
-                                            if 'column_hint' in failed_item and 'column_hint' not in existing_item:
-                                                current._failed_cte_attempts[idx] = failed_item
-                                            elif 'column_hint' not in failed_item and 'column_hint' in existing_item:
-                                                # 保留旧项的column_hint，但更新其他字段
-                                                failed_item['column_hint'] = existing_item['column_hint']
-                                                failed_item['column_name'] = existing_item.get('column_name')
-                                                failed_item['column_tables'] = existing_item.get('column_tables')
-                                                current._failed_cte_attempts[idx] = failed_item
-                                            else:
-                                                current._failed_cte_attempts[idx] = failed_item
-                                                # 更新deduplicated_failed_info中对应的项
-                                                for d_idx, d_item in enumerate(deduplicated_failed_info):
-                                                    if d_item.get('error', '').strip() == error:
-                                                        deduplicated_failed_info[d_idx] = failed_item
-                                                        break   
+                                        # 如果新项有requires_full_cte_chain标记但旧项没有，更新旧项
+                                        if failed_item.get('requires_full_cte_chain', False) and not existing_item.get('requires_full_cte_chain', False):
+                                            existing_item['requires_full_cte_chain'] = True
+                                            existing_item['is_cte_column_error'] = failed_item.get('is_cte_column_error', False)
+                                        # 如果新项有column_hint但旧项没有，更新旧项
+                                        if 'column_hint' in failed_item and 'column_hint' not in existing_item:
+                                            existing_item['column_hint'] = failed_item['column_hint']
+                                            existing_item['column_name'] = failed_item.get('column_name')
+                                            existing_item['column_tables'] = failed_item.get('column_tables')
+                                        # 更新deduplicated_failed_info中对应的项（保留标记）
+                                        for d_idx, d_item in enumerate(deduplicated_failed_info):
+                                            if d_item.get('error', '').strip() == error:
+                                                # 更新标记，但保留原有的CTE（不需要替换）
+                                                if failed_item.get('requires_full_cte_chain', False):
+                                                    d_item['requires_full_cte_chain'] = True
+                                                    d_item['is_cte_column_error'] = failed_item.get('is_cte_column_error', False)
+                                                if 'column_hint' in failed_item:
+                                                    d_item['column_hint'] = failed_item['column_hint']
+                                                    d_item['column_name'] = failed_item.get('column_name')
+                                                    d_item['column_tables'] = failed_item.get('column_tables')
+                                                break
                                         break
                             else:
                                 # 如果错误信息不存在，直接添加
@@ -569,16 +572,11 @@ class MCTSWorkflow:
                                     error = '未知错误'
                                 cte = failed_item.get('cte', '').strip()
                                 
-                                # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
+                                # 基于错误信息去重：如果错误信息已存在，跳过（不需要比较CTE长度）
                                 if error in existing_errors_retry:
-                                    # 查找已存在的相同错误信息的项
-                                    for idx, existing_item in enumerate(deduplicated_failed_info_retry):
-                                        if existing_item.get('error', '').strip() == error:
-                                            existing_cte = existing_item.get('cte', '').strip()
-                                            # 如果新的CTE更短，替换
-                                            if len(cte) < len(existing_cte):
-                                                deduplicated_failed_info_retry[idx] = failed_item
-                                            break
+                                    # 如果错误信息已存在，跳过重复的错误信息
+                                    # 失败信息会被传递到失败节点，rollout时会触发修正prompt
+                                    continue
                                 else:
                                     # 如果错误信息不存在，直接添加
                                     deduplicated_failed_info_retry.append(failed_item)
@@ -650,15 +648,13 @@ class MCTSWorkflow:
                                 failed_child.execution_results['is_failed'] = True
                                 failed_child.execution_results['error_type'] = error_msg  # 保存错误类型，用于区分
                                 
-                                # 保存失败尝试信息，供下一轮使用
-                                failed_child._failed_cte_attempts = current._failed_cte_attempts.copy() if hasattr(current, '_failed_cte_attempts') else []
+                                # 失败节点只保存自己的失败信息（不复制父节点的失败信息）
+                                # 每个失败节点对应一个错误类型，只包含该错误类型的失败信息
+                                failed_child._failed_cte_attempts = []
                                 
                                 # 将当前错误类型的失败信息添加到失败节点中（去重后的）
+                                existing_combinations_in_failed_node = set()
                                 if failed_items:
-                                    existing_combinations_in_failed_node = {
-                                        (item.get('error', '').strip(), item.get('cte', '').strip()) 
-                                        for item in failed_child._failed_cte_attempts
-                                    }
                                     for failed_item in failed_items:
                                         error = failed_item.get('error', '').strip()
                                         cte = failed_item.get('cte', '').strip()
@@ -677,6 +673,7 @@ class MCTSWorkflow:
                                             if retry_error and combination not in existing_combinations_in_failed_node:
                                                 failed_child._failed_cte_attempts.append(failed_item)
                                                 existing_combinations_in_failed_node.add(combination)
+                                print(f"[失败节点创建] 为错误类型 '{error_msg}' 创建失败节点，包含 {len(failed_child._failed_cte_attempts)} 条失败信息")
                                 
                                 # 失败节点也增加深度（深度+1）
                                 current.add_child(failed_child)
@@ -693,11 +690,144 @@ class MCTSWorkflow:
                         continue
 
             # 3) 仅为"有效且非空"的变体创建子节点；<END> 根据策略保留
-            # 如果成功生成了CTE变体，重置重试计数和失败记录
+            # 如果成功生成了CTE变体，重置重试计数（但保留失败记录，供后续rollout使用）
             if hasattr(current, '_cte_retry_count'):
                 current._cte_retry_count = 0
-            if hasattr(current, '_failed_cte_attempts'):
-                current._failed_cte_attempts = []  # 清空失败记录
+            # 注意：不清空失败记录，即使有成功的CTE，失败信息也应该被保留
+            # 这样后续rollout可以选择失败节点或使用失败信息生成修正CTE
+            # 失败信息会被传递到子节点，或者在rollout到当前节点时使用
+            # if hasattr(current, '_failed_cte_attempts'):
+            #     current._failed_cte_attempts = []  # 不清空失败记录
+            
+            # 即使有成功的CTE，如果有失败信息，也应该处理失败信息并创建失败节点供rollout探索
+            # 这样rollout可以探索不同的路径（成功的CTE路径和失败的CTE路径）
+            if failed_info and unique_cte_variants:
+                print(f"[MCTS扩展] 有成功的CTE但也有失败信息，处理失败信息并创建失败节点供rollout探索")
+                
+                # 首先处理失败信息（添加列名映射和修正标记）
+                # 确保节点有_failed_cte_attempts属性
+                if not hasattr(current, '_failed_cte_attempts'):
+                    current._failed_cte_attempts = []
+                
+                existing_errors = {
+                    item.get('error', '').strip() 
+                    for item in current._failed_cte_attempts
+                }
+                processed_failed_info = []  # 处理后的失败信息列表
+                for failed_item in failed_info:
+                    error = failed_item.get('error', '').strip()
+                    # 过滤掉无效的重复命名错误
+                    if error.lower().find('duplicate with table name') != -1:
+                        continue
+                    if not error:
+                        error = '未知错误'
+                    cte = failed_item.get('cte', '').strip()
+                    
+                    # 处理列名错误（使用CTEErrorHandler）
+                    if CTEErrorHandler.is_column_error(error):
+                        print(f"[错误处理] 检测到列名错误: {error}")
+                        failed_item = CTEErrorHandler.process_column_error(
+                            failed_item, current, self.mcts_tree.root
+                        )
+                        # 检查是否标记了requires_full_cte_chain
+                        if failed_item.get('requires_full_cte_chain', False):
+                            print(f"[错误处理] ✅ 已标记 requires_full_cte_chain=True")
+                        else:
+                            print(f"[错误处理] ⚠️ 未标记 requires_full_cte_chain (可能是普通列名错误，不是CTE列名引用错误)")
+                    
+                    # 基于错误信息去重
+                    if error not in existing_errors:
+                        current._failed_cte_attempts.append(failed_item)
+                        existing_errors.add(error)
+                        processed_failed_info.append(failed_item)
+                    else:
+                        # 如果错误信息已存在，检查是否需要更新标记
+                        for idx, existing_item in enumerate(current._failed_cte_attempts):
+                            if existing_item.get('error', '').strip() == error:
+                                # 如果新项有requires_full_cte_chain标记但旧项没有，更新旧项
+                                if failed_item.get('requires_full_cte_chain', False) and not existing_item.get('requires_full_cte_chain', False):
+                                    existing_item['requires_full_cte_chain'] = True
+                                    existing_item['is_cte_column_error'] = failed_item.get('is_cte_column_error', False)
+                                # 如果新项有column_hint但旧项没有，更新旧项
+                                if 'column_hint' in failed_item and 'column_hint' not in existing_item:
+                                    existing_item['column_hint'] = failed_item['column_hint']
+                                    existing_item['column_name'] = failed_item.get('column_name')
+                                    existing_item['column_tables'] = failed_item.get('column_tables')
+                                # 更新processed_failed_info中的对应项
+                                for p_idx, p_item in enumerate(processed_failed_info):
+                                    if p_item.get('error', '').strip() == error:
+                                        processed_failed_info[p_idx] = existing_item
+                                        break
+                                else:
+                                    processed_failed_info.append(existing_item)
+                                break
+                
+                # 使用处理后的失败信息创建失败节点
+                # 按照错误信息分桶，为每种错误类型创建失败节点
+                error_buckets = {}
+                for failed_item in processed_failed_info:
+                    error_msg = failed_item.get('error', '未知错误').strip()
+                    # 过滤掉无效的重复命名错误
+                    if error_msg and error_msg.lower().find('duplicate with table name') != -1:
+                        continue
+                    # 规范化错误信息（用于分桶）
+                    if not error_msg:
+                        error_msg = '未知错误'
+                    if error_msg not in error_buckets:
+                        error_buckets[error_msg] = []
+                    error_buckets[error_msg].append(failed_item)
+                
+                # 为每种错误类型创建一个失败节点
+                root_schema = self.mcts_tree.root.schema_info if self.mcts_tree.root else current.schema_info
+                created_failed_nodes_with_success = []
+                for error_msg, failed_items in error_buckets.items():
+                    failed_child = MCTSNode(
+                        question=current.question,
+                        schema_info=root_schema,
+                        additional_context=current.additional_context,
+                        parent=current
+                    )
+                    failed_child.cte = ""  # 失败节点没有CTE
+                    
+                    # 构建详细的错误信息
+                    if len(failed_items) > 0:
+                        detailed_error = f"{error_msg} (共{len(failed_items)}个CTE变体失败)"
+                    else:
+                        detailed_error = error_msg
+                    
+                    failed_child.execution_results['cte_result'] = {
+                        'valid': False,
+                        'error': detailed_error
+                    }
+                    failed_child.execution_results['is_failed'] = True
+                    failed_child.execution_results['error_type'] = error_msg
+                    
+                    # 失败节点只保存自己的失败信息（不复制父节点的失败信息）
+                    # 每个失败节点对应一个错误类型，只包含该错误类型的失败信息
+                    failed_child._failed_cte_attempts = []
+                    
+                    # 将当前错误类型的失败信息添加到失败节点中
+                    if failed_items:
+                        existing_combinations_in_failed_node = set()
+                        for failed_item in failed_items:
+                            error = failed_item.get('error', '').strip()
+                            cte = failed_item.get('cte', '').strip()
+                            combination = (error, cte)
+                            if error and combination not in existing_combinations_in_failed_node:
+                                failed_child._failed_cte_attempts.append(failed_item)
+                                existing_combinations_in_failed_node.add(combination)
+                        print(f"[失败节点创建] 为错误类型 '{error_msg}' 创建失败节点，包含 {len(failed_child._failed_cte_attempts)} 条失败信息")
+                    
+                    # 失败节点也增加深度（深度+1）
+                    # 注意：这里不立即添加到树中，而是在锁内批量添加
+                    created_failed_nodes_with_success.append(failed_child)
+                
+                # 在锁内批量添加失败节点
+                with self.mcts_tree.lock:
+                    if not current.is_expanded:  # 再次检查，避免重复创建
+                        for failed_child in created_failed_nodes_with_success:
+                            current.add_child(failed_child)
+                        print(f"[MCTS扩展] 创建了 {len(created_failed_nodes_with_success)} 个失败节点（即使有成功的CTE）")
             
             # 优化：将排序和评估移到锁外，减少锁持有时间
             created_map = {}  # cte文本 -> 子节点
@@ -746,6 +876,13 @@ class MCTSWorkflow:
                     child.execution_results['cte_result'] = exec_res
                     child.execution_results['bucket_count'] = info.get('count', 0)
                     child.execution_results['bucket_variants'] = info.get('variants', [])
+                    
+                    # 检查是否是修正后的CTE（父节点需要重新生成完整CTE链）
+                    if hasattr(current, '_requires_full_cte_chain') and current._requires_full_cte_chain:
+                        child.is_repaired = True
+                        child.repair_reason = getattr(current, '_repair_reason', 'CTE列名引用错误，需要重新生成完整CTE链')
+                        print(f"[修正标记] CTE节点标记为修正: {child.repair_reason}")
+                    
                     children_to_create.append((child, cte_text, info, None))
                 elif exec_res and exec_res.get('valid', False):
                     # 允许基于"有效但结果为空"的候选创建子节点
@@ -767,6 +904,12 @@ class MCTSWorkflow:
                     child.execution_results['bucket_count'] = info.get('count', 0)
                     child.execution_results['bucket_variants'] = info.get('variants', [])
                     child.execution_results['is_empty_result'] = True
+                    
+                    # 检查是否是修正后的CTE（父节点需要重新生成完整CTE链）
+                    if hasattr(current, '_requires_full_cte_chain') and current._requires_full_cte_chain:
+                        child.is_repaired = True
+                        child.repair_reason = getattr(current, '_repair_reason', 'CTE列名引用错误，需要重新生成完整CTE链')
+                        print(f"[修正标记] CTE节点标记为修正: {child.repair_reason}")
                     
                     # 空结果节点允许继续扩展（不再基于连续空结果次数停止）
                     children_to_create.append((child, cte_text, info, None))
@@ -845,15 +988,13 @@ class MCTSWorkflow:
                                 failed_child.execution_results['is_failed'] = True
                                 failed_child.execution_results['error_type'] = error_msg
                                 
-                                # 保存失败尝试信息，供下一轮使用
-                                failed_child._failed_cte_attempts = current._failed_cte_attempts.copy() if hasattr(current, '_failed_cte_attempts') else []
+                                # 失败节点只保存自己的失败信息（不复制父节点的失败信息）
+                                # 每个失败节点对应一个错误类型，只包含该错误类型的失败信息
+                                failed_child._failed_cte_attempts = []
                                 
                                 # 将当前错误类型的失败信息添加到失败节点中（去重后的）
+                                existing_combinations_in_failed_node = set()
                                 if failed_items:
-                                    existing_combinations_in_failed_node = {
-                                        (item.get('error', '').strip(), item.get('cte', '').strip()) 
-                                        for item in failed_child._failed_cte_attempts
-                                    }
                                     for failed_item in failed_items:
                                         error = failed_item.get('error', '').strip()
                                         cte = failed_item.get('cte', '').strip()
@@ -861,6 +1002,7 @@ class MCTSWorkflow:
                                         if error and combination not in existing_combinations_in_failed_node:
                                             failed_child._failed_cte_attempts.append(failed_item)
                                             existing_combinations_in_failed_node.add(combination)
+                                print(f"[失败节点创建] 为错误类型 '{error_msg}' 创建失败节点，包含 {len(failed_child._failed_cte_attempts)} 条失败信息")
                                 
                                 # 失败节点也增加深度（深度+1）
                                 current.add_child(failed_child)
@@ -1255,101 +1397,152 @@ class MCTSWorkflow:
         current = node
         visited_nodes = set()  # 避免重复收集同一节点的失败信息
         
-        # 辅助函数：检查列名错误是否已经被前序CTE修正
-        def is_column_error_fixed(column_name: str, error_msg: str) -> bool:
-            """检查列名错误是否已经被前序CTE修正"""
-            if not column_name:
-                return False
-            
-            # 从当前节点向上遍历，检查是否有成功的CTE包含了这个列名
-            check_node = node
-            while check_node is not None:
-                # 检查当前节点的CTE是否成功执行
-                if hasattr(check_node, 'cte') and check_node.cte and check_node.cte != "<END>":
-                    exec_results = check_node.execution_results.get('cte_result', {})
-                    if exec_results.get('valid', False):
-                        # CTE执行成功，检查是否包含该列名
-                        cte_text = check_node.cte
-                        # 检查列名是否在CTE的SELECT子句中（使用反引号包裹或直接使用）
-                        column_patterns = [
-                            f"`{column_name}`",
-                            f"`{column_name.replace(' ', '')}`",  # 处理空格
-                            f"{column_name}",  # 直接使用（可能被反引号包裹）
-                        ]
-                        for pattern in column_patterns:
-                            if pattern.lower() in cte_text.lower():
-                                # 找到了列名，说明错误已经被修正
-                                return True
-                check_node = check_node.parent
-            return False
+        # 检查是否需要重新生成完整CTE链（用于标记修正）
+        requires_full_cte_chain = False
+        repair_reason = None
         
-        # 向上遍历父节点链，收集所有失败尝试
-        while current is not None and current.node_id not in visited_nodes:
-            visited_nodes.add(current.node_id)
-            # 收集当前节点的失败尝试
-            if hasattr(current, '_failed_cte_attempts') and current._failed_cte_attempts:
-                # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
-                existing_errors = {
-                    item.get('error', '').strip() 
-                    for item in failed_attempts
-                }
-                for attempt in current._failed_cte_attempts:
+        # 使用CTEErrorHandler检查列名错误是否已经被前序CTE修正
+        
+        # 如果当前节点是失败节点，只使用该失败节点自己的失败信息，不向上遍历父节点链
+        if node.execution_results.get('is_failed', False):
+            # 失败节点只使用自己的失败信息
+            if hasattr(node, '_failed_cte_attempts') and node._failed_cte_attempts:
+                failed_attempts = []
+                existing_errors = set()
+                for attempt in node._failed_cte_attempts:
                     error = attempt.get('error', '').strip()
                     if not error:
                         error = '未知错误'
-                    cte = attempt.get('cte', '').strip()
-                    
-                    # 检查是否是列名错误，并且是否已经被修正
-                    column_name = attempt.get('column_name')
-                    if column_name and is_column_error_fixed(column_name, error):
-                        # 错误已经被修正，完全跳过这个失败尝试
-                        continue
-                    
-                    # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
-                    if error in existing_errors:
-                        # 查找已存在的相同错误信息的项
-                        for idx, existing_item in enumerate(failed_attempts):
-                            if existing_item.get('error', '').strip() == error:
-                                existing_cte = existing_item.get('cte', '').strip()
-                                # 如果新的CTE更短，替换（同时保留列名映射信息）
-                                if len(cte) < len(existing_cte):
-                                    # 如果新项有column_hint但旧项没有，保留新项；如果旧项有但新项没有，保留旧项的column_hint
-                                    if 'column_hint' in attempt and 'column_hint' not in existing_item:
-                                        failed_attempts[idx] = attempt
-                                    elif 'column_hint' not in attempt and 'column_hint' in existing_item:
-                                        # 保留旧项的column_hint，但更新其他字段
-                                        attempt['column_hint'] = existing_item['column_hint']
-                                        attempt['column_name'] = existing_item.get('column_name')
-                                        attempt['column_tables'] = existing_item.get('column_tables')
-                                        failed_attempts[idx] = attempt
-                                    else:
-                                        failed_attempts[idx] = attempt
-                                break
-                    else:
-                        # 如果错误信息不存在，直接添加
+                    if error not in existing_errors:
                         failed_attempts.append(attempt)
                         existing_errors.add(error)
-            
-            # 如果当前节点是失败节点，也收集其execution_results中的错误信息
-            # 但优先使用_failed_cte_attempts中的详细信息（包含具体CTE和错误）
-            # 如果_failed_cte_attempts为空，才使用execution_results中的汇总错误
-            if current.execution_results.get('is_failed', False):
-                # 如果已经有_failed_cte_attempts，就不需要再添加汇总错误了
-                if not (hasattr(current, '_failed_cte_attempts') and current._failed_cte_attempts):
-                    cte_result = current.execution_results.get('cte_result', {})
-                    if not cte_result.get('valid', True):
-                        error_msg = cte_result.get('error', '所有CTE变体都执行失败')
-                        # 检查是否已存在相同的错误信息
-                        if not any(item.get('error', '') == error_msg for item in failed_attempts):
-                            failed_attempts.append({
-                                'cte': '',
-                                'error': error_msg
-                            })
-            
-            current = current.parent
+                        
+                        # 检查是否需要重新生成完整CTE链
+                        if attempt.get('requires_full_cte_chain', False):
+                            requires_full_cte_chain = True
+                            if not repair_reason:
+                                error_msg = attempt.get('error', '').strip()
+                                column_name = attempt.get('column_name', '')
+                                if column_name:
+                                    repair_reason = f"CTE列名引用错误: {column_name} ({error_msg})"
+                                else:
+                                    repair_reason = f"CTE列名引用错误: {error_msg}"
+            else:
+                # 如果没有_failed_cte_attempts，使用execution_results中的汇总错误
+                failed_attempts = []
+                cte_result = node.execution_results.get('cte_result', {})
+                if not cte_result.get('valid', True):
+                    error_msg = cte_result.get('error', '所有CTE变体都执行失败')
+                    failed_attempts.append({
+                        'cte': '',
+                        'error': error_msg
+                    })
+        else:
+            # 正常节点：向上遍历父节点链，收集所有失败尝试
+            failed_attempts = []
+            while current is not None and current.node_id not in visited_nodes:
+                visited_nodes.add(current.node_id)
+                # 收集当前节点的失败尝试
+                if hasattr(current, '_failed_cte_attempts') and current._failed_cte_attempts:
+                    # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
+                    existing_errors = {
+                        item.get('error', '').strip() 
+                        for item in failed_attempts
+                    }
+                    for attempt in current._failed_cte_attempts:
+                        error = attempt.get('error', '').strip()
+                        if not error:
+                            error = '未知错误'
+                        cte = attempt.get('cte', '').strip()
+                        
+                        # 如果是列名错误（no such column），需要传递给后续节点用于修复
+                        # 检测到 no such column 错误时就应该跳转到repair的部分，保留失败记录
+                        
+                        # 基于错误信息去重：如果错误信息已存在，比较CTE长度，保留较短的
+                        if error in existing_errors:
+                            # 查找已存在的相同错误信息的项
+                            for idx, existing_item in enumerate(failed_attempts):
+                                if existing_item.get('error', '').strip() == error:
+                                    existing_cte = existing_item.get('cte', '').strip()
+                                    # 如果新的CTE更短，替换（同时保留列名映射信息和修正标记）
+                                    if len(cte) < len(existing_cte):
+                                        # 如果新项有column_hint但旧项没有，保留新项；如果旧项有但新项没有，保留旧项的column_hint
+                                        if 'column_hint' in attempt and 'column_hint' not in existing_item:
+                                            # 保留旧项的requires_full_cte_chain标记（如果存在）
+                                            if existing_item.get('requires_full_cte_chain', False):
+                                                attempt['requires_full_cte_chain'] = True
+                                                attempt['is_cte_column_error'] = existing_item.get('is_cte_column_error', False)
+                                            failed_attempts[idx] = attempt
+                                        elif 'column_hint' not in attempt and 'column_hint' in existing_item:
+                                            # 保留旧项的column_hint，但更新其他字段
+                                            attempt['column_hint'] = existing_item['column_hint']
+                                            attempt['column_name'] = existing_item.get('column_name')
+                                            attempt['column_tables'] = existing_item.get('column_tables')
+                                            # 保留旧项的requires_full_cte_chain标记（如果存在）
+                                            if existing_item.get('requires_full_cte_chain', False):
+                                                attempt['requires_full_cte_chain'] = True
+                                                attempt['is_cte_column_error'] = existing_item.get('is_cte_column_error', False)
+                                            failed_attempts[idx] = attempt
+                                        else:
+                                            # 保留旧项的requires_full_cte_chain标记（如果存在）
+                                            if existing_item.get('requires_full_cte_chain', False):
+                                                attempt['requires_full_cte_chain'] = True
+                                                attempt['is_cte_column_error'] = existing_item.get('is_cte_column_error', False)
+                                            failed_attempts[idx] = attempt
+                                    else:
+                                        # 如果新CTE更长，但新项有requires_full_cte_chain标记，保留新项
+                                        if attempt.get('requires_full_cte_chain', False) and not existing_item.get('requires_full_cte_chain', False):
+                                            failed_attempts[idx] = attempt
+                                    break
+                        else:
+                            # 如果错误信息不存在，直接添加
+                            failed_attempts.append(attempt)
+                            existing_errors.add(error)
+                        
+                        # 检查是否需要重新生成完整CTE链
+                        if attempt.get('requires_full_cte_chain', False):
+                            requires_full_cte_chain = True
+                            if not repair_reason:
+                                error_msg = attempt.get('error', '').strip()
+                                column_name = attempt.get('column_name', '')
+                                if column_name:
+                                    repair_reason = f"CTE列名引用错误: {column_name} ({error_msg})"
+                                else:
+                                    repair_reason = f"CTE列名引用错误: {error_msg}"
+                
+                # 如果当前节点是失败节点，也收集其execution_results中的错误信息
+                # 但优先使用_failed_cte_attempts中的详细信息（包含具体CTE和错误）
+                # 如果_failed_cte_attempts为空，才使用execution_results中的汇总错误
+                if current.execution_results.get('is_failed', False):
+                    # 如果已经有_failed_cte_attempts，就不需要再添加汇总错误了
+                    if not (hasattr(current, '_failed_cte_attempts') and current._failed_cte_attempts):
+                        cte_result = current.execution_results.get('cte_result', {})
+                        if not cte_result.get('valid', True):
+                            error_msg = cte_result.get('error', '所有CTE变体都执行失败')
+                            # 检查是否已存在相同的错误信息
+                            if not any(item.get('error', '') == error_msg for item in failed_attempts):
+                                failed_attempts.append({
+                                    'cte': '',
+                                    'error': error_msg
+                                })
+                
+                current = current.parent
         
         # 限制失败信息数量，避免prompt过长
         failed_attempts = failed_attempts[:5]  # 最多保留5个失败尝试
+        
+        # 如果是失败节点，打印调试信息
+        if node.execution_results.get('is_failed', False):
+            print(f"[失败节点] 使用失败节点自己的失败信息，共 {len(failed_attempts)} 条")
+        
+        # 将修正信息存储到节点中，用于后续标记修正后的CTE
+        # 如果检测到CTE列名引用错误，标记需要完整修复（失败节点被rollout到时会触发修复prompt）
+        if requires_full_cte_chain:
+            node._requires_full_cte_chain = True
+            node._repair_reason = repair_reason
+        else:
+            node._requires_full_cte_chain = False
+            node._repair_reason = None
            
         # generate_multiple_cte_variants 方法内部已经支持并行生成
         # 统一使用配置的CTE变体数量

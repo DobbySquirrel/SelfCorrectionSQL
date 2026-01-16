@@ -13,15 +13,17 @@ class SQLSelector:
     @staticmethod
     def select_by_highest_reward(rollout_stats_list: List[Dict[str, Any]]) -> str:
         """
-        策略：选择最高奖励的rollout的SQL
+        策略：选择最高奖励的rollout的SQL（与merge_and_evaluate_sqls.py的max_reward策略一致）
         
         选择逻辑：
-        1. 优先选择reward最高的rollout的selected_sql
-        2. 如果reward相同，选择sql_bucket_count最大的
-        3. 如果都相同，优先选择CTE rollout（非快速路径）
+        1. 选择reward最高的rollout（如果有多个，收集所有）
+        2. 从每个rollout的result_buckets中找到count最高的signature
+        3. 如果有多个平票，选择第一个
+        4. 从all_sql_variants中找到对应的SQL
+        5. 如果有多个rollout具有相同最高reward，合并它们的SQL，然后选择结果行数最少 → SQL最短的
         
         Args:
-            rollout_stats_list: 所有rollout的统计信息列表，包含reward、sql_bucket_count、selected_sql
+            rollout_stats_list: 所有rollout的统计信息列表，包含reward、result_buckets、all_sql_variants
             
         Returns:
             最佳 SQL 字符串，如果找不到则返回空字符串
@@ -30,112 +32,90 @@ class SQLSelector:
             print("[Selection] ⚠️ 没有rollout_stats，无法选择SQL")
             return ""
         
-        print("[Selection] 使用策略：选择最高奖励的rollout的SQL")
+        print("[Selection] 使用策略：选择最高奖励的rollout的SQL（max_reward策略）")
+        
+        # 过滤掉没有result_buckets的rollout
+        valid_rollouts = [r for r in rollout_stats_list if r.get('result_buckets')]
+        
+        if not valid_rollouts:
+            print("[Selection] ❌ 未找到有效的rollout（没有result_buckets），无法选择SQL")
+            return ""
         
         # 第一步：找到最高reward
-        max_reward = max((r.get('reward', 0.0) for r in rollout_stats_list if r.get('selected_sql')), default=-1.0)
+        max_reward = max((r.get('reward', 0.0) for r in valid_rollouts), default=-1.0)
         
         # 第二步：收集所有具有最高reward的rollout
         top_reward_rollouts = [
-            r for r in rollout_stats_list 
-            if r.get('selected_sql') and abs(r.get('reward', 0.0) - max_reward) < 1e-6
+            r for r in valid_rollouts 
+            if abs(r.get('reward', 0.0) - max_reward) < 1e-6
         ]
         
         if not top_reward_rollouts:
-            print("[Selection] ❌ 未找到有效的rollout（没有selected_sql），无法选择SQL")
+            print("[Selection] ❌ 未找到有效的rollout")
             return ""
         
-        # 如果只有一个最高reward的rollout，直接返回
-        if len(top_reward_rollouts) == 1:
-            best_rollout = top_reward_rollouts[0]
+        print(f"[Selection] 找到 {len(top_reward_rollouts)} 个rollout具有最高reward {max_reward:.4f}")
+        
+        # 第三步：从每个rollout中提取SQL（找到result_buckets中count最高的signature对应的SQL）
+        candidate_sqls = []  # 存储 (sql, result_buckets, signature, row_count) 元组
+        
+        for rollout in top_reward_rollouts:
+            result_buckets = rollout.get('result_buckets', {})
+            if not result_buckets:
+                continue
+            
+            # 找到count最高的signature
+            max_count = max(result_buckets.values())
+            best_signatures = [sig for sig, count in result_buckets.items() if count == max_count]
+            
+            # 如果有多个平票，选择第一个
+            best_signature = best_signatures[0] if best_signatures else None
+            
+            if not best_signature:
+                continue
+            
+            # 从all_sql_variants中找到这个signature对应的SQL
+            all_sql_variants = rollout.get('all_sql_variants', [])
+            found_sql = None
+            found_row_count = 0
+            
+            for sql_info in all_sql_variants:
+                sql_signature = sql_info.get('result_signature')
+                if sql_signature == best_signature:
+                    found_sql = sql_info.get('sql', '')
+                    if sql_info.get('valid', False):
+                        found_row_count = sql_info.get('result_row_count', 0)
+                    break
+            
+            if found_sql:
+                candidate_sqls.append((found_sql, result_buckets, best_signature, found_row_count))
+                print(f"[Selection] 从rollout {rollout.get('rollout_id', '?')} 提取SQL: signature={best_signature}, count={max_count}, row_count={found_row_count}")
+        
+        if not candidate_sqls:
+            print("[Selection] ❌ 未找到有效的SQL")
+            return ""
+        
+        # 第四步：如果有多个候选SQL，使用tiebreak逻辑选择最佳SQL
+        if len(candidate_sqls) == 1:
+            best_sql = candidate_sqls[0][0]
+            print(f"[Selection] ✅ 选择唯一候选SQL")
         else:
-            # 多个rollout具有相同最高reward，计算平均奖励
-            print(f"[Selection] 发现 {len(top_reward_rollouts)} 个rollout具有相同最高reward {max_reward:.4f}，计算平均奖励...")
-            best_rollout = None
-            max_avg_reward = -1.0
-            max_sql_bucket = -1
+            # 多个候选SQL，使用tiebreak：结果行数最少 → 列数最少 → SQL最短
+            print(f"[Selection] 有 {len(candidate_sqls)} 个候选SQL，使用tiebreak逻辑")
             
-            for rollout_stats in top_reward_rollouts:
-                avg_reward = SQLSelector._calculate_avg_reward(rollout_stats)
-                sql_bucket_count = rollout_stats.get('sql_bucket_count', 0)
-                selected_sql = rollout_stats.get('selected_sql')
-                is_quick_path = rollout_stats.get('is_quick_path', False)
-                
-                # 优先选择平均奖励最高的
-                if avg_reward > max_avg_reward:
-                    max_avg_reward = avg_reward
-                    max_sql_bucket = sql_bucket_count
-                    best_rollout = rollout_stats
-                elif abs(avg_reward - max_avg_reward) < 1e-6:
-                    # 平均奖励相同，选择sql_bucket_count最大的
-                    if sql_bucket_count > max_sql_bucket:
-                        max_sql_bucket = sql_bucket_count
-                        best_rollout = rollout_stats
-                    elif sql_bucket_count == max_sql_bucket:
-                        # 平均奖励和sql_bucket_count都相同，比较SQL特征
-                        current_best_sql = best_rollout.get('selected_sql', '') if best_rollout else ''
-                        current_sql = selected_sql or ''
-                        
-                        # 优先选择不使用不必要聚合函数的SQL（避免过度聚合）
-                        current_has_unnecessary_agg = SQLSelector._has_unnecessary_aggregation(current_best_sql)
-                        candidate_has_unnecessary_agg = SQLSelector._has_unnecessary_aggregation(current_sql)
-                        
-                        if current_has_unnecessary_agg and not candidate_has_unnecessary_agg:
-                            best_rollout = rollout_stats
-                            print(f"[Selection] 💡 相同平均奖励和一致性下，优先选择不使用不必要聚合函数的SQL")
-                        elif not current_has_unnecessary_agg and candidate_has_unnecessary_agg:
-                            # 保持当前最佳
-                            pass
-                        else:
-                            # 都使用或都不使用聚合，优先选择CTE rollout（非快速路径）
-                            current_best_is_quick = best_rollout.get('is_quick_path', False) if best_rollout else False
-                            if current_best_is_quick and not is_quick_path:
-                                best_rollout = rollout_stats
-                                print(f"[Selection] 💡 相同平均奖励和一致性下，优先选择CTE rollout而非quick_path")
+            def get_tiebreak_score(item: tuple) -> tuple:
+                """返回(行数, SQL长度)，越小越好"""
+                sql, _, _, row_count = item
+                num_rows = row_count if row_count else 0
+                sql_len = len(sql) if sql else 0
+                return (num_rows, sql_len)
             
-            if best_rollout:
-                print(f"[Selection] 💡 基于平均奖励选择：avg_reward={max_avg_reward:.4f}, sql_bucket_count={max_sql_bucket}")
+            best_item = min(candidate_sqls, key=get_tiebreak_score)
+            best_sql = best_item[0]
+            best_score = get_tiebreak_score(best_item)
+            print(f"[Selection] ✅ 选择最佳SQL (行数={best_score[0]}, SQL长度={best_score[1]})")
         
-        # 返回最佳rollout的SQL
-        if best_rollout:
-            selected_sql = best_rollout.get('selected_sql')
-            if selected_sql:
-                # 验证选择的SQL是否有效（检查all_sql_variants中是否有对应的有效SQL）
-                all_sql_variants = best_rollout.get('all_sql_variants', [])
-                is_valid_sql = False
-                if all_sql_variants:
-                    for sql_info in all_sql_variants:
-                        if sql_info.get('sql', '').strip() == selected_sql.strip() and sql_info.get('valid', False):
-                            is_valid_sql = True
-                            break
-                else:
-                    # 如果没有all_sql_variants信息，假设SQL有效（向后兼容）
-                    is_valid_sql = True
-                
-                if not is_valid_sql:
-                    print(f"[Selection] ⚠️ 警告：选择的SQL无效（语法错误），尝试从其他rollout中选择有效的SQL")
-                    # 尝试从其他rollout中选择有效的SQL
-                    for rollout_stats in rollout_stats_list:
-                        all_sql_variants_alt = rollout_stats.get('all_sql_variants', [])
-                        if all_sql_variants_alt:
-                            for sql_info in all_sql_variants_alt:
-                                if sql_info.get('valid', False):
-                                    valid_sql = sql_info.get('sql', '').strip()
-                                    if valid_sql:
-                                        print(f"[Selection] ✅ 找到有效的SQL替代方案")
-                                        return valid_sql
-                    print(f"[Selection] ❌ 所有rollout都没有有效的SQL")
-                    return ""
-                
-                is_quick_path = best_rollout.get('is_quick_path', False)
-                rollout_id = best_rollout.get('rollout_id', '?')
-                rollout_type = "快速路径" if is_quick_path else f"CTE Rollout {rollout_id}"
-                max_sql_bucket = best_rollout.get('sql_bucket_count', 0)
-                print(f"[Selection] ✅ 选择最高奖励的rollout的SQL (reward={max_reward:.4f}, sql_bucket_count={max_sql_bucket}, 类型={rollout_type})")
-                return selected_sql.strip()
-        
-        print("[Selection] ❌ 未找到有效的rollout（没有selected_sql），无法选择SQL")
-        return ""
+        return best_sql.strip() if best_sql else ""
     
     @staticmethod
     def _has_unnecessary_aggregation(sql: str) -> bool:

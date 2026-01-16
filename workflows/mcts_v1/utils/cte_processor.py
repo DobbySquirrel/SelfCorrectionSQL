@@ -101,8 +101,57 @@ class CTEProcessor:
             # 使用较短的超时时间进行探针执行（快速检测）
             res = self.sql_executor._execute_single_query(exec_sql, timeout_s=self.cte_probe_timeout_s)
             cte_used = one_cte
+            
+            # 检查是否是修正后的CTE（通过检查父节点是否有_requires_full_cte_chain标记）
+            is_repaired_cte = False
+            check_node = node
+            while check_node is not None:
+                if hasattr(check_node, '_requires_full_cte_chain') and check_node._requires_full_cte_chain:
+                    is_repaired_cte = True
+                    break
+                check_node = check_node.parent
+            
+            # 如果是修正后的CTE，打印详细信息
+            if is_repaired_cte:
+                print(f"\n{'='*80}")
+                print(f"[修正CTE执行] CTE内容:")
+                print(f"{'='*80}")
+                print(cte_used[:1000] if len(cte_used) > 1000 else cte_used)
+                if len(cte_used) > 1000:
+                    print(f"... (总长度: {len(cte_used)} 字符)")
+                print(f"\n[修正CTE执行] 构建的完整SQL:")
+                print(exec_sql[:1000] if len(exec_sql) > 1000 else exec_sql)
+                if len(exec_sql) > 1000:
+                    print(f"... (总长度: {len(exec_sql)} 字符)")
+                print(f"\n[修正CTE执行] 执行结果:")
+                print(f"  valid: {res.get('valid', False)}")
+                if res.get('valid', False):
+                    query_result = res.get('query_result', [])
+                    result_count = len(query_result) if isinstance(query_result, list) else 0
+                    print(f"  结果行数: {result_count}")
+                    if result_count > 0 and result_count <= 5:
+                        print(f"  结果内容:")
+                        for i, row in enumerate(query_result[:5], 1):
+                            print(f"    Row {i}: {row}")
+                    elif result_count > 5:
+                        print(f"  结果内容（前5行）:")
+                        for i, row in enumerate(query_result[:5], 1):
+                            print(f"    Row {i}: {row}")
+                else:
+                    print(f"  错误: {res.get('error', '未知错误')}")
+                print(f"{'='*80}\n")
+            
             # 3) 生成签名key
             bucket_key = MCTSUtils.create_result_signature(res)
+            
+            # 检查执行结果是否失败
+            failed_item = None
+            if not res.get('valid', False):
+                # 执行失败：收集失败信息
+                error_msg = res.get('error', '执行失败或超时')
+                failed_item = {'cte': cte_used, 'error': error_msg}
+                print(f"[CTE执行失败] 错误: {error_msg}")
+            
             # 空结果/失败/超时处理：
             # - 允许空结果继续扩展，以便在下一层使用模糊匹配（Levenshtein/pg_trgm）
             # - 只有执行失败/超时才过滤掉
@@ -111,15 +160,12 @@ class CTEProcessor:
                 bucket_key = "empty_result"
             elif bucket_key.startswith("invalid_"):
                 # 执行失败/超时：返回失败信息
-                error_msg = ""
-                if not res.get('valid', False):
-                    error_msg = res.get('error', '执行失败或超时')
-                else:
-                    error_msg = "执行失败或超时"
-                # 打印简化的错误信息
-                print(f"[CTE执行失败] 错误: {error_msg}")
-                return cte_used, res, None, {'cte': cte_used, 'error': error_msg}, exec_sql
-            return cte_used, res, bucket_key, None, exec_sql
+                if not failed_item:
+                    error_msg = res.get('error', '执行失败或超时') if not res.get('valid', False) else "执行失败或超时"
+                    failed_item = {'cte': cte_used, 'error': error_msg}
+                return cte_used, res, None, failed_item, exec_sql
+            
+            return cte_used, res, bucket_key, failed_item, exec_sql
         
         # 并行执行所有非 <END> CTE
         _exec_t0 = _time_for_timing.time()
@@ -170,6 +216,7 @@ class CTEProcessor:
                 exec_sql_map[cte_used] = exec_sql
                 # 收集所有失败信息（进行去重）
                 if failed_item:
+                    print(f"[CTE处理] 收集失败信息: error={failed_item.get('error', '')[:100]}")
                     # 基于错误信息去重：对于相同的错误信息，只保留一个代表性的CTE（最短的）
                     error = failed_item.get('error', '').strip()
                     cte = failed_item.get('cte', '').strip()
@@ -178,17 +225,16 @@ class CTEProcessor:
                     
                     # 检查是否已存在相同的错误信息
                     if error in {item.get('error', '').strip() for item in failed_info}:
-                        # 如果已存在，比较CTE长度，保留较短的
-                        for idx, existing_item in enumerate(failed_info):
-                            if existing_item.get('error', '').strip() == error:
-                                existing_cte = existing_item.get('cte', '').strip()
-                                # 如果新的CTE更短，替换
-                                if len(cte) < len(existing_cte):
-                                    failed_info[idx] = failed_item
-                                break
+                        print(f"[CTE处理] 错误信息已存在，跳过重复的错误信息")
+                        # 如果错误信息已存在，跳过（不需要比较CTE长度，错误信息相同就够了）
+                        # 失败信息会在失败节点中保存，rollout时会触发修正prompt
                     else:
                         # 如果错误信息不存在，直接添加
+                        print(f"[CTE处理] 添加新的失败信息到failed_info")
                         failed_info.append(failed_item)
+                else:
+                    if not cte_result.get('valid', False):
+                        print(f"[CTE处理] ⚠️ CTE执行失败但failed_item为None: valid={cte_result.get('valid', False)}, bucket_key={bucket_key}")
                 
                 # 统计bucket_key类型
                 if bucket_key is None:
