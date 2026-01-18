@@ -523,14 +523,35 @@ class SQLExecutor:
         构建可执行的完整CTE SQL：拼接路径上的所有历史CTE + 当前CTE，保留最后SELECT。
         自动处理<END>与空输入。
         
+        特殊处理：如果 current_cte 是完整CTE链（包含多个CTE定义），则直接使用它，不再拼接历史CTE。
+        这种情况通常发生在触发全链修复时，LLM会重新生成整个CTE链。
+        
         注意：current_cte 是新生成的CTE变体，需要从 node 开始遍历（包括 node 本身），
         因为 node 可能已经包含了前序CTE（如果是在扩展阶段）。
         """
         if not current_cte or current_cte is None:
-            print(f"⚠️  build_executable_cte_sql: current_cte 为 None 或空")
             return ""
 
         current_cte_stripped = current_cte.strip()
+        
+        # 检测 current_cte 是否是完整CTE链（包含多个CTE定义）
+        # 通过检查是否有多个 "AS (" 模式来判断
+        cte_count = len(re.findall(r'\b\w+\s+AS\s*\(', current_cte_stripped, re.IGNORECASE))
+        is_complete_chain = cte_count > 1
+        
+        if is_complete_chain:
+            # 如果是完整CTE链，直接使用它，不再拼接历史CTE
+            # 这种情况发生在全链修复时，LLM重新生成了整个CTE链
+            # 确保最后有 SELECT 语句
+            if re.search(r'\bSELECT\s+.*?\s+FROM\s+\w+', current_cte_stripped, re.IGNORECASE | re.DOTALL):
+                return current_cte_stripped
+            else:
+                # 提取最后一个CTE的名称并添加SELECT
+                last_cte_name = self._extract_last_cte_name(current_cte_stripped)
+                if last_cte_name:
+                    return f"{current_cte_stripped}\nSELECT * FROM {last_cte_name};"
+                else:
+                    return current_cte_stripped
 
         # 收集路径上所有历史CTE（从当前节点开始，向上遍历到根节点）
         # 注意：包括当前节点本身，因为当前节点可能已经包含了前序CTE（如果是在扩展阶段）
@@ -551,20 +572,28 @@ class SQLExecutor:
             # 提取新CTE的名称
             new_cte_name = self.extract_cte_name(current_cte_stripped)
             
-            # 检查新CTE是否与历史CTE同名（不允许重用CTE名称）
+            # 检查新CTE是否与历史CTE同名
             if new_cte_name and new_cte_name in cte_names_seen:
-                # 检测到同名CTE：这是一个错误，不应该重用已存在的CTE名称
-                # 仍然添加新CTE，但会在执行时产生duplicate WITH table name错误
-                # 这样可以让错误信息更清晰地传递给LLM
+                # 同名CTE：用新CTE替换历史中的同名CTE
+                # 找到并移除历史中的同名CTE
+                cte_sequence = [
+                    cte for cte in cte_sequence 
+                    if self.extract_cte_name(cte) != new_cte_name
+                ]
+            
+            # 添加新CTE到序列末尾
+            if not cte_sequence or cte_sequence[-1] != current_cte_stripped:
                 cte_sequence.append(current_cte_stripped)
-            else:
-                # 新CTE：添加到序列末尾
-                if not any(cte_sequence) or cte_sequence[-1] != current_cte_stripped:
-                    cte_sequence.append(current_cte_stripped)
-                    if new_cte_name:
-                        cte_names_seen.add(new_cte_name)
+                if new_cte_name:
+                    cte_names_seen.add(new_cte_name)
 
         return self.combine_cte_sequence(cte_sequence)
+    
+    def _extract_last_cte_name(self, cte_chain: str) -> str:
+        """从CTE链中提取最后一个CTE的名称。"""
+        # 找到所有 CTE 名称
+        matches = re.findall(r'\b(\w+)\s+AS\s*\(', cte_chain, re.IGNORECASE)
+        return matches[-1] if matches else ""
 
     def combine_cte_sequence(self, cte_sequence: List[str]) -> str:
         """组合CTE序列为完整的WITH语句。"""
@@ -592,11 +621,37 @@ class SQLExecutor:
                     # 无法提取CTE名称，直接返回（可能格式不正确）
                     return single_cte
 
+        # 提取所有CTE定义，并按名称去重（后出现的覆盖先出现的）
         cte_definitions: List[str] = []
+        cte_names_in_result: set = set()  # 用于检测重复
+        
         for cte in cte_sequence:
-            cte_def = self.extract_cte_definition(cte)
-            if cte_def:
-                cte_definitions.append(cte_def)
+            # 检查这个CTE是否包含多个定义（完整链）
+            all_cte_names = re.findall(r'\b(\w+)\s+AS\s*\(', cte, re.IGNORECASE)
+            
+            if len(all_cte_names) > 1:
+                # 如果是完整链，提取所有CTE定义
+                all_defs = self._extract_all_cte_definitions(cte)
+                for cte_name, cte_def in all_defs:
+                    # 如果名称已存在，移除旧的
+                    if cte_name.lower() in cte_names_in_result:
+                        cte_definitions = [d for d in cte_definitions 
+                                           if not d.lower().startswith(cte_name.lower() + ' as')]
+                    cte_definitions.append(cte_def)
+                    cte_names_in_result.add(cte_name.lower())
+            else:
+                # 单个CTE
+                cte_def = self.extract_cte_definition(cte)
+                if cte_def:
+                    cte_name = self.extract_cte_name(cte)
+                    # 如果名称已存在，移除旧的
+                    if cte_name and cte_name.lower() in cte_names_in_result:
+                        cte_definitions = [d for d in cte_definitions 
+                                           if not d.lower().startswith(cte_name.lower() + ' as')]
+                    cte_definitions.append(cte_def)
+                    if cte_name:
+                        cte_names_in_result.add(cte_name.lower())
+        
         if not cte_definitions:
             return cte_sequence[-1]
 
@@ -606,6 +661,49 @@ class SQLExecutor:
             return f"WITH {combined_ctes}\nSELECT * FROM {last_cte_name};"
         else:
             return f"WITH {combined_ctes}"
+    
+    def _extract_all_cte_definitions(self, cte_chain: str) -> List[tuple]:
+        """从CTE链中提取所有CTE定义，返回 [(name, definition), ...]"""
+        result = []
+        
+        # 删除末尾的 SELECT 语句
+        cte_cleaned = re.sub(r'\s*SELECT\s+.*$', '', cte_chain, flags=re.IGNORECASE | re.DOTALL)
+        cte_cleaned = re.sub(r'^\s*WITH\s+', '', cte_cleaned.strip(), flags=re.IGNORECASE)
+        
+        # 使用平衡括号算法分割多个CTE定义
+        i = 0
+        while i < len(cte_cleaned):
+            # 找到 name AS (
+            name_match = re.match(r'\s*(\w+)\s+AS\s*\(', cte_cleaned[i:], re.IGNORECASE)
+            if not name_match:
+                break
+            
+            cte_name = name_match.group(1)
+            start_pos = i + name_match.end() - 1  # ( 的位置
+            
+            # 找到匹配的 )
+            paren_count = 0
+            j = start_pos
+            while j < len(cte_cleaned):
+                if cte_cleaned[j] == '(':
+                    paren_count += 1
+                elif cte_cleaned[j] == ')':
+                    paren_count -= 1
+                    if paren_count == 0:
+                        # 找到了匹配的右括号
+                        cte_body = cte_cleaned[start_pos + 1:j].strip()
+                        result.append((cte_name, f"{cte_name} AS ({cte_body})"))
+                        i = j + 1
+                        # 跳过可能的逗号
+                        while i < len(cte_cleaned) and cte_cleaned[i] in ' \t\n\r,':
+                            i += 1
+                        break
+                j += 1
+            else:
+                # 没找到匹配的右括号，跳出
+                break
+        
+        return result
 
     def extract_cte_definition(self, cte: str) -> str:
         """

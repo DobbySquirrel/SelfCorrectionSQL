@@ -202,14 +202,14 @@ class CTEGenerator:
         code_block_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL)
         if code_block_match:
             raw_text = code_block_match.group(1).strip()
-            print(f"[CTE提取] 从SQL代码块中提取，代码块长度: {len(raw_text)} 字符")
+        
         else:
             # 如果没有代码块，使用整个响应文本
             raw_text = response.strip()
-            print(f"[CTE提取] 未找到SQL代码块，使用整个响应文本，长度: {len(raw_text)} 字符")
+          
         
         if not raw_text or 'WITH' not in raw_text.upper():
-            print(f"[CTE提取] ⚠️ 未找到WITH关键字或文本为空")
+
             return ""
         
         # 清理：移除末尾的分号
@@ -276,9 +276,64 @@ class CTEGenerator:
         
         # 系统自动添加SELECT语句
         full_cte = f"{cte_text}\nSELECT * FROM {cte_name};"
-        print(f"[CTE提取] 成功提取CTE，CTE文本长度: {len(cte_text)} 字符，完整CTE长度: {len(full_cte)} 字符")
-        
+
         return full_cte
+    
+    def _extract_complete_cte_chain(self, response) -> str:
+        """
+        从响应中提取完整的CTE链，保留为一个整体（不拆分）
+        
+        当LLM返回完整的CTE链时（如 WITH cte1 AS (...), cte2 AS (...), cte3 AS (...)），
+        保留整个链作为一个整体，供sql_executor直接使用（不和历史CTE拼接）
+        
+        Args:
+            response: LLM响应内容
+            
+        Returns:
+            完整的CTE链字符串，如果提取失败则返回空字符串
+        """
+        # 处理autogen返回的不同类型
+        if isinstance(response, dict):
+            response = response.get('content', '') or str(response)
+        elif not isinstance(response, str):
+            response = str(response)
+        
+        # 首先检查是否包含<END>标记
+        if "<END>" in response:
+            return "<END>"
+        
+        # 尝试从代码块中提取
+        code_block_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL)
+        if code_block_match:
+            raw_text = code_block_match.group(1).strip()
+        else:
+            # 如果没有代码块，使用整个响应文本
+            raw_text = response.strip()
+        
+        if not raw_text or 'WITH' not in raw_text.upper():
+            return ""
+        
+        # 查找第一个WITH关键字的位置
+        first_with_match = re.search(r'WITH\s+', raw_text, re.IGNORECASE)
+        if not first_with_match:
+            return ""
+        
+        # 从第一个WITH开始提取
+        cte_chain_text = raw_text[first_with_match.start():]
+        
+        # 检查是否已经有SELECT语句
+        if re.search(r'\bSELECT\s+.*?\s+FROM\s+\w+', cte_chain_text, re.IGNORECASE | re.DOTALL):
+            # 已经有SELECT语句，直接返回
+            return cte_chain_text.strip()
+        
+        # 没有SELECT语句，需要找到最后一个CTE的名称并添加SELECT
+        # 找到所有CTE名称
+        cte_names = re.findall(r'\b(\w+)\s+AS\s*\(', cte_chain_text, re.IGNORECASE)
+        if cte_names:
+            last_cte_name = cte_names[-1]
+            return f"{cte_chain_text.rstrip(';').strip()}\nSELECT * FROM {last_cte_name};"
+        
+        return cte_chain_text.strip()
     
     def _extract_and_split_cte_chain(self, response) -> List[str]:
         """
@@ -999,8 +1054,10 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         remainder = num_variants % num_groups
         
         # 获取当前深度和剩余深度
+        # current_depth从0开始，current_step = current_depth + 1
+        # remaining_steps = max_depth - current_step = max_depth - (current_depth + 1)
         current_depth = node.depth
-        remaining_steps = max(0, self.max_depth - current_depth)
+        remaining_steps = max(0, self.max_depth - current_depth - 1)
         
         # 构建失败尝试提示（如果有）
         failed_attempts_section = ""
@@ -1011,14 +1068,16 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
             # 处理失败信息：可能是字符串（旧格式）或字典（新格式，包含错误信息）
             failed_items = []
             attempt_count = 0
+            duplicate_cte_names = []  # 收集重复的CTE名称
             for item in failed_attempts[:5]:  # 最多显示5个
                 if isinstance(item, dict):
                     # 新格式：包含CTE和错误信息
                     cte = item.get('cte', '').strip()
                     error = item.get('error', 'Execution failed or timeout')
-                    # 过滤掉无效的重复命名错误
-                    if error and error.lower().find('duplicate with table name') != -1:
-                        continue
+                    
+                    # 收集重复的CTE名称
+                    if item.get('duplicate_cte_name'):
+                        duplicate_cte_names.append(item['duplicate_cte_name'])
                     
                     # 检查是否需要重新生成完整CTE链
                     if item.get('requires_full_cte_chain', False):
@@ -1046,8 +1105,8 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     else:
                         failed_items.append(f"**Failed Attempt #{attempt_count}:**\n**Error:** Execution failed or timeout")
             
-            if failed_items:
-                failed_list = "\n\n".join(failed_items)
+            if failed_items or duplicate_cte_names:
+                failed_list = "\n\n".join(failed_items) if failed_items else ""
                 
                 # 如果有列名映射提示，单独放在一个部分
                 column_hints_section = ""
@@ -1055,6 +1114,14 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                     # 去重列名提示
                     unique_hints = list(set(column_hints))
                     column_hints_section = f"\n\n**⚠️ Column Location Hints (CRITICAL):**\n" + "\n".join(f"- {hint}" for hint in unique_hints)
+                
+                # 如果有重复的CTE名称，添加警告
+                duplicate_cte_warning = ""
+                if duplicate_cte_names:
+                    unique_dup_names = list(set(duplicate_cte_names))
+                    duplicate_cte_warning = f"\n\n**⚠️ DUPLICATE CTE NAME ERROR (CRITICAL):**\n" \
+                        f"The following CTE names already exist in the preceding CTEs and CANNOT be reused: **{', '.join(unique_dup_names)}**\n" \
+                        f"You MUST use a DIFFERENT name for your new CTE (e.g., add suffix like `_v2`, `_new`, `_final`, or use a completely different descriptive name).\n"
                 
                 # 如果需要重新生成完整CTE链，添加特殊提示
                 full_chain_instruction = ""
@@ -1101,7 +1168,7 @@ cte3 AS (
 * **Previous Failed Attempts (Please avoid generating similar CTEs)**:
 The following CTEs failed during generation or execution in previous attempts. Please avoid generating similar CTEs:
 
-{failed_list}{column_hints_section}{full_chain_instruction}
+{failed_list}{column_hints_section}{duplicate_cte_warning}{full_chain_instruction}
 
 """
                 
@@ -1153,14 +1220,16 @@ The following CTEs failed during generation or execution in previous attempts. P
         # 构建系统消息
         system_message = self._get_cte_system_message()
         
-        # 打印CTE生成的prompt（用于调试）- 包含system message和user input
+        # 打印CTE生成的prompt（用于调试）- 不打印策略部分
         if should_monitor:
             print(f"[CTE生成] User Input (parallel):")
             print(f"  {'='*80}")
-            print(f"[System Message]:")
-            print(system_message)
+            # 打印时去掉策略部分，只打印 **Input**: 开始的内容
+            user_input_for_print = user_input
+            if "**Input**:" in user_input:
+                user_input_for_print = "**Input**:" + user_input.split("**Input**:", 1)[1]
             print(f"\n[User Input]:")
-            print(user_input)
+            print(user_input_for_print)
             print(f"  {'='*80}")
         
         # 并行为每个temperature组生成变体
@@ -1219,82 +1288,23 @@ The following CTEs failed during generation or execution in previous attempts. P
                 # 提取当前组的CTE
                 group_ctes = []
                 for idx, choice in enumerate(response.choices):
-                    # 打印完整的响应对象信息
-                    print(f"\n{'='*80}")
-                    print(f"[CTE生成] ===== 完整LLM响应对象信息 (temperature={temperature}, choice_idx={idx}) =====")
-                    print(f"{'='*80}")
-                    print(f"Response ID: {response.id}")
-                    print(f"Model: {response.model}")
-                    print(f"Created: {response.created}")
-                    print(f"Choice Index: {idx}")
-                    print(f"Choice Finish Reason: {choice.finish_reason}")
-                    print(f"Choice Index in response: {choice.index}")
-                    
-                    # 打印完整的choice对象信息
-                    print(f"\n[CTE生成] Choice对象完整信息:")
-                    print(f"  - choice对象类型: {type(choice)}")
-                    print(f"  - choice对象属性: {dir(choice)}")
-                    
-                    # 打印完整的message对象信息
-                    print(f"\n[CTE生成] Message对象完整信息:")
-                    print(f"  - message对象类型: {type(choice.message)}")
-                    print(f"  - message对象属性: {dir(choice.message)}")
-                    print(f"  - message.role: {choice.message.role}")
-                    
+        
                     # 获取完整的消息内容
                     content = choice.message.content
-                    print(f"\n[CTE生成] ===== Choice Message Content (原始repr格式，显示所有字符) =====")
-                    print(f"{'='*80}")
-                    print(repr(content))  # 使用repr显示原始字符串，包括所有转义字符、换行符等
-                    print(f"{'='*80}")
-                    print(f"[CTE生成] ===== Choice Message Content (可读格式) =====")
-                    print(f"{'='*80}")
-                    print(content)  # 打印完整内容，不缩略
-                    print(f"{'='*80}")
-                    print(f"[CTE生成] 内容统计信息:")
-                    print(f"  - 总长度: {len(content)} 字符")
-                    print(f"  - 类型: {type(content)}")
-                    print(f"  - 是否包含<END>: {'<END>' in content}")
-                    print(f"  - 是否包含<think>: {'<think>' in content}")
-                    print(f"  - 是否包含WITH: {'WITH' in content.upper() if content else False}")
-                    print(f"  - 行数: {len(content.splitlines()) if content else 0}")
-                    print(f"{'='*80}")
                     
-                    # 如果需要重新生成完整CTE链，拆分CTE链为多个单独的CTE
+                    # 如果需要重新生成完整CTE链，保留整个链作为一个整体（不拆分）
+                    # sql_executor会检测到这是完整链并直接使用，不再和历史CTE拼接
                     if requires_full_chain_flag:
-                        print(f"\n[修正CTE] 检测到 requires_full_chain_flag=True，将拆分CTE链")
-                        cte_list = self._extract_and_split_cte_chain(content)
-                        
-                        print(f"[修正CTE] 拆分后的CTE列表（共 {len(cte_list)} 个，完整格式，不缩略）:")
-                        for i, cte in enumerate(cte_list, 1):
-                            print(f"\n--- CTE #{i} (完整格式) ---")
-                            print(cte)  # 打印完整CTE，不缩略
-                            print(f"--- CTE #{i} 总长度: {len(cte)} 字符 ---\n")
-                        print(f"{'='*80}\n")
-                        
-                        group_ctes.extend(cte_list)
+                        # 提取完整的CTE链作为一个整体
+                        cte_chain = self._extract_complete_cte_chain(content)
+                        if cte_chain:
+                            group_ctes.append(cte_chain)
                     else:
-                        print(f"\n[CTE生成] 正常模式，提取单个CTE")
                         cte = self._extract_cte_from_response(content)
                         if cte:
-                            print(f"[CTE生成] 提取后的CTE（完整格式，不缩略）:")
-                            print(f"{'='*80}")
-                            print(cte)  # 打印完整CTE，不缩略
-                            print(f"{'='*80}")
-                            print(f"[CTE生成] 提取后CTE总长度: {len(cte)} 字符\n")
                             group_ctes.append(cte)
-                        else:
-                            print(f"[CTE生成] ⚠️ 未能从响应中提取CTE")
-                            print(f"[CTE生成] 原始内容预览（前500字符）: {content[:500]}")
-                            print(f"{'='*80}\n")
                 return group_ctes
-            except Exception as e:
-                if should_monitor:
-                    error_type = type(e).__name__
-                    error_msg = str(e)
-                    print(f"[CTE生成] temperature={temperature} 失败: {error_type}: {error_msg}")
-                    # 打印更详细的调试信息
-                    print(f"  端点: {selected_base_url}, 模型: {selected_model}")
+            except Exception:
                 return []
         
         # 并行执行所有temperature组

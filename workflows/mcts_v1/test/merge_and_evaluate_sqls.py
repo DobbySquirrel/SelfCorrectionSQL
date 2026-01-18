@@ -638,6 +638,64 @@ def load_gold_sqls(gold_file: str) -> Dict[str, str]:
     return gold_sqls
 
 
+def process_question_with_top_sql(qid: str, file_label: str, data: Dict[str, Any], 
+                                   db_name: str, gold_sql: Optional[str] = None) -> Dict[str, Any]:
+    """
+    使用顶层sql字段直接评估
+    
+    Args:
+        qid: question_id
+        file_label: 文件标签
+        data: 文件数据
+        db_name: 数据库名称
+        gold_sql: gold SQL（可选）
+        
+    Returns:
+        处理结果字典
+    """
+    if qid not in data:
+        return {
+            'qid': qid,
+            'file_label': file_label,
+            'error': '未找到数据',
+            'best_sql': '',
+            'gold_match': False  # 没有数据算作失败
+        }
+    
+    question_data = data[qid]
+    best_sql = question_data.get('sql', '').strip()
+    
+    if not best_sql:
+        return {
+            'qid': qid,
+            'file_label': file_label,
+            'error': '没有有效的SQL',
+            'best_sql': '',
+            'gold_match': False  # 没有SQL算作失败
+        }
+    
+    # 与gold SQL比较
+    gold_match = False
+    if gold_sql:
+        db_connector = build_db_connector(db_name)
+        try:
+            gold_match = compare_with_gold(best_sql, gold_sql, db_connector=db_connector)
+            if gold_match:
+                print(f"  [{file_label}] qid={qid}: ✅ 匹配成功")
+            else:
+                print(f"  [{file_label}] qid={qid}: ❌ 不匹配")
+        finally:
+            db_connector.disconnect()
+    
+    return {
+        'qid': qid,
+        'file_label': file_label,
+        'best_sql': best_sql,
+        'gold_match': gold_match,
+        'gold_sql': gold_sql
+    }
+
+
 def get_db_name_from_ppl_file(ppl_file: str, qid: str) -> Optional[str]:
     """从ppl文件中获取指定question_id的数据库名称"""
     try:
@@ -664,10 +722,15 @@ def main():
                        help="选择rollout的策略: max_reward(最高reward), max_entropy(最高信息熵), "
                             "max_diversity(最高多样性), max_confidence(最高置信度), "
                             "reward_entropy_combined(reward×熵), reward_confidence_combined(reward×置信度)")
+    parser.add_argument("--use_top_sql", action="store_true",
+                       help="直接使用结果文件中顶层的'sql'字段进行评估，而不是从rollout_stats中选择")
     args = parser.parse_args()
     
     strategy = args.strategy
+    use_top_sql = args.use_top_sql
     print(f"[策略] 使用选择策略: {strategy}")
+    if use_top_sql:
+        print(f"[模式] 使用顶层'sql'字段直接评估")
     
     # 解析文件列表
     file_paths = [f.strip() for f in args.files.split(',') if f.strip()]
@@ -738,6 +801,12 @@ def main():
     # 每个文件的统计信息
     file_stats = {file_label: {'correct': 0, 'total': 0} for file_label, _ in file_data_list}
     
+    # upper bound 和 self-consistency 统计（仅use_top_sql模式）
+    upper_bound_correct = 0
+    upper_bound_total = 0
+    self_consistency_correct = 0
+    self_consistency_total = 0
+    
     for qid in qid_list:
         # 获取数据库名称
         db_name = None
@@ -753,28 +822,104 @@ def main():
         
         gold_sql = gold_sqls.get(qid, None)
         
-        # 1. 先单独处理每个文件，计算每个文件的准确度
-        single_file_results = {}
-        for file_label, data in file_data_list:
-            single_result = process_question_single_file(qid, file_label, data, db_name, gold_sql, strategy=strategy)
-            single_file_results[file_label] = single_result
+        if use_top_sql:
+            # 使用顶层sql字段直接评估模式
+            single_file_results = {}
+            file_sqls = {}  # {file_label: sql}
+            file_gold_matches = {}  # {file_label: gold_match}
             
-            # 统计每个文件的gold验证结果
-            if single_result.get('gold_match') is not None:
+            for file_label, data in file_data_list:
+                single_result = process_question_with_top_sql(qid, file_label, data, db_name, gold_sql)
+                single_file_results[file_label] = single_result
+                file_sqls[file_label] = single_result.get('best_sql', '')
+                file_gold_matches[file_label] = single_result.get('gold_match', False)
+                
+                # 统计每个文件的gold验证结果（分母固定为所有question）
                 file_stats[file_label]['total'] += 1
-                if single_result['gold_match']:
+                if single_result.get('gold_match'):
                     file_stats[file_label]['correct'] += 1
-        
-        # 2. 然后合并处理（总体）
-        result = process_question(qid, file_data_list, db_name, gold_sql, strategy=strategy)
-        result['single_file_results'] = single_file_results  # 保存每个文件的结果
-        results[qid] = result
-        
-        # 统计gold验证结果（总体）
-        if result.get('gold_match') is not None:
-            total_count += 1
-            if result['gold_match']:
-                correct_count += 1
+            
+            # Upper bound：任意一个文件对就算对
+            upper_bound_total += 1
+            if any(file_gold_matches.values()):
+                upper_bound_correct += 1
+            
+            # Self-consistency：执行三个SQL，看结果是否一致，多数投票
+            # 需要执行SQL获取结果签名
+            db_connector = build_db_connector(db_name)
+            try:
+                sql_signatures = {}  # {file_label: signature}
+                for file_label, sql in file_sqls.items():
+                    if not sql:
+                        sql_signatures[file_label] = 'empty_sql'
+                        continue
+                    try:
+                        result, error = db_connector.execute_query(sql, timeout_s=30.0)
+                        if error is not None:
+                            sql_signatures[file_label] = f'error_{hash(str(error)) % 10000}'
+                        elif result is not None:
+                            query_result = MCTSUtils.safe_to_dict(result)
+                            exec_res = {
+                                'valid': True,
+                                'error': None,
+                                'query_result': query_result
+                            }
+                            sig = MCTSUtils.create_result_signature(exec_res)
+                            sql_signatures[file_label] = sig
+                        else:
+                            sql_signatures[file_label] = 'none_result'
+                    except Exception as e:
+                        sql_signatures[file_label] = f'exception_{hash(str(e)) % 10000}'
+                
+                # 统计每个signature出现次数
+                sig_counts = Counter(sql_signatures.values())
+                # 找出出现次数最多的signature
+                most_common_sig, most_common_count = sig_counts.most_common(1)[0] if sig_counts else (None, 0)
+                
+                # 如果有>=2个文件结果一致，选择那个一致的
+                self_consistency_total += 1
+                if most_common_count >= 2:
+                    # 找到使用这个signature的文件
+                    chosen_files = [fl for fl, sig in sql_signatures.items() if sig == most_common_sig]
+                    # 检查这些文件中是否有gold_match为True的
+                    chosen_gold_match = any(file_gold_matches[fl] for fl in chosen_files)
+                    if chosen_gold_match:
+                        self_consistency_correct += 1
+                    print(f"  [Self-Consistency] qid={qid}: {most_common_count}个文件一致 (sig={most_common_sig[:30]}...), 选择: {chosen_files}, gold_match: {chosen_gold_match}")
+                else:
+                    # 没有一致的，随机选或者选第一个
+                    first_file = list(file_gold_matches.keys())[0]
+                    if file_gold_matches[first_file]:
+                        self_consistency_correct += 1
+                    print(f"  [Self-Consistency] qid={qid}: 无一致结果，使用{first_file}, gold_match: {file_gold_matches[first_file]}")
+            finally:
+                db_connector.disconnect()
+            
+            results[qid] = {'qid': qid, 'single_file_results': single_file_results}
+        else:
+            # 原有模式：从rollout_stats中选择
+            # 1. 先单独处理每个文件，计算每个文件的准确度
+            single_file_results = {}
+            for file_label, data in file_data_list:
+                single_result = process_question_single_file(qid, file_label, data, db_name, gold_sql, strategy=strategy)
+                single_file_results[file_label] = single_result
+                
+                # 统计每个文件的gold验证结果
+                if single_result.get('gold_match') is not None:
+                    file_stats[file_label]['total'] += 1
+                    if single_result['gold_match']:
+                        file_stats[file_label]['correct'] += 1
+            
+            # 2. 然后合并处理（总体）
+            result = process_question(qid, file_data_list, db_name, gold_sql, strategy=strategy)
+            result['single_file_results'] = single_file_results  # 保存每个文件的结果
+            results[qid] = result
+            
+            # 统计gold验证结果（总体）
+            if result.get('gold_match') is not None:
+                total_count += 1
+                if result['gold_match']:
+                    correct_count += 1
     
     # 打印每个文件的统计
     print(f"\n{'='*80}")
@@ -786,6 +931,22 @@ def main():
         else:
             print(f"  {file_label}: 0/0 正确 (准确率: N/A)")
     print(f"{'='*80}")
+    
+    # 如果是use_top_sql模式，打印upper bound和self-consistency统计
+    if use_top_sql:
+        print(f"\n{'='*80}")
+        print(f"[Upper Bound 统计] (任意一个文件对就算对)")
+        if upper_bound_total > 0:
+            accuracy = upper_bound_correct / upper_bound_total * 100
+            print(f"  {upper_bound_correct}/{upper_bound_total} 正确 (准确率: {accuracy:.2f}%)")
+        print(f"{'='*80}")
+        
+        print(f"\n{'='*80}")
+        print(f"[Self-Consistency 统计] (多数投票，>=2个结果一致则选该结果)")
+        if self_consistency_total > 0:
+            accuracy = self_consistency_correct / self_consistency_total * 100
+            print(f"  {self_consistency_correct}/{self_consistency_total} 正确 (准确率: {accuracy:.2f}%)")
+        print(f"{'='*80}")
     
     # 打印总体统计
     print(f"\n{'='*80}")

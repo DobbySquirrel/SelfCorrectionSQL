@@ -571,3 +571,39 @@ class MCTSUtils:
             'tables': matching_tables,
             'hint': hint
         }
+    
+    @staticmethod
+    def find_tables_with_column(column_name: str, schema_info: str) -> List[str]:
+        """
+        查找包含指定列名的所有表
+        
+        Args:
+            column_name: 列名
+            schema_info: schema信息字符串
+            
+        Returns:
+            包含该列的表名列表
+        """
+        if not column_name or not schema_info:
+            return []
+        
+        # 解析schema，建立列名到表的映射
+        column_to_tables = MCTSUtils.parse_schema_column_mapping(schema_info)
+        
+        # 查找列名对应的表（支持大小写不敏感匹配）
+        column_lower = column_name.lower()
+        
+        # 优先使用小写键匹配
+        if column_lower in column_to_tables:
+            return column_to_tables[column_lower]
+        
+        # 如果小写匹配失败，尝试原始列名匹配
+        if column_name in column_to_tables:
+            return column_to_tables[column_name]
+        
+        # 最后尝试大小写不敏感匹配（遍历所有键）
+        for col, tables in column_to_tables.items():
+            if col.lower() == column_lower:
+                return tables
+        
+        return []

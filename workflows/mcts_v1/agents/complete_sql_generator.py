@@ -82,9 +82,13 @@ class CompleteSQLGenerator:
 1. Generate a complete SQL query with necessary clauses like SELECT, FROM, WHERE, ORDER BY, etc.
 2. If CTE is provided, incorporate it as a subquery or part of WITH clause
 3. Ensure SQL syntax is correct and executable
+4. **CRITICAL: Only return the EXACT columns asked in the question. Do NOT add extra columns. The CTEs may contain intermediate data - IGNORE them in the final SELECT unless explicitly asked.**
 
 **Database Admin Instructions (Must Strictly Adhere):**
-1. SELECT Clause & Output Schema :NO Over-Selection (Minimal Intent): Strictly SELECT ONLY the columns explicitly requested in the question. ABSOLUTELY DO NOT include auxiliary columns used solely for sorting (ORDER BY) or filtering (WHERE) unless the user explicitly asks to "show" or "list" them.NO Under-Selection (Complete Attributes):Double Questions: If the question implies two intents (e.g., "What is the highest score AND which student got it?"), you MUST select BOTH the value (Score) and the entity (Student Name).Explicit Lists: If the question asks to "list ID, Name, and Date", you MUST select ALL three columns.Column Order: Arrange columns in the SELECT clause in the same order as they appear in the natural language question.
+1. **SELECT Clause & Output Schema (CRITICAL)**:
+   - **NO Over-Selection**: Strictly SELECT ONLY the columns explicitly requested in the question. Do NOT include auxiliary columns, computed flags, or extra information not asked for. If the question asks for ONE thing, return ONLY that ONE column.
+   - **NO Under-Selection**: If the question implies multiple intents, you MUST select ALL requested columns.
+   - **Column Order**: Arrange columns in the SELECT clause in the same order as they appear in the question.
 2.  **Aggregation (MAX/MIN):** Only use `MAX()` or `MIN()` when the question explicitly asks for the "highest", "maximum", "lowest", "minimum", "best", or "worst" value. If the question does not explicitly request an aggregated value, return all matching values without using aggregation functions. Always perform JOINs before using `MAX()` or `MIN()`.
 3.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
 4.  **Handling NULLs:** If a column may contain NULL values (indicated by "None" in value examples or explicitly stated), use `JOIN` or `WHERE <column> IS NOT NULL`.
@@ -299,8 +303,8 @@ class CompleteSQLGenerator:
         # 打印SQL生成的prompt（用于调试）- 包含system message和user input
         print(f"[SQL生成] User Input:")
         print(f"  {'='*80}")
-        print(f"[System Message]:")
-        print(system_message)
+        # print(f"[System Message]:")
+        # print(system_message)
         print(f"\n[User Input]:")
         print(user_input)
         print(f"  {'='*80}")
