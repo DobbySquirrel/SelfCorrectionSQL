@@ -272,7 +272,7 @@ Please generate a complete SQL query.
 def main():
     parser = argparse.ArgumentParser(description="测试LLM API连接和调用")
     parser.add_argument("--base_url", type=str, default=None,
-                        help="API base URL (默认: 从环境变量VLLM_API_URL获取或http://localhost:8010/v1)")
+                        help="API base URL (默认: 从环境变量VLLM_API_URL获取或http://localhost:8000/v1)")
     parser.add_argument("--api_key", type=str, default=None,
                         help="API key (默认: 从环境变量VLLM_API_KEY获取或dummy-key)")
     parser.add_argument("--model", type=str, default=None,
@@ -287,7 +287,7 @@ def main():
     args = parser.parse_args()
     
     # 获取配置
-    base_url = args.base_url or os.environ.get("VLLM_API_URL", "http://localhost:8010/v1")
+    base_url = args.base_url or os.environ.get("VLLM_API_URL", "http://localhost:8000/v1")
     api_key = args.api_key or os.environ.get("VLLM_API_KEY", "dummy-key")
     timeout = args.timeout
     

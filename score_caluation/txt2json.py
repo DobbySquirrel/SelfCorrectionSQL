@@ -125,5 +125,5 @@ if __name__ == "__main__":
 # 使用示例（从项目根目录运行）：
 # python score_caluation/txt2json.py \
 #   --dev_set data/sub_sampled_bird_dev_set.json \
-#   --txt_sqls workflows/mcts_v1/test/out/12_25_single_rollout.txt \
-#   --output workflows/mcts_v1/test/out/12_25_single_rollout.json
+#   --txt_sqls /hpc2hdd/home/sshen190/wtao565/SelfCorrectionSQL/workflows/mcts_v1/test/out/1_18_fix_duplicate_name_strategy_force-s1_sql.txt \
+#   --output /hpc2hdd/home/sshen190/wtao565/SelfCorrectionSQL/workflows/mcts_v1/test/out/1_18_fix_duplicate_name_strategy_force-s1_sql.json

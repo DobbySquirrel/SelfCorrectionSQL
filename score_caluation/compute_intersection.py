@@ -27,7 +27,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='计算多种SQL生成方法的交集准确率')
     parser.add_argument('--straightforward_path', type=str, 
-                        default=str(project_root / 'workflows/mcts_v1/test/out/test_single_rollout_llm_pick_once.json'), 
+                        default=str(project_root / 'workflows/mcts_v1/test/out/1_18_fix_duplicate_name_strategy_force-s1_sql.json'), 
                         help='straightforward方法的预测结果路径')
     parser.add_argument('--ground_truth_path', type=str, 
                         default=str(project_root / 'data'), 

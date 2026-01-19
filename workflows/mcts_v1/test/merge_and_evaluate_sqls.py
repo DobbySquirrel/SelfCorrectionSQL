@@ -801,11 +801,11 @@ def main():
     # 每个文件的统计信息
     file_stats = {file_label: {'correct': 0, 'total': 0} for file_label, _ in file_data_list}
     
-    # upper bound 和 self-consistency 统计（仅use_top_sql模式）
+    # upper bound 和 reward-based selection 统计（仅use_top_sql模式）
     upper_bound_correct = 0
     upper_bound_total = 0
-    self_consistency_correct = 0
-    self_consistency_total = 0
+    reward_selection_correct = 0
+    reward_selection_total = 0
     
     for qid in qid_list:
         # 获取数据库名称
@@ -823,17 +823,19 @@ def main():
         gold_sql = gold_sqls.get(qid, None)
         
         if use_top_sql:
-            # 使用顶层sql字段直接评估模式
+            # 使用顶层sql字段直接评估模式 + average_reward选择
             single_file_results = {}
             file_sqls = {}  # {file_label: sql}
+            file_rewards = {}  # {file_label: average_reward}
             file_gold_matches = {}  # {file_label: gold_match}
-            
+
             for file_label, data in file_data_list:
                 single_result = process_question_with_top_sql(qid, file_label, data, db_name, gold_sql)
                 single_file_results[file_label] = single_result
                 file_sqls[file_label] = single_result.get('best_sql', '')
+                file_rewards[file_label] = data.get(qid, {}).get('stats', {}).get('average_reward', 0.0)
                 file_gold_matches[file_label] = single_result.get('gold_match', False)
-                
+
                 # 统计每个文件的gold验证结果（分母固定为所有question）
                 file_stats[file_label]['total'] += 1
                 if single_result.get('gold_match'):
@@ -875,23 +877,24 @@ def main():
                 sig_counts = Counter(sql_signatures.values())
                 # 找出出现次数最多的signature
                 most_common_sig, most_common_count = sig_counts.most_common(1)[0] if sig_counts else (None, 0)
-                
-                # 如果有>=2个文件结果一致，选择那个一致的
-                self_consistency_total += 1
-                if most_common_count >= 2:
-                    # 找到使用这个signature的文件
-                    chosen_files = [fl for fl, sig in sql_signatures.items() if sig == most_common_sig]
-                    # 检查这些文件中是否有gold_match为True的
-                    chosen_gold_match = any(file_gold_matches[fl] for fl in chosen_files)
-                    if chosen_gold_match:
-                        self_consistency_correct += 1
-                    print(f"  [Self-Consistency] qid={qid}: {most_common_count}个文件一致 (sig={most_common_sig[:30]}...), 选择: {chosen_files}, gold_match: {chosen_gold_match}")
+
+                # Reward-based Selection: 选择average_reward最高的SQL
+                reward_selection_total += 1
+                if file_rewards:
+                    # 选择reward最高的策略
+                    best_file = max(file_rewards.keys(), key=lambda f: file_rewards[f])
+                    best_reward = file_rewards[best_file]
+                    best_gold_match = file_gold_matches[best_file]
+
+                    if best_gold_match:
+                        reward_selection_correct += 1
+                    print(f"  [Reward Selection] qid={qid}: 选择 {best_file} (reward={best_reward:.3f}), gold_match: {best_gold_match}")
                 else:
-                    # 没有一致的，随机选或者选第一个
+                    # 没有reward信息，随机选第一个
                     first_file = list(file_gold_matches.keys())[0]
                     if file_gold_matches[first_file]:
-                        self_consistency_correct += 1
-                    print(f"  [Self-Consistency] qid={qid}: 无一致结果，使用{first_file}, gold_match: {file_gold_matches[first_file]}")
+                        reward_selection_correct += 1
+                    print(f"  [Reward Selection] qid={qid}: 无reward信息，使用{first_file}, gold_match: {file_gold_matches[first_file]}")
             finally:
                 db_connector.disconnect()
             
@@ -942,10 +945,10 @@ def main():
         print(f"{'='*80}")
         
         print(f"\n{'='*80}")
-        print(f"[Self-Consistency 统计] (多数投票，>=2个结果一致则选该结果)")
-        if self_consistency_total > 0:
-            accuracy = self_consistency_correct / self_consistency_total * 100
-            print(f"  {self_consistency_correct}/{self_consistency_total} 正确 (准确率: {accuracy:.2f}%)")
+        print(f"[Reward-based Selection 统计] (选择average_reward最高的SQL)")
+        if reward_selection_total > 0:
+            accuracy = reward_selection_correct / reward_selection_total * 100
+            print(f"  {reward_selection_correct}/{reward_selection_total} 正确 (准确率: {accuracy:.2f}%)")
         print(f"{'='*80}")
     
     # 打印总体统计

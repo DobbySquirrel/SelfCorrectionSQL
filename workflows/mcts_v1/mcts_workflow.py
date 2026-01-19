@@ -316,28 +316,19 @@ class MCTSWorkflow:
             if not non_terminal_children:
                 break
             
-            # 【调试模式】优先选择失败节点，方便调试失败节点的修复逻辑
-            # TODO: 调试完成后改回正常逻辑
-            failed_children = [ch for ch in non_terminal_children 
-                               if ch.execution_results.get('is_failed', False)]
-            if failed_children:
-                # 如果有失败节点，优先选择第一个失败节点
-                best_child = failed_children[0]
-                print(f"[调试模式] 优先选择失败节点: {best_child.execution_results.get('error_type', 'unknown')}")
+            # 【改进】优先选择未访问的节点（参考Alpha-SQL的实现）
+            # 检查是否有未访问的子节点
+            unvisited_children = [ch for ch in non_terminal_children if ch.visit_count == 0]
+            if unvisited_children:
+                # 如果有未访问的节点，选择第一个（子节点顺序已在扩展时被打乱）
+                # 这样既保证了每个未访问节点都有机会被探索，又避免了完全随机的选择
+                best_child = unvisited_children[0]
             else:
-                # 【改进】优先选择未访问的节点（参考Alpha-SQL的实现）
-                # 检查是否有未访问的子节点
-                unvisited_children = [ch for ch in non_terminal_children if ch.visit_count == 0]
-                if unvisited_children:
-                    # 如果有未访问的节点，选择第一个（子节点顺序已在扩展时被打乱）
-                    # 这样既保证了每个未访问节点都有机会被探索，又避免了完全随机的选择
-                    best_child = unvisited_children[0]
-                else:
-                    # 所有子节点都已访问过，使用UCB1公式选择
-                    best_child = max(
-                        non_terminal_children,
-                        key=lambda child: child.get_ucb1_value(self.exploration_constant)
-                    )
+                # 所有子节点都已访问过，使用UCB1公式选择
+                best_child = max(
+                    non_terminal_children,
+                    key=lambda child: child.get_ucb1_value(self.exploration_constant)
+                )
             
             current_node = best_child
             path.append(current_node)
@@ -377,18 +368,11 @@ class MCTSWorkflow:
               _should_continue_expansion(current):
             if current.is_expanded:
                 if current.children:
-                    # 【调试模式】优先选择失败节点
-                    failed_children = [ch for ch in current.children 
-                                       if ch.execution_results.get('is_failed', False)]
-                    if failed_children:
-                        next_child = failed_children[0]
-                        print(f"[调试模式-扩展] 优先选择失败节点: {next_child.execution_results.get('error_type', 'unknown')}")
-                    else:
-                        # 所有孩子都参与 UCB 竞争，包括 terminal
-                        next_child = max(
-                            current.children,
-                            key=lambda child: child.get_ucb1_value(self.exploration_constant)
-                        )
+                    # 所有孩子都参与 UCB 竞争，包括 terminal
+                    next_child = max(
+                        current.children,
+                        key=lambda child: child.get_ucb1_value(self.exploration_constant)
+                    )
                     added_nodes.append(next_child)
                     current = next_child
 
@@ -857,16 +841,6 @@ class MCTSWorkflow:
                     current.is_expanded = True
                 break
             
-            # 【调试模式】优先选择失败节点
-            # 检查current.children中是否有失败节点（刚刚创建的）
-            failed_children_in_current = [ch for ch in current.children 
-                                          if ch.execution_results.get('is_failed', False)]
-            if failed_children_in_current:
-                next_child = failed_children_in_current[0]
-                print(f"[调试模式-扩展后] 优先选择失败节点: {next_child.execution_results.get('error_type', 'unknown')}")
-                added_nodes.append(next_child)
-                current = next_child
-                continue  # 继续while循环，在失败节点上生成新的CTE
             
             # 计算是否允许选择 <END>
             end_child = created_map.get('<END>')
