@@ -220,6 +220,8 @@ class CTEGenerator:
         with_match = re.search(r'WITH\s+(\w+)\s+AS\s*\(', raw_text, re.IGNORECASE)
         if not with_match:
             print(f"[CTE提取] ⚠️ 未找到WITH name AS (模式")
+            print(f"[CTE提取] 完整的CTE内容:\n{raw_text}")
+            print(f"[CTE提取] 内容长度: {len(raw_text)} 字符")
             return ""
         
         cte_name = with_match.group(1)
@@ -263,7 +265,8 @@ class CTEGenerator:
         else:
             # 如果循环结束还没找到匹配的右括号，说明CTE不完整
             print(f"⚠️ _extract_cte_from_response: CTE括号不匹配，拒绝不完整的CTE")
-            print(f"   不完整的CTE内容:\n{raw_text[:500]}...")
+            print(f"   完整的CTE内容:\n{raw_text}")
+            print(f"   内容长度: {len(raw_text)} 字符")
             print(f"   括号计数: {paren_count} (未闭合)")
             return ""  # 拒绝不完整的CTE
         
@@ -811,6 +814,89 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
                         if relevant_sample_values:
                             formatted_info.append("    **Relevant Sample Values**:")
                             formatted_info.extend(relevant_sample_values)
+
+                        # 添加统计信息（如果有）
+                        stats_info = exec_result.get('stats_info', {})
+                        if stats_info:
+                            formatted_info.append("    **Statistics Info**:")
+                            if 'total_rows' in stats_info:
+                                formatted_info.append(f"      Total rows in table: {stats_info['total_rows']}")
+
+                            # 去重信息
+                            if 'distinct_rows' in stats_info:
+                                formatted_info.append(f"      Distinct rows: {stats_info['distinct_rows']}")
+                                if 'duplicate_ratio' in stats_info:
+                                    formatted_info.append(f"      Duplicate ratio: {stats_info['duplicate_ratio']:.1%}")
+                            elif 'distinct_rows_estimated' in stats_info:
+                                formatted_info.append(f"      Distinct rows (estimated): {stats_info['distinct_rows_estimated']}")
+                                if 'duplicate_ratio_estimated' in stats_info:
+                                    formatted_info.append(f"      Duplicate ratio (estimated): {stats_info['duplicate_ratio_estimated']:.1%}")
+
+                            # 列统计信息
+                            if 'column_stats' in stats_info:
+                                formatted_info.append("      Column statistics:")
+                                for col_name, col_info in stats_info['column_stats'].items():
+                                    null_ratio = col_info.get('null_ratio', 0)
+                                    has_nulls = col_info.get('has_nulls', False)
+                                    null_indicator = ""
+
+                                    # 基本NULL信息
+                                    col_lines = [f"        {col_name}: {null_ratio:.1%} nulls {null_indicator}"]
+
+                                    # 数值列范围信息
+                                    if 'range' in col_info:
+                                        range_info = col_info['range']
+                                        min_val = range_info.get('min')
+                                        max_val = range_info.get('max')
+                                        if min_val is not None and max_val is not None:
+                                            col_lines.append(f"          Range: {min_val} - {max_val}")
+
+                                    # 字符串列统计信息
+                                    if 'string_stats' in col_info:
+                                        str_stats = col_info['string_stats']
+                                        avg_length = str_stats.get('avg_length', 0)
+                                        unique_count = str_stats.get('unique_count', 0)
+                                        col_lines.append(f"          Avg length: {avg_length:.1f} chars, {unique_count} unique values")
+
+                                        # 添加模式检测
+                                        if 'patterns' in str_stats:
+                                            patterns = str_stats['patterns']
+                                            if patterns:
+                                                pattern_desc = []
+                                                if patterns.get('numeric_only'):
+                                                    pattern_desc.append("全数字")
+                                                if patterns.get('alpha_only'):
+                                                    pattern_desc.append("全字母")
+                                                if patterns.get('alphanumeric'):
+                                                    pattern_desc.append("字母数字混合")
+                                                if patterns.get('has_dash'):
+                                                    pattern_desc.append("含连字符")
+                                                if patterns.get('segmented_numeric'):
+                                                    pattern_desc.append(f"分段数字({patterns.get('segment_count', 0)}段)")
+                                                if patterns.get('fixed_format') and patterns.get('format_example'):
+                                                    pattern_desc.append(f"固定格式:{patterns['format_example']}")
+
+                                                if pattern_desc:
+                                                    col_lines.append(f"          Patterns: {', '.join(pattern_desc)}")
+
+                                    # 常见值信息
+                                    if 'common_values' in col_info:
+                                        common_vals = col_info['common_values']
+                                        if common_vals:
+                                            top_values = [f"{v['value']}({v['count']})" for v in common_vals[:3]]
+                                            col_lines.append(f"          Top values: {', '.join(top_values)}")
+
+                                            # 检查值模式相似性
+                                            if len(common_vals) >= 3:
+                                                values = [str(v['value']) for v in common_vals[:3]]
+                                                if len(values[0]) > 6:
+                                                    # 检查共同前缀
+                                                    common_prefix = self._find_common_prefix(values)
+                                                    if len(common_prefix) >= 6:
+                                                        col_lines.append(f"          Common prefix: '{common_prefix}...'")
+
+                                    formatted_info.extend(col_lines)
+
                 else:
                     formatted_info.append("**Execution Result**: Successfully executed, returned empty result set")
                     # 只在最后一个（最近的）前序CTE有WHERE子句且返回空结果时，提示使用模糊匹配
@@ -831,6 +917,22 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         
         return "\n".join(formatted_info)
     
+    def _find_common_prefix(self, strings):
+        """找到字符串列表的共同前缀"""
+        if not strings:
+            return ""
+
+        # 找到最短字符串的长度
+        min_length = min(len(s) for s in strings)
+
+        # 从头开始比较字符
+        for i in range(min_length):
+            char = strings[0][i]
+            if not all(s[i] == char for s in strings):
+                return strings[0][:i]
+
+        return strings[0][:min_length]
+
     def _extract_db_name_from_schema(self, schema_info: str) -> Optional[str]:
         """从schema_info中提取数据库名称"""
         if not schema_info:

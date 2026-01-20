@@ -46,11 +46,11 @@ def build_db_connector(db_name: str) -> DatabaseConnector:
     return db_connector
 
 
-def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str] = None, 
-             mcts_config: dict = None, strategy_mode: Optional[str] = None) -> dict:
+def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str] = None,
+             mcts_config: dict = None, strategy_mode: Optional[str] = None, collect_stats_on_node_creation: bool = True) -> dict:
     db_name = sample["db"]
     question = sample["question"]
-    schema_info = sample["simplified_ddl"]
+    schema_info = sample.get("ddl_data", sample.get("simplified_ddl", ""))
     foreign_key = sample.get("foreign_key", "")
     # 只使用 evidence，不使用 combine_evidence（因为 combine_evidence 包含不需要的 "Evidence from other related questions" 部分）
     evidence_to_use = sample.get("evidence", "")
@@ -83,7 +83,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
         llm_config = get_llm_config(temperature=0.2, auto_select=True)  # 降低temperature以提高生成质量
 
     # 使用parallel_workers参数设置MCTS内部的max_workers
-    w = MCTSWorkflow(llm_config, db, max_workers=parallel_workers, strategy_mode=strategy_mode)
+    w = MCTSWorkflow(llm_config, db, max_workers=parallel_workers, strategy_mode=strategy_mode, collect_stats_on_node_creation=collect_stats_on_node_creation)
     
     # 应用MCTS配置（如果提供）
     if mcts_config:
@@ -118,14 +118,14 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
 
 def process_single_task(args_tuple):
     """处理单个任务的包装函数，用于并行执行"""
-    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode = args_tuple
+    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode, collect_stats_on_node_creation = args_tuple
     try:
         qid = str(sample.get('question_id', idx))
         print(f"\n{'='*80}")
         print(f">>> 样本#{idx} (question_id={qid}) | DB={sample['db']}")
         print(f"{'='*80}")
 
-        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, mcts_config=mcts_config, strategy_mode=strategy_mode)
+        result = run_once(sample, parallel_workers=parallel_workers, multi_base_urls=multi_base_urls, mcts_config=mcts_config, strategy_mode=strategy_mode, collect_stats_on_node_creation=collect_stats_on_node_creation)
 
 
         # 与gold SQL对比（如果提供）
@@ -393,8 +393,14 @@ def main():
     parser.add_argument("--num_sql_variants", type=int, default=10, help="每个rollout末尾生成的SQL变体数量（默认10）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
-    parser.add_argument("--task_timeout", type=int, default=1800, 
+    parser.add_argument("--task_timeout", type=int, default=1800,
                        help="单个任务的最大超时时间（秒），默认1800秒（30分钟）。8个rollout时建议设置为1800秒以上")
+    parser.add_argument("--skip_processed", action="store_true",
+                       help="跳过已处理的问题（检查JSON输出文件中是否已有结果）")
+    parser.add_argument("--collect_stats", action="store_true", default=True,
+                       help="在节点创建时收集统计信息（默认True）")
+    parser.add_argument("--no_collect_stats", action="store_true",
+                       help="不在节点创建时收集统计信息（与--collect_stats互斥）")
     args = parser.parse_args()
     
     # MCTS配置
@@ -405,6 +411,9 @@ def main():
     }
     if args.max_depth is not None:
         mcts_config['max_depth'] = args.max_depth
+
+    # 处理统计信息收集配置
+    collect_stats_on_node_creation = args.collect_stats and not args.no_collect_stats
 
     # 解析多模型端点
     multi_base_urls = None
@@ -480,12 +489,36 @@ def main():
     processed_indices = []
     correct_count = 0
     total_count = 0
-    
-    # 准备任务列表
+
+    # 检查已处理的样本（如果启用跳过功能）
+    skipped_indices = []
+    if args.skip_processed and args.json_out and os.path.exists(args.json_out):
+        try:
+            with open(args.json_out, 'r', encoding='utf-8') as f:
+                existing_results = json.load(f)
+            for idx in indices:
+                qid = str(ppls[idx].get('question_id', idx))
+                if qid in existing_results:
+                    skipped_indices.append(idx)
+                    print(f"[跳过] question_id={qid} (索引{idx}) 已存在于输出文件中")
+                    # 将现有结果加载到内存中
+                    results[qid] = existing_results[qid]['sql']
+                    results_with_stats[qid] = existing_results[qid]
+                    processed_indices.append(idx)
+                    # 统计gold验证结果
+                    if existing_results[qid].get('stats', {}).get('gold_match') is not None:
+                        total_count += 1
+                        if existing_results[qid]['stats']['gold_match']:
+                            correct_count += 1
+        except Exception as e:
+            print(f"[警告] 读取现有输出文件失败: {e}，继续处理所有样本")
+
+    # 准备任务列表（排除已处理的样本）
     tasks = []
-    for idx in indices:
+    remaining_indices = [idx for idx in indices if idx not in skipped_indices]
+    for idx in remaining_indices:
         sample = load_sample(args.ppl_file, idx)
-        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode))
+        tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode, collect_stats_on_node_creation))
     
     # 统一使用并行处理模式（max_workers=1时也是并行处理，只是单线程）
     print(f"\n处理 {len(tasks)} 个样本（{args.max_workers} 个worker）...")

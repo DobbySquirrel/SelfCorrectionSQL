@@ -37,18 +37,20 @@ import time as _time_for_timing
 class MCTSWorkflow:
     """MCTS工作流主控制器"""
     
-    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None, strategy_mode: Optional[str] = None):
+    def __init__(self, llm_config: Dict, db_connector: DatabaseConnector, max_workers: int = None, strategy_mode: Optional[str] = None, collect_stats_on_node_creation: bool = True):
         """
         初始化MCTS工作流
-        
+
         Args:
             llm_config: LLM配置
             db_connector: 数据库连接器
             max_workers: 最大并行工作线程数（默认根据实际需求动态计算）
             strategy_mode: 策略模式（FORCE_S1/S2/S3, NONE, LLM_PICK_ONCE），如果提供则覆盖全局配置
+            collect_stats_on_node_creation: 是否在节点创建时收集统计信息（默认True）
         """
         self.llm_config = llm_config
         self.db_connector = db_connector
+        self.collect_stats_on_node_creation = collect_stats_on_node_creation
         # using rollouts_per_iteration=1 to test 
         self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
         self.exploration_constant = 2.5  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
@@ -700,7 +702,12 @@ class MCTSWorkflow:
                         parent=None
                     )
                     child.cte = cte_text
-                    child.execution_results['cte_result'] = exec_res
+                    # 根据配置决定是否在节点创建时收集统计信息
+                    if self.collect_stats_on_node_creation:
+                        enhanced_exec_res = self.cte_processor.collect_stats_for_node(cte_text, exec_res)
+                        child.execution_results['cte_result'] = enhanced_exec_res
+                    else:
+                        child.execution_results['cte_result'] = exec_res
                     child.execution_results['bucket_count'] = info.get('count', 0)
                     child.execution_results['bucket_variants'] = info.get('variants', [])
                     
@@ -720,7 +727,12 @@ class MCTSWorkflow:
                         parent=None
                     )
                     child.cte = cte_text
-                    child.execution_results['cte_result'] = exec_res
+                    # 根据配置决定是否在节点创建时收集统计信息（即使结果为空也收集表统计信息）
+                    if self.collect_stats_on_node_creation:
+                        enhanced_exec_res = self.cte_processor.collect_stats_for_node(cte_text, exec_res)
+                        child.execution_results['cte_result'] = enhanced_exec_res
+                    else:
+                        child.execution_results['cte_result'] = exec_res
                     child.execution_results['bucket_count'] = info.get('count', 0)
                     child.execution_results['bucket_variants'] = info.get('variants', [])
                     child.execution_results['is_empty_result'] = True
