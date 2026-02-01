@@ -307,7 +307,10 @@ HPC 程序运行：
 
 
 
-部署vllm serve ~/wtao565/models/Qwen3-Coder-30B --dtype auto --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.8    --tensor-parallel-size 2
-部署vllm serve ~/wtao565/models/Qwen3-32B --dtype auto --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.8    --tensor-parallel-size 2
+部署 vllm serve ~/wtao565/models/Qwen3-Coder-30B --dtype auto --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.9    --tensor-parallel-size 2
+部署 vllm serve ~/wtao565/models/Qwen3-32B --dtype auto --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.8    --tensor-parallel-size 2
 
-运行： ./run_then_hold_gpu.sh （正常程序后接VLLM无限调用程序）
+运行： ./hold_gpu_periodically.sh （正常程序后接VLLM无限调用程序）
+
+跑三个策略全数据集：（好像要先cd /hpc2hdd/home/sshen190/wtao565/SelfCorrectionSQL）
+./run_three_strategies.sh

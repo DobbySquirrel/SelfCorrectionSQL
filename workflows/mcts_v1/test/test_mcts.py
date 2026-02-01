@@ -50,7 +50,7 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
              mcts_config: dict = None, strategy_mode: Optional[str] = None, collect_stats_on_node_creation: bool = True) -> dict:
     db_name = sample["db"]
     question = sample["question"]
-    schema_info = sample.get("ddl_data", sample.get("simplified_ddl", ""))
+    schema_info = sample.get("ddl_data", sample.get("simplified_ddl", "")) #todo : change to ddl_data
     foreign_key = sample.get("foreign_key", "")
     # 只使用 evidence，不使用 combine_evidence（因为 combine_evidence 包含不需要的 "Evidence from other related questions" 部分）
     evidence_to_use = sample.get("evidence", "")
@@ -216,7 +216,7 @@ def load_sample(ppl_file: str, index: int) -> dict:
         ppls = json.load(f)
     if index < 0 or index >= len(ppls):
         raise IndexError(f"index 超界: {index}/{len(ppls)}")
-    required_fields = ["db", "question", "simplified_ddl", "foreign_key"]
+    required_fields = ["db", "question", "ddl_data", "foreign_key"]
     missing = [k for k in required_fields if k not in ppls[index]]
     if missing:
         raise KeyError(f"样本缺少字段: {missing}")

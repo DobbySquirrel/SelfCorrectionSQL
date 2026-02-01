@@ -53,7 +53,7 @@ Expression Types:
 5. **<Set>**: Set operations (UNION, INTERSECT, EXCEPT, DISTINCT)
 6. **<String>**: String processing functions (CONCAT, SUBSTR, UPPER, LOWER, TRIM, REPLACE)
 7. **<Date>**: Date/time processing (STRFTIME, DATE, DATETIME, julianday)
-8. **<Window>**: Window functions (ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY, ORDER BY)
+8. **<Window>**: Window functions (RANK, DENSE_RANK, PARTITION BY, ORDER BY)
 """
 
 # 各策略的示例（根据选定的策略动态注入）

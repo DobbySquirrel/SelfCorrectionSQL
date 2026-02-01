@@ -801,11 +801,15 @@ def main():
     # 每个文件的统计信息
     file_stats = {file_label: {'correct': 0, 'total': 0} for file_label, _ in file_data_list}
     
-    # upper bound 和 reward-based selection 统计（仅use_top_sql模式）
+    # upper bound, self-consistency, reward-based selection, rollout reward selection 统计（仅use_top_sql模式）
     upper_bound_correct = 0
     upper_bound_total = 0
+    self_consistency_correct = 0
+    self_consistency_total = 0
     reward_selection_correct = 0
     reward_selection_total = 0
+    rollout_reward_selection_correct = 0
+    rollout_reward_selection_total = 0
     
     for qid in qid_list:
         # 获取数据库名称
@@ -878,6 +882,22 @@ def main():
                 # 找出出现次数最多的signature
                 most_common_sig, most_common_count = sig_counts.most_common(1)[0] if sig_counts else (None, 0)
 
+                # Self-consistency (Major Voting): 如果多数signature一致，且对应的SQL正确，则算对
+                self_consistency_total += 1
+                if most_common_count >= 2 and most_common_sig is not None:  # 至少2个文件结果一致
+                    # 找到具有多数signature的SQL文件
+                    consistent_files = [f for f, sig in sql_signatures.items() if sig == most_common_sig]
+                    if consistent_files:
+                        # 选择第一个一致的文件来验证gold_match
+                        consistent_file = consistent_files[0]
+                        if file_gold_matches.get(consistent_file, False):
+                            self_consistency_correct += 1
+                        print(f"  [Self-consistency] qid={qid}: 多数投票选择 {consistent_file} (一致数={most_common_count}/3), gold_match: {file_gold_matches.get(consistent_file, False)}")
+                    else:
+                        print(f"  [Self-consistency] qid={qid}: 无一致文件")
+                else:
+                    print(f"  [Self-consistency] qid={qid}: 无多数一致 (max_count={most_common_count})")
+
                 # Reward-based Selection: 选择average_reward最高的SQL
                 reward_selection_total += 1
                 if file_rewards:
@@ -895,6 +915,46 @@ def main():
                     if file_gold_matches[first_file]:
                         reward_selection_correct += 1
                     print(f"  [Reward Selection] qid={qid}: 无reward信息，使用{first_file}, gold_match: {file_gold_matches[first_file]}")
+
+                # Rollout Reward Selection: 选择对应selected_sql的rollout reward最高的SQL
+                rollout_reward_selection_total += 1
+                rollout_rewards = {}  # {file_label: rollout_reward}
+
+                for file_label, data in file_data_list:
+                    qid_data = data.get(qid, {})
+                    top_sql = qid_data.get('sql', '').strip()
+
+                    if top_sql and qid_data.get('rollout_stats'):
+                        # 在rollout_stats中找到匹配的selected_sql
+                        for rollout in qid_data['rollout_stats']:
+                            if rollout and isinstance(rollout, dict):
+                                rollout_selected_sql = rollout.get('selected_sql', '').strip() if rollout.get('selected_sql') else ''
+                                if rollout_selected_sql == top_sql:
+                                    rollout_reward = rollout.get('reward', 0.0)
+                                    rollout_rewards[file_label] = rollout_reward
+                                    print(f"  [Rollout Reward] {file_label}: 找到匹配rollout, reward={rollout_reward:.3f}")
+                                    break
+                        else:
+                            print(f"  [Rollout Reward] {file_label}: 未找到匹配的rollout")
+                    else:
+                        print(f"  [Rollout Reward] {file_label}: 无top_sql或rollout_stats")
+
+                if rollout_rewards:
+                    # 选择rollout reward最高的策略
+                    best_file = max(rollout_rewards.keys(), key=lambda f: rollout_rewards[f])
+                    best_rollout_reward = rollout_rewards[best_file]
+                    best_gold_match = file_gold_matches[best_file]
+
+                    if best_gold_match:
+                        rollout_reward_selection_correct += 1
+                    print(f"  [Rollout Reward Selection] qid={qid}: 选择 {best_file} (rollout_reward={best_rollout_reward:.3f}), gold_match: {best_gold_match}")
+                else:
+                    # 没有rollout reward信息，随机选第一个
+                    first_file = list(file_gold_matches.keys())[0]
+                    if file_gold_matches[first_file]:
+                        rollout_reward_selection_correct += 1
+                    print(f"  [Rollout Reward Selection] qid={qid}: 无rollout reward信息，使用{first_file}, gold_match: {file_gold_matches[first_file]}")
+
             finally:
                 db_connector.disconnect()
             
@@ -945,10 +1005,24 @@ def main():
         print(f"{'='*80}")
         
         print(f"\n{'='*80}")
+        print(f"[Self-consistency 统计] (多数投票: 至少2/3 SQL结果一致)")
+        if self_consistency_total > 0:
+            accuracy = self_consistency_correct / self_consistency_total * 100
+            print(f"  {self_consistency_correct}/{self_consistency_total} 正确 (准确率: {accuracy:.2f}%)")
+        print(f"{'='*80}")
+
+        print(f"\n{'='*80}")
         print(f"[Reward-based Selection 统计] (选择average_reward最高的SQL)")
         if reward_selection_total > 0:
             accuracy = reward_selection_correct / reward_selection_total * 100
             print(f"  {reward_selection_correct}/{reward_selection_total} 正确 (准确率: {accuracy:.2f}%)")
+        print(f"{'='*80}")
+
+        print(f"\n{'='*80}")
+        print(f"[Rollout Reward Selection 统计] (选择selected_sql对应rollout reward最高的SQL)")
+        if rollout_reward_selection_total > 0:
+            accuracy = rollout_reward_selection_correct / rollout_reward_selection_total * 100
+            print(f"  {rollout_reward_selection_correct}/{rollout_reward_selection_total} 正确 (准确率: {accuracy:.2f}%)")
         print(f"{'='*80}")
     
     # 打印总体统计

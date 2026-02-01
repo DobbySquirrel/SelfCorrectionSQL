@@ -3,22 +3,116 @@ import argparse
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import tempfile
 
 # 加载 .env 文件
 env_path = Path(__file__).parent.parent / '.env'
 if env_path.exists():
     load_dotenv(env_path)
 
+def load_dev_order_and_db(dev_set_path: Path):
+    """从 dev_set 中获取 question_id 顺序和 db_id 映射"""
+    with open(dev_set_path, "r", encoding="utf-8") as f:
+        dev_data = json.load(f)
+
+    items = None
+    if isinstance(dev_data, list):
+        items = dev_data
+    elif isinstance(dev_data, dict) and isinstance(dev_data.get("data"), list):
+        items = dev_data["data"]
+    else:
+        raise ValueError("dev_set 格式不支持：应为 list 或 {'data': list}")
+
+    qid_order = []
+    qid_to_db = {}
+    for it in items:
+        if "question_id" in it and "db_id" in it:
+            qid = it["question_id"]
+            qid_order.append(qid)
+            qid_to_db[qid] = it["db_id"]
+
+    return qid_order, qid_to_db
+
+def load_txt_sqls(txt_path):
+    """读取 txt 文件，每行一个 SQL"""
+    sqls = []
+    with open(txt_path, "r", encoding="utf-8") as f:
+        for line in f:
+            # 只去掉换行符，不做 strip
+            sqls.append(line.rstrip("\n"))
+    return sqls
+
+def convert_txt_to_json(txt_path, dev_set_path, start_idx=0, limit=None):
+    """将 txt 文件转换为 matched_sqls_formatted.json 格式"""
+    qid_order, qid_to_db = load_dev_order_and_db(dev_set_path)
+    sqls = load_txt_sqls(txt_path)
+
+    if start_idx < 0 or start_idx >= len(qid_order):
+        raise ValueError(f"start_idx 超出范围: {start_idx} (dev_set size={len(qid_order)})")
+
+    if limit is not None:
+        sqls = sqls[:limit]
+
+    needed = len(sqls)
+    available = len(qid_order) - start_idx
+    if needed > available:
+        raise ValueError(
+            f"❌ txt 有 {needed} 条SQL，但从 dev_set.start_idx={start_idx} 起只剩 {available} 条可对齐。\n"
+            f"   你可以：1) 调小 --limit  2) 调整 --start_idx  3) 确认txt是不是dev子集"
+        )
+
+    formatted = {}
+
+    for i, sql in enumerate(sqls):
+        qid = qid_order[start_idx + i]
+        db_id = qid_to_db.get(qid, "unknown")
+
+        if sql.strip():
+            formatted_sql = f"{sql}\t----- bird -----\t{db_id}"
+        else:
+            formatted_sql = f"\t----- bird -----\t{db_id}"
+
+        formatted[str(qid)] = formatted_sql
+
+    return formatted
+
+def load_json_or_txt(file_path, dev_set_path=None):
+    """加载 JSON 文件或 TXT 文件（自动转换为 JSON 格式）"""
+    file_path = Path(file_path)
+
+    if file_path.suffix.lower() == '.txt':
+        # 如果是 txt 文件，需要转换为 JSON
+        if dev_set_path is None:
+            # 尝试使用默认的 dev_set 路径
+            script_dir = Path(__file__).parent
+            project_root = script_dir.parent
+            dev_set_path = project_root / 'data' / 'sub_sampled_bird_dev_set.json'
+            if not dev_set_path.exists():
+                print(f"错误：处理 txt 文件需要 dev_set 文件，但未找到: {dev_set_path}")
+                return None
+
+        print(f"检测到 txt 文件，正在转换为 JSON 格式: {file_path}")
+        try:
+            return convert_txt_to_json(file_path, dev_set_path)
+        except Exception as e:
+            print(f"错误：转换 txt 文件失败: {e}")
+            return None
+
+    else:
+        # 普通 JSON 文件
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"警告：文件未找到: {file_path}")
+            return None
+        except json.JSONDecodeError:
+            print(f"警告：无法解码JSON文件: {file_path}")
+            return None
+
 def load_json(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"警告：文件未找到: {file_path}")
-        return None
-    except json.JSONDecodeError:
-        print(f"警告：无法解码JSON文件: {file_path}")
-        return None
+    """兼容旧接口的函数"""
+    return load_json_or_txt(file_path)
 
 def main():
     # 获取项目根目录（score_caluation 的父目录）
@@ -27,7 +121,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='计算多种SQL生成方法的交集准确率')
     parser.add_argument('--straightforward_path', type=str, 
-                        default=str(project_root / 'workflows/mcts_v1/test/out/1_18_fix_duplicate_name_strategy_force-s1_sql.json'), 
+                        default=str(project_root / 'workflows/mcts_v1/test/out/1_20_test2_fix_duplicate_close_error_detection_strategy_force-s1_sql.json'), 
                         help='straightforward方法的预测结果路径')
     parser.add_argument('--ground_truth_path', type=str, 
                         default=str(project_root / 'data'), 
@@ -50,16 +144,39 @@ def main():
             args.db_root_path = str(project_root / 'data/dev_databases')
     
     evaluation_script = str(script_dir / "evaluation.py")
-    
+
+    # 处理 straightforward_path：如果是 txt 文件，转换为 JSON
+    temp_file_path = None
+    straightforward_path = Path(args.straightforward_path)
+    if straightforward_path.suffix.lower() == '.txt':
+        print(f"检测到 txt 文件，正在转换为临时 JSON 文件...")
+        # 转换 txt 为 JSON
+        json_data = convert_txt_to_json(straightforward_path, Path(args.diff_json_path))
+        if json_data is None:
+            print("错误：无法转换 txt 文件为 JSON 格式")
+            return
+
+        # 创建临时 JSON 文件
+        temp_json = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(json_data, temp_json, ensure_ascii=False, indent=4)
+        temp_json.close()
+
+        # 使用临时文件路径
+        actual_straightforward_path = temp_json.name
+        temp_file_path = actual_straightforward_path
+        print(f"临时 JSON 文件已创建: {actual_straightforward_path}")
+    else:
+        actual_straightforward_path = args.straightforward_path
+
     # 从路径中提取文件名（不含扩展名）作为方法名，并加上_acc后缀
     straightforward_basename = os.path.splitext(os.path.basename(args.straightforward_path))[0]
     method_name = f"{straightforward_basename}_acc"
-    
+
     # 获取straightforward_path所在的目录，用于保存error_analysis文件
     straightforward_dir = os.path.dirname(args.straightforward_path)
-    
+
     methods = {
-        method_name: args.straightforward_path,
+        method_name: actual_straightforward_path,
     }
 
     for name, path in methods.items():
@@ -177,6 +294,14 @@ def main():
         'stats': stats,
         'straightforward_correct': list(straightforward_correct_ids),
     }
+
+    # 清理临时文件
+    if temp_file_path:
+        try:
+            os.unlink(temp_file_path)
+            print(f"临时文件已清理: {temp_file_path}")
+        except:
+            pass
 
 if __name__ == "__main__":
     main()
