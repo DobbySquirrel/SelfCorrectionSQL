@@ -1,0 +1,264 @@
+{
+  "v0": {
+    "dev": {
+      "axis_recall": 0.7363,
+      "value_recall_exact": 0.1411,
+      "value_recall_semantic": 0.8544,
+      "fp_rate": 0.4243,
+      "avg_value_count": 2.48,
+      "n_cases": 15
+    },
+    "test": {
+      "axis_recall": 0.7983,
+      "value_recall_exact": 0.0767,
+      "value_recall_semantic": 0.6067,
+      "fp_rate": 0.4083,
+      "avg_value_count": 2.57,
+      "n_cases": 15
+    }
+  },
+  "dev_per_case": [
+    {
+      "qid": "23",
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 2.29
+    },
+    {
+      "qid": "36",
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.1667,
+      "value_recall_semantic": 0.8333,
+      "false_positive_rate": 0.25,
+      "avg_value_count": 2.5
+    },
+    {
+      "qid": "85",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.3333,
+      "avg_value_count": 2.4
+    },
+    {
+      "qid": "145",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 2.5
+    },
+    {
+      "qid": "219",
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.25,
+      "avg_value_count": 2.0
+    },
+    {
+      "qid": "347",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.5556,
+      "avg_value_count": 3.0
+    },
+    {
+      "qid": "366",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 0.5,
+      "false_positive_rate": 0.5556,
+      "avg_value_count": 3.0
+    },
+    {
+      "qid": "480",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.4286,
+      "avg_value_count": 2.38
+    },
+    {
+      "qid": "587",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.2,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.2857,
+      "avg_value_count": 2.0
+    },
+    {
+      "qid": "829",
+      "axis_recall": 0.75,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.6667,
+      "avg_value_count": 2.22
+    },
+    {
+      "qid": "959",
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 2.17
+    },
+    {
+      "qid": "1094",
+      "axis_recall": 0.5714,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "false_positive_rate": 0.3333,
+      "avg_value_count": 2.86
+    },
+    {
+      "qid": "1166",
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.8333,
+      "false_positive_rate": 0.3333,
+      "avg_value_count": 2.62
+    },
+    {
+      "qid": "1338",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.4286,
+      "avg_value_count": 2.38
+    },
+    {
+      "qid": "1481",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.4,
+      "false_positive_rate": 0.4444,
+      "avg_value_count": 3.0
+    }
+  ],
+  "test_per_case": [
+    {
+      "qid": "32",
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 0.8333,
+      "false_positive_rate": 0.3333,
+      "avg_value_count": 2.91
+    },
+    {
+      "qid": "46",
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.1667,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.3333,
+      "avg_value_count": 3.0
+    },
+    {
+      "qid": "125",
+      "axis_recall": 0.4,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 2.0
+    },
+    {
+      "qid": "197",
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.1667,
+      "false_positive_rate": 0.25,
+      "avg_value_count": 2.11
+    },
+    {
+      "qid": "263",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.4,
+      "false_positive_rate": 0.2857,
+      "avg_value_count": 2.25
+    },
+    {
+      "qid": "349",
+      "axis_recall": 0.7143,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.2,
+      "false_positive_rate": 0.4444,
+      "avg_value_count": 2.71
+    },
+    {
+      "qid": "391",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.8,
+      "false_positive_rate": 0.4444,
+      "avg_value_count": 2.44
+    },
+    {
+      "qid": "483",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.4,
+      "value_recall_semantic": 0.6,
+      "false_positive_rate": 0.2857,
+      "avg_value_count": 2.14
+    },
+    {
+      "qid": "639",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "false_positive_rate": 0.4286,
+      "avg_value_count": 3.75
+    },
+    {
+      "qid": "894",
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.6,
+      "false_positive_rate": 0.375,
+      "avg_value_count": 2.11
+    },
+    {
+      "qid": "1031",
+      "axis_recall": 0.6667,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 3.0
+    },
+    {
+      "qid": "1149",
+      "axis_recall": 1.0,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "false_positive_rate": 0.7778,
+      "avg_value_count": 2.11
+    },
+    {
+      "qid": "1255",
+      "axis_recall": 0.8889,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.25,
+      "false_positive_rate": 0.1111,
+      "avg_value_count": 2.67
+    },
+    {
+      "qid": "1387",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "false_positive_rate": 0.5556,
+      "avg_value_count": 3.12
+    },
+    {
+      "qid": "1482",
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 0.75,
+      "false_positive_rate": 0.5,
+      "avg_value_count": 2.0
+    }
+  ]
+}

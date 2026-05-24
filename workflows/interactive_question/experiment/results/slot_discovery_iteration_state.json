@@ -1,0 +1,19 @@
+{
+  "best_prompt_version": "v0",
+  "best_dev_metrics": {
+    "axis_recall": 0.7363,
+    "value_recall_exact": 0.1411,
+    "value_recall_semantic": 0.8544,
+    "fp_rate": 0.4243,
+    "avg_value_count": 2.48,
+    "n_cases": 15
+  },
+  "v0_dev_metrics": {
+    "axis_recall": 0.7363,
+    "value_recall_exact": 0.1411,
+    "value_recall_semantic": 0.8544,
+    "fp_rate": 0.4243,
+    "avg_value_count": 2.48,
+    "n_cases": 15
+  }
+}

@@ -1,0 +1,4845 @@
+{
+  "qids": [
+    "23",
+    "32",
+    "36",
+    "46",
+    "85",
+    "125",
+    "197",
+    "219",
+    "263",
+    "347",
+    "349",
+    "366",
+    "480",
+    "483",
+    "587",
+    "639",
+    "829",
+    "1031",
+    "1094",
+    "1149",
+    "1166",
+    "1255",
+    "1387",
+    "1481",
+    "1482",
+    "1338",
+    "959",
+    "391",
+    "145",
+    "894"
+  ],
+  "per_case": [
+    {
+      "qid": "23",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 6,
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 2,
+      "value_miss_count": 0,
+      "hit_axis_count": 3,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.29,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "schools",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.cdscode = frpm.cdscode\", \"target\": \"frpm\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "frpm.\"enrollment (k-12)\" - frpm.\"enrollment (ages 5-17)\" > 30 and not schools.school is null",
+        "aggregate:SELECT": "schools.school, schools.street"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "frpm",
+          "schools"
+        ],
+        "aggregate:GROUP": [
+          "frpm.`Enrollment (K-12)` and frpm.`Enrollment (Ages 5-17)`",
+          "schools.`GSserved` (interpreted as grade span served, e.g., K-12 or 5-17)",
+          "schools.`Street`, schools.`City`, schools.`Zip`",
+          "schools.`Street` only"
+        ],
+        "aggregate:SELECT": [
+          "frpm.`Enrollment (K-12)` and frpm.`Enrollment (Ages 5-17)`",
+          "schools.`GSserved` (interpreted as grade span served, e.g., K-12 or 5-17)",
+          "frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`",
+          "frpm.`Enrollment (Ages 5-17)` - frpm.`Enrollment (K-12)`",
+          "ABS(frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`)",
+          "schools.`Street`",
+          "schools.`StreetAbr`",
+          "schools.`MailStreet`"
+        ],
+        "filter:WHERE": [
+          "frpm.`Enrollment (K-12)` and frpm.`Enrollment (Ages 5-17)`",
+          "schools.`GSserved` (interpreted as grade span served, e.g., K-12 or 5-17)",
+          "ABS(frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`) > 30",
+          "frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)` > 30"
+        ],
+        "combine:JOINS": [
+          "frpm.`CDSCode` = schools.`CDSCode`",
+          "frpm.`CDSCode` = satscores.`cds` AND satscores.`cds` = schools.`CDSCode`"
+        ],
+        "aggregate:DISTINCT": [
+          "schools.`Street`, schools.`City`, schools.`Zip`",
+          "schools.`Street` only"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "Ambiguity in determining which table contains the enrollment data for K-12 and ages 5-17.",
+          "candidate_values": [
+            "frpm",
+            "schools"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "Ambiguity in determining the correct columns for enrollment data for K-12 and ages 5-17.",
+          "candidate_values": [
+            "frpm.`Enrollment (K-12)` and frpm.`Enrollment (Ages 5-17)`",
+            "schools.`GSserved` (interpreted as grade span served, e.g., K-12 or 5-17)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "Ambiguity in determining how to join tables to retrieve the school names and addresses.",
+          "candidate_values": [
+            "frpm.`CDSCode` = schools.`CDSCode`",
+            "frpm.`CDSCode` = satscores.`cds` AND satscores.`cds` = schools.`CDSCode`"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "Ambiguity in how to interpret the 'difference in enrollments' threshold of 30.",
+          "candidate_values": [
+            "ABS(frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`) > 30",
+            "frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)` > 30"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula Ambiguity",
+          "description": "Ambiguity in how to calculate the difference in enrollments between K-12 and ages 5-17.",
+          "candidate_values": [
+            "frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`",
+            "frpm.`Enrollment (Ages 5-17)` - frpm.`Enrollment (K-12)`",
+            "ABS(frpm.`Enrollment (K-12)` - frpm.`Enrollment (Ages 5-17)`)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "Ambiguity in determining which address format to include in the output.",
+          "candidate_values": [
+            "schools.`Street`",
+            "schools.`StreetAbr`",
+            "schools.`MailStreet`"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "Ambiguity in whether to include additional school details (e.g., city, zip code) in the output.",
+          "candidate_values": [
+            "schools.`Street`, schools.`City`, schools.`Zip`",
+            "schools.`Street` only"
+          ]
+        }
+      ],
+      "nl_question": "List the names of schools with more than 30 difference in enrollements between K-12 and ages 5-17? Please also give the full street adress of the schools.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "32",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 0.8333,
+      "value_exact_count": 2,
+      "value_semantic_count": 3,
+      "value_miss_count": 1,
+      "hit_axis_count": 6,
+      "false_positive_rate": 0.3333,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.91,
+      "slot_count": 11,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "frpm",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.cdscode = schools.cdscode\", \"target\": \"schools\", \"type\": \"inner\"}",
+        "filter:WHERE": "schools.soc = 66",
+        "aggregate:SELECT": "cast(frpm.\"frpm count (k-12)\" as float) / frpm.\"enrollment (k-12)\"",
+        "aggregate:ORDERBY": "frpm.\"frpm count (k-12)\" desc",
+        "aggregate:LIMIT": "5"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "frpm",
+          "satscores",
+          "schools"
+        ],
+        "aggregate:GROUP": [
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)",
+          "Percent (%) Eligible FRPM (Ages 5-17)",
+          "Percent (%) Eligible Free (Ages 5-17)",
+          "Only top 5 schools",
+          "Top 5 schools with additional metadata (e.g., Enrollment, County Name)"
+        ],
+        "aggregate:SELECT": [
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)",
+          "Percent (%) Eligible FRPM (Ages 5-17)",
+          "Percent (%) Eligible Free (Ages 5-17)",
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)",
+          "FRPM Count (K-12) / Enrollment (K-12)",
+          "Free Meal Count (K-12) / Enrollment (K-12)",
+          "School Name, Percent (%) Eligible FRPM (K-12)",
+          "School Name, Percent (%) Eligible Free (K-12)",
+          "School Name, FRPM Count (K-12), Percent (%) Eligible FRPM (K-12)"
+        ],
+        "filter:WHERE": [
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)",
+          "Percent (%) Eligible FRPM (Ages 5-17)",
+          "Percent (%) Eligible Free (Ages 5-17)",
+          "schools.SOC = 66",
+          "schools.SOCType = 'High Schools (Public)'",
+          "Low Grade >= 1 AND High Grade <= 12",
+          "Low Grade >= 1 AND High Grade = 12",
+          "Low Grade = 1 AND High Grade = 12"
+        ],
+        "combine:JOINS": [
+          "frpm.CDSCode = schools.CDSCode AND schools.SOC = 66",
+          "satscores.cds = schools.CDSCode AND schools.SOC = 66"
+        ],
+        "combine:COMBINE_WHERE": [
+          "Low Grade >= 1 AND High Grade <= 12",
+          "Low Grade >= 1 AND High Grade = 12",
+          "Low Grade = 1 AND High Grade = 12"
+        ],
+        "aggregate:LIMIT": [
+          "FRPM Count (K-12)",
+          "Free Meal Count (K-12)",
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)"
+        ],
+        "aggregate:ORDERBY": [
+          "FRPM Count (K-12)",
+          "Free Meal Count (K-12)",
+          "Percent (%) Eligible FRPM (K-12)",
+          "Percent (%) Eligible Free (K-12)",
+          "Use alphabetical order of School Name as a tiebreaker",
+          "Use Enrollment (K-12) as a tiebreaker",
+          "Include all schools with the same metric value in the top 5",
+          "DESC (highest to lowest)",
+          "ASC (lowest to highest)"
+        ],
+        "aggregate:DISTINCT": [
+          "Only top 5 schools",
+          "Top 5 schools with additional metadata (e.g., Enrollment, County Name)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:LIMIT": "miss",
+        "aggregate:ORDERBY": "semantic",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "exact",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "Ambiguity in determining which table contains the 'eligible free or reduced price meal rate' data.",
+          "candidate_values": [
+            "frpm",
+            "satscores",
+            "schools"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "Ambiguity in determining which column represents the 'eligible free or reduced price meal rate'.",
+          "candidate_values": [
+            "Percent (%) Eligible FRPM (K-12)",
+            "Percent (%) Eligible Free (K-12)",
+            "Percent (%) Eligible FRPM (Ages 5-17)",
+            "Percent (%) Eligible Free (Ages 5-17)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "Ambiguity in determining how to join tables to filter schools with ownership code 66.",
+          "candidate_values": [
+            "frpm.CDSCode = schools.CDSCode AND schools.SOC = 66",
+            "satscores.cds = schools.CDSCode AND schools.SOC = 66"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "Ambiguity in interpreting the ownership code '66' and its representation in the database.",
+          "candidate_values": [
+            "schools.SOC = 66",
+            "schools.SOCType = 'High Schools (Public)'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula Ambiguity",
+          "description": "Ambiguity in defining the 'eligible free or reduced price meal rate' for a school.",
+          "candidate_values": [
+            "Percent (%) Eligible FRPM (K-12)",
+            "Percent (%) Eligible Free (K-12)",
+            "FRPM Count (K-12) / Enrollment (K-12)",
+            "Free Meal Count (K-12) / Enrollment (K-12)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "Ambiguity in defining the grade range for 'grades 1-12'.",
+          "candidate_values": [
+            "Low Grade >= 1 AND High Grade <= 12",
+            "Low Grade >= 1 AND High Grade = 12",
+            "Low Grade = 1 AND High Grade = 12"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum Ambiguity",
+          "description": "Ambiguity in determining the ranking metric for the 'top 5 schools'.",
+          "candidate_values": [
+            "FRPM Count (K-12)",
+            "Free Meal Count (K-12)",
+            "Percent (%) Eligible FRPM (K-12)",
+            "Percent (%) Eligible Free (K-12)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method Ambiguity",
+          "description": "Ambiguity in how to rank schools with the same metric value.",
+          "candidate_values": [
+            "Use alphabetical order of School Name as a tiebreaker",
+            "Use Enrollment (K-12) as a tiebreaker",
+            "Include all schools with the same metric value in the top 5"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Direction Ambiguity",
+          "description": "Ambiguity in whether 'highest' refers to ascending or descending order.",
+          "candidate_values": [
+            "DESC (highest to lowest)",
+            "ASC (lowest to highest)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "Ambiguity in determining which columns to include in the output.",
+          "candidate_values": [
+            "School Name, Percent (%) Eligible FRPM (K-12)",
+            "School Name, Percent (%) Eligible Free (K-12)",
+            "School Name, FRPM Count (K-12), Percent (%) Eligible FRPM (K-12)"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "Ambiguity in whether to include only the top 5 schools or additional metadata.",
+          "candidate_values": [
+            "Only top 5 schools",
+            "Top 5 schools with additional metadata (e.g., Enrollment, County Name)"
+          ]
+        }
+      ],
+      "nl_question": "What is the eligible free or reduced price meal rate for the top 5 schools in grades 1-12 with the highest free or reduced price meal count of the schools with the ownership code 66?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "36",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.1667,
+      "value_recall_semantic": 0.8333,
+      "value_exact_count": 1,
+      "value_semantic_count": 4,
+      "value_miss_count": 1,
+      "hit_axis_count": 6,
+      "false_positive_rate": 0.25,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.5,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "satscores",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.cds = schools.cdscode\", \"target\": \"schools\", \"type\": \"inner\"}",
+        "filter:WHERE": "satscores.rtype = 's'",
+        "aggregate:SELECT": "schools.admfname1, schools.admlname1, schools.admfname2, schools.admlname2, schools.admfname3, schools.admlname3",
+        "aggregate:ORDERBY": "satscores.numge1500 desc",
+        "aggregate:LIMIT": "1"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "schools",
+          "frpm",
+          "satscores"
+        ],
+        "aggregate:SELECT": [
+          "schools.AdmFName1, schools.AdmLName1",
+          "schools.AdmFName2, schools.AdmLName2",
+          "schools.District",
+          "schools.DOCType",
+          "MAX(satscores.NumGE1500)",
+          "COUNT(satscores.NumGE1500 > 0)",
+          "schools.AdmFName1, schools.AdmLName1",
+          "schools.AdmFName2, schools.AdmLName2",
+          "schools.AdmFName1, schools.AdmLName1, schools.AdmFName2, schools.AdmLName2"
+        ],
+        "filter:WHERE": [
+          "schools.AdmFName1, schools.AdmLName1",
+          "schools.AdmFName2, schools.AdmLName2",
+          "schools.District",
+          "schools.DOCType",
+          "satscores.NumGE1500",
+          "satscores.AvgScrRead + satscores.AvgScrMath + satscores.AvgScrWrite >= 1500"
+        ],
+        "aggregate:GROUP": [
+          "schools.AdmFName1, schools.AdmLName1",
+          "schools.AdmFName2, schools.AdmLName2",
+          "schools.District",
+          "schools.DOCType",
+          "GROUP BY schools.CDSCode",
+          "GROUP BY schools.AdmFName1, schools.AdmLName1"
+        ],
+        "combine:JOINS": [
+          "satscores.cds = schools.CDSCode",
+          "frpm.CDSCode = schools.CDSCode AND satscores.cds = frpm.CDSCode"
+        ],
+        "aggregate:ORDERBY": [
+          "satscores.NumGE1500",
+          "satscores.enroll12"
+        ],
+        "aggregate:LIMIT": [
+          "satscores.NumGE1500",
+          "satscores.enroll12"
+        ],
+        "aggregate:DISTINCT": [
+          "GROUP BY schools.CDSCode",
+          "GROUP BY schools.AdmFName1, schools.AdmLName1"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:LIMIT": "semantic",
+        "aggregate:ORDERBY": "semantic",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "miss",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the relevant information about the school administration.",
+          "candidate_values": [
+            "schools",
+            "frpm",
+            "satscores"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in identifying the column that represents the 'administration' of the school.",
+          "candidate_values": [
+            "schools.AdmFName1, schools.AdmLName1",
+            "schools.AdmFName2, schools.AdmLName2",
+            "schools.District",
+            "schools.DOCType"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to connect SAT scores to school administration.",
+          "candidate_values": [
+            "satscores.cds = schools.CDSCode",
+            "frpm.CDSCode = schools.CDSCode AND satscores.cds = frpm.CDSCode"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in how the SAT score threshold (1500) is encoded or calculated.",
+          "candidate_values": [
+            "satscores.NumGE1500",
+            "satscores.AvgScrRead + satscores.AvgScrMath + satscores.AvgScrWrite >= 1500"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in how the 'highest number of students scoring 1500 or more' is calculated.",
+          "candidate_values": [
+            "MAX(satscores.NumGE1500)",
+            "COUNT(satscores.NumGE1500 > 0)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum",
+          "description": "Ambiguity in determining the ranking target for 'highest number of students scoring 1500 or more.'",
+          "candidate_values": [
+            "satscores.NumGE1500",
+            "satscores.enroll12"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining which administrator's full name(s) to project in the output.",
+          "candidate_values": [
+            "schools.AdmFName1, schools.AdmLName1",
+            "schools.AdmFName2, schools.AdmLName2",
+            "schools.AdmFName1, schools.AdmLName1, schools.AdmFName2, schools.AdmLName2"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether to output one row per administrator or one row per school.",
+          "candidate_values": [
+            "GROUP BY schools.CDSCode",
+            "GROUP BY schools.AdmFName1, schools.AdmLName1"
+          ]
+        }
+      ],
+      "nl_question": "Under whose administration is the school with the highest number of students scoring 1500 or more on the SAT? Indicate their full names.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "46",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.1667,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 5,
+      "value_miss_count": 0,
+      "hit_axis_count": 6,
+      "false_positive_rate": 0.3333,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 3.0,
+      "slot_count": 10,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "frpm",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.cdscode = schools.cdscode\", \"target\": \"schools\", \"type\": \"inner\"}",
+        "filter:WHERE": "schools.doc = 31 and not schools.school is null",
+        "aggregate:SELECT": "schools.school",
+        "aggregate:ORDERBY": "frpm.\"enrollment (k-12)\" desc",
+        "aggregate:LIMIT": "1"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "frpm",
+          "schools",
+          "satscores"
+        ],
+        "aggregate:GROUP": [
+          "schools.DOCType",
+          "schools.District",
+          "frpm.District Type",
+          "GROUP BY frpm.District",
+          "GROUP BY frpm.School Name",
+          "No GROUP BY (return a single row with the highest enrollment)"
+        ],
+        "aggregate:SELECT": [
+          "schools.DOCType",
+          "schools.District",
+          "frpm.District Type",
+          "MAX(frpm.Enrollment (K-12))",
+          "SUM(frpm.Enrollment (K-12)) GROUP BY frpm.District",
+          "MAX(satscores.enroll12)",
+          "schools.District, frpm.Enrollment (K-12)",
+          "schools.School, frpm.Enrollment (K-12)",
+          "schools.District, schools.School, frpm.Enrollment (K-12)"
+        ],
+        "filter:WHERE": [
+          "schools.DOCType",
+          "schools.District",
+          "frpm.District Type",
+          "'State Special Schools' in frpm.District Type",
+          "'State Special Schools' in schools.DOCType",
+          "'California School for the Blind (State Special Schl)' in schools.District",
+          "'California School for the Deaf-Fremont (State Special Schl)' in schools.District",
+          "frpm.Low Grade = '1' AND frpm.High Grade = '12'",
+          "schools.GSserved = 'K-12'",
+          "schools.GSoffered = 'K-12'"
+        ],
+        "combine:JOINS": [
+          "frpm.CDSCode = schools.CDSCode",
+          "satscores.cds = schools.CDSCode",
+          "frpm.CDSCode = satscores.cds"
+        ],
+        "combine:COMBINE_WHERE": [
+          "frpm.Low Grade = '1' AND frpm.High Grade = '12'",
+          "schools.GSserved = 'K-12'",
+          "schools.GSoffered = 'K-12'"
+        ],
+        "aggregate:LIMIT": [
+          "MAX(frpm.Enrollment (K-12))",
+          "MAX(satscores.enroll12)"
+        ],
+        "aggregate:ORDERBY": [
+          "MAX(frpm.Enrollment (K-12))",
+          "MAX(satscores.enroll12)",
+          "ORDER BY frpm.Enrollment (K-12) DESC",
+          "ORDER BY SUM(frpm.Enrollment (K-12)) DESC",
+          "ORDER BY satscores.enroll12 DESC"
+        ],
+        "aggregate:DISTINCT": [
+          "GROUP BY frpm.District",
+          "GROUP BY frpm.School Name",
+          "No GROUP BY (return a single row with the highest enrollment)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:LIMIT": "semantic",
+        "aggregate:ORDERBY": "semantic",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "It is unclear which table contains the primary data for 'state special schools' and their enrollment.",
+          "candidate_values": [
+            "frpm",
+            "schools",
+            "satscores"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "The column representing 'state special schools' is ambiguous.",
+          "candidate_values": [
+            "schools.DOCType",
+            "schools.District",
+            "frpm.District Type"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "The join path to connect tables for 'state special schools' and their enrollment is unclear.",
+          "candidate_values": [
+            "frpm.CDSCode = schools.CDSCode",
+            "satscores.cds = schools.CDSCode",
+            "frpm.CDSCode = satscores.cds"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "The encoding of 'state special schools' is ambiguous and could refer to different values.",
+          "candidate_values": [
+            "'State Special Schools' in frpm.District Type",
+            "'State Special Schools' in schools.DOCType",
+            "'California School for the Blind (State Special Schl)' in schools.District",
+            "'California School for the Deaf-Fremont (State Special Schl)' in schools.District"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula Ambiguity",
+          "description": "The formula for 'highest number of enrollees from grades 1 through 12' is ambiguous.",
+          "candidate_values": [
+            "MAX(frpm.Enrollment (K-12))",
+            "SUM(frpm.Enrollment (K-12)) GROUP BY frpm.District",
+            "MAX(satscores.enroll12)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "The grade range 'grades 1 through 12' is ambiguous in terms of how it maps to the schema.",
+          "candidate_values": [
+            "frpm.Low Grade = '1' AND frpm.High Grade = '12'",
+            "schools.GSserved = 'K-12'",
+            "schools.GSoffered = 'K-12'"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum Ambiguity",
+          "description": "The ranking target for 'highest number of enrollees' is ambiguous.",
+          "candidate_values": [
+            "MAX(frpm.Enrollment (K-12))",
+            "MAX(satscores.enroll12)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method Ambiguity",
+          "description": "The method for determining the 'highest number of enrollees' is ambiguous.",
+          "candidate_values": [
+            "ORDER BY frpm.Enrollment (K-12) DESC",
+            "ORDER BY SUM(frpm.Enrollment (K-12)) DESC",
+            "ORDER BY satscores.enroll12 DESC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "The output columns to include in the result are ambiguous.",
+          "candidate_values": [
+            "schools.District, frpm.Enrollment (K-12)",
+            "schools.School, frpm.Enrollment (K-12)",
+            "schools.District, schools.School, frpm.Enrollment (K-12)"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "The row structure for the output is ambiguous (e.g., whether to group by district or school).",
+          "candidate_values": [
+            "GROUP BY frpm.District",
+            "GROUP BY frpm.School Name",
+            "No GROUP BY (return a single row with the highest enrollment)"
+          ]
+        }
+      ],
+      "nl_question": "Which state special schools have the highest number of enrollees from grades 1 through 12?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "85",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 6,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 0,
+      "value_semantic_count": 4,
+      "value_miss_count": 0,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.3333,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.4,
+      "slot_count": 5,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "frpm",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.cdscode = schools.cdscode\", \"target\": \"schools\", \"type\": \"inner\"}",
+        "filter:WHERE": "schools.admfname1 = 'alusine'",
+        "aggregate:SELECT": "frpm.\"free meal count (k-12)\" * 100 / frpm.\"enrollment (k-12)\", frpm.\"district code\""
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "frpm.`Percent (%) Eligible Free (K-12)`",
+          "frpm.`Percent (%) Eligible FRPM (K-12)`",
+          "frpm.`District Code`",
+          "schools.`District`",
+          "schools.`AdmFName1`",
+          "schools.`AdmFName2`",
+          "schools.`AdmFName3`",
+          "SELECT DISTINCT frpm.`District Code`",
+          "SELECT schools.`District`"
+        ],
+        "aggregate:SELECT": [
+          "frpm.`Percent (%) Eligible Free (K-12)`",
+          "frpm.`Percent (%) Eligible FRPM (K-12)`",
+          "frpm.`District Code`",
+          "schools.`District`",
+          "schools.`AdmFName1`",
+          "schools.`AdmFName2`",
+          "schools.`AdmFName3`",
+          "SELECT DISTINCT frpm.`District Code`",
+          "SELECT schools.`District`"
+        ],
+        "combine:JOINS": [
+          "frpm.`Percent (%) Eligible Free (K-12)`",
+          "frpm.`Percent (%) Eligible FRPM (K-12)`",
+          "frpm.`District Code`",
+          "schools.`District`",
+          "schools.`AdmFName1`",
+          "schools.`AdmFName2`",
+          "schools.`AdmFName3`"
+        ],
+        "filter:WHERE": [
+          "frpm.`Percent (%) Eligible Free (K-12)`",
+          "frpm.`Percent (%) Eligible FRPM (K-12)`",
+          "frpm.`District Code`",
+          "schools.`District`",
+          "schools.`AdmFName1`",
+          "schools.`AdmFName2`",
+          "schools.`AdmFName3`",
+          "'Alusine'",
+          "'Alusine%'",
+          "'%Alusine%'"
+        ],
+        "source:FROM": [
+          "frpm.`Percent (%) Eligible Free (K-12)`",
+          "frpm.`Percent (%) Eligible FRPM (K-12)`",
+          "frpm.`District Code`",
+          "schools.`District`",
+          "schools.`AdmFName1`",
+          "schools.`AdmFName2`",
+          "schools.`AdmFName3`"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT DISTINCT frpm.`District Code`",
+          "SELECT schools.`District`"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the correct table and column for 'Percent (%) Eligible Free (K-12)'",
+          "candidate_values": [
+            "frpm.`Percent (%) Eligible Free (K-12)`",
+            "frpm.`Percent (%) Eligible FRPM (K-12)`"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the correct table and column for 'district code'",
+          "candidate_values": [
+            "frpm.`District Code`",
+            "schools.`District`"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the correct column for administrator's first name 'Alusine'",
+          "candidate_values": [
+            "schools.`AdmFName1`",
+            "schools.`AdmFName2`",
+            "schools.`AdmFName3`"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in the format of the administrator's first name 'Alusine'",
+          "candidate_values": [
+            "'Alusine'",
+            "'Alusine%'",
+            "'%Alusine%'"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in determining the output structure for the district code",
+          "candidate_values": [
+            "SELECT DISTINCT frpm.`District Code`",
+            "SELECT schools.`District`"
+          ]
+        }
+      ],
+      "nl_question": "What is the Percent (%) Eligible Free (K-12) in the school administered by an administrator whose first name is Alusine. List the district code of the school.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "125",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 4,
+      "axis_recall": 0.4,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 0,
+      "hit_axis_count": 2,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.0,
+      "slot_count": 5,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "loan",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.account_id = account.account_id\", \"target\": \"account\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "loan.status = 'd' and not district.a12 is null and not district.a13 is null and district.a12 > 0",
+        "aggregate:SELECT": "(district.a13 - district.a12) / district.a12 * 100"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "district.A12",
+          "district.A13"
+        ],
+        "aggregate:SELECT": [
+          "district.A12",
+          "district.A13",
+          "(district.A12_1996 - district.A12_1995) / district.A12_1995 * 100",
+          "(district.A13_1996 - district.A13_1995) / district.A13_1995 * 100",
+          "district.A2, district.A12",
+          "district.A2, district.A13"
+        ],
+        "filter:WHERE": [
+          "district.A12",
+          "district.A13",
+          "loan.status = 'B'",
+          "loan.status = 'D'"
+        ],
+        "combine:JOINS": [
+          "loan.account_id = account.account_id AND account.district_id = district.district_id",
+          "loan.account_id = disp.account_id AND disp.client_id = client.client_id AND client.district_id = district.district_id"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column ambiguity",
+          "description": "Ambiguity in identifying the correct column for unemployment rate increment.",
+          "candidate_values": [
+            "district.A12",
+            "district.A13"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the correct join path to link loans to clients and districts.",
+          "candidate_values": [
+            "loan.account_id = account.account_id AND account.district_id = district.district_id",
+            "loan.account_id = disp.account_id AND disp.client_id = client.client_id AND client.district_id = district.district_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in interpreting the loan status to determine if a client is in debt.",
+          "candidate_values": [
+            "loan.status = 'B'",
+            "loan.status = 'D'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in calculating the percentage increment of unemployment rate from 1995 to 1996.",
+          "candidate_values": [
+            "(district.A12_1996 - district.A12_1995) / district.A12_1995 * 100",
+            "(district.A13_1996 - district.A13_1995) / district.A13_1995 * 100"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in determining which columns to project in the final output.",
+          "candidate_values": [
+            "district.A2, district.A12",
+            "district.A2, district.A13"
+          ]
+        }
+      ],
+      "nl_question": "For loans contracts which are still running where client are in debt, state their district percentage unemployment rate increment from year 1995 to 1996.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "197",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.8571,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.1667,
+      "value_exact_count": 0,
+      "value_semantic_count": 1,
+      "value_miss_count": 5,
+      "hit_axis_count": 6,
+      "false_positive_rate": 0.25,
+      "false_positive_axes": [
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.11,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "aggregate_state_query_2",
+        "aggregate:SELECT": "avg(oxygen_atoms_per_molecule.oxygen_count) as average_oxygen_atoms",
+        "aggregate:GROUP": "atom.molecule_id",
+        "filter:WHERE": "bond.bond_type = '-'",
+        "aggregate:DISTINCT": "true",
+        "combine:BASE": "source_state_query_3",
+        "combine:JOINS": "{\"on\": \"source_state_query_3.molecule_id = aggregate_state_query_1.molecule_id\", \"target\": \"aggregate_state_query_1\", \"type\": \"inner\"}"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "bond",
+          "connected"
+        ],
+        "aggregate:SELECT": [
+          "bond.bond_type",
+          "connected.bond_id",
+          "COUNT(oxygen_atoms) / COUNT(single_bonded_molecules)",
+          "SUM(oxygen_atoms) / COUNT(single_bonded_molecules)",
+          "Average number of oxygen atoms",
+          "List of single-bonded molecules and their oxygen atom counts"
+        ],
+        "filter:WHERE": [
+          "bond.bond_type",
+          "connected.bond_id",
+          "'-'",
+          "'single'",
+          "Include molecules with zero oxygen atoms",
+          "Exclude molecules with zero oxygen atoms"
+        ],
+        "aggregate:GROUP": [
+          "bond.bond_type",
+          "connected.bond_id",
+          "Single row with the average value",
+          "Multiple rows, one per molecule, with oxygen atom counts"
+        ],
+        "combine:JOINS": [
+          "atom -> connected -> bond",
+          "atom -> bond",
+          "atom -> connected"
+        ],
+        "combine:COMBINE_WHERE": [
+          "Include molecules with zero oxygen atoms",
+          "Exclude molecules with zero oxygen atoms"
+        ],
+        "aggregate:ORDERBY": [
+          "Filter molecules with at least one single bond",
+          "Filter molecules where all bonds are single bonds"
+        ],
+        "aggregate:DISTINCT": [
+          "Single row with the average value",
+          "Multiple rows, one per molecule, with oxygen atom counts"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:GROUP": "miss",
+        "aggregate:SELECT": "miss",
+        "combine:JOINS": "miss",
+        "filter:WHERE": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table(s) to use for identifying single-bonded molecules.",
+          "candidate_values": [
+            "bond",
+            "connected"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in identifying the column that specifies the bond type for single bonds.",
+          "candidate_values": [
+            "bond.bond_type",
+            "connected.bond_id"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to connect atoms, bonds, and molecules.",
+          "candidate_values": [
+            "atom -> connected -> bond",
+            "atom -> bond",
+            "atom -> connected"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in interpreting the encoding of single bonds in the bond_type column.",
+          "candidate_values": [
+            "'-'",
+            "'single'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in defining the formula to calculate the average number of oxygen atoms in single-bonded molecules.",
+          "candidate_values": [
+            "COUNT(oxygen_atoms) / COUNT(single_bonded_molecules)",
+            "SUM(oxygen_atoms) / COUNT(single_bonded_molecules)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in determining whether to include molecules with no oxygen atoms in the average calculation.",
+          "candidate_values": [
+            "Include molecules with zero oxygen atoms",
+            "Exclude molecules with zero oxygen atoms"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method",
+          "description": "Ambiguity in the method to identify single-bonded molecules.",
+          "candidate_values": [
+            "Filter molecules with at least one single bond",
+            "Filter molecules where all bonds are single bonds"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining the output column(s) for the query.",
+          "candidate_values": [
+            "Average number of oxygen atoms",
+            "List of single-bonded molecules and their oxygen atom counts"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in the structure of the output rows.",
+          "candidate_values": [
+            "Single row with the average value",
+            "Multiple rows, one per molecule, with oxygen atom counts"
+          ]
+        }
+      ],
+      "nl_question": "Calculate the average number of oxygen atoms in single-bonded molecules.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "219",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 4,
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 0,
+      "value_semantic_count": 3,
+      "value_miss_count": 0,
+      "hit_axis_count": 3,
+      "false_positive_rate": 0.25,
+      "false_positive_axes": [
+        "aggregate:GROUP"
+      ],
+      "false_positive_count": 1,
+      "avg_value_count": 2.0,
+      "slot_count": 5,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "atom",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.molecule_id = molecule.molecule_id\", \"target\": \"molecule\", \"type\": \"inner\"}",
+        "filter:WHERE": "bond.bond_type = '#'",
+        "aggregate:SELECT": "cast(count(distinct case when molecule.label = '+' then molecule.molecule_id else null end) as float) * 100 / count(distinct molecule.molecule_id)"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "bond.bond_type = '≡'",
+          "bond.bond_type = '='"
+        ],
+        "aggregate:SELECT": [
+          "bond.bond_type = '≡'",
+          "bond.bond_type = '='",
+          "(COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '≡' AND molecule.label = '+') / COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '≡')) * 100",
+          "(COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '=' AND molecule.label = '+') / COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '=')) * 100",
+          "SELECT percentage_of_carcinogenic_molecules",
+          "SELECT molecule_id, percentage_of_carcinogenic_molecules"
+        ],
+        "filter:WHERE": [
+          "bond.bond_type = '≡'",
+          "bond.bond_type = '='",
+          "molecule.label = '+'",
+          "molecule.label = 'carcinogenic'"
+        ],
+        "combine:JOINS": [
+          "bond JOIN molecule ON bond.molecule_id = molecule.molecule_id",
+          "bond JOIN connected ON bond.bond_id = connected.bond_id JOIN molecule ON connected.atom_id = atom.atom_id JOIN molecule ON atom.molecule_id = molecule.molecule_id"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column ambiguity",
+          "description": "Ambiguity in identifying which table and column to use for 'triple type bonds'",
+          "candidate_values": [
+            "bond.bond_type = '≡'",
+            "bond.bond_type = '='"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the correct join path to associate bonds with molecules",
+          "candidate_values": [
+            "bond JOIN molecule ON bond.molecule_id = molecule.molecule_id",
+            "bond JOIN connected ON bond.bond_id = connected.bond_id JOIN molecule ON connected.atom_id = atom.atom_id JOIN molecule ON atom.molecule_id = molecule.molecule_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in encoding carcinogenic molecules, represented by the 'label' column",
+          "candidate_values": [
+            "molecule.label = '+'",
+            "molecule.label = 'carcinogenic'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in calculating the percentage of carcinogenic molecules with triple bonds",
+          "candidate_values": [
+            "(COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '≡' AND molecule.label = '+') / COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '≡')) * 100",
+            "(COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '=' AND molecule.label = '+') / COUNT(DISTINCT molecule.molecule_id WHERE bond.bond_type = '=')) * 100"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in determining the output structure for the percentage calculation",
+          "candidate_values": [
+            "SELECT percentage_of_carcinogenic_molecules",
+            "SELECT molecule_id, percentage_of_carcinogenic_molecules"
+          ]
+        }
+      ],
+      "nl_question": "What is the percentage of molecules in triple type bonds are carcinogenic?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "263",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.4,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 3,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.2857,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.25,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "molecule",
+        "filter:WHERE": "molecule_id in (select * from aggregate_state_query_2)",
+        "aggregate:SELECT": "molecule.molecule_id",
+        "combine:BASE": "source_state_query_2",
+        "combine:JOINS": "{\"on\": \"source_state_query_2.molecule_id = bond.molecule_id and bond.bond_type = '-'\", \"target\": \"bond\", \"type\": \"inner\"}",
+        "aggregate:DISTINCT": "true"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "bond WHERE bond_type = '-'",
+          "connected JOIN bond ON connected.bond_id = bond.bond_id WHERE bond.bond_type = '-'"
+        ],
+        "aggregate:SELECT": [
+          "atom.element = 'cl'",
+          "LOWER(atom.element) = 'cl'",
+          "(COUNT(atom.element = 'cl') / COUNT(*)) * 100",
+          "(COUNT(atom.element = 'cl') / COUNT(atom.atom_id)) * 100",
+          "(COUNT(atom.element = 'cl') / COUNT(DISTINCT atom.molecule_id)) * 100",
+          "percentage of chlorine per molecule",
+          "overall percentage of chlorine across all single bond molecules"
+        ],
+        "filter:WHERE": [
+          "atom.element = 'cl'",
+          "LOWER(atom.element) = 'cl'",
+          "'cl'",
+          "'Cl'",
+          "'chlorine'",
+          "molecules where all bonds are single (bond_type = '-')",
+          "molecules where at least one bond is single (bond_type = '-')"
+        ],
+        "aggregate:GROUP": [
+          "atom.element = 'cl'",
+          "LOWER(atom.element) = 'cl'",
+          "GROUP BY molecule_id",
+          "aggregate across all molecules"
+        ],
+        "combine:JOINS": [
+          "atom JOIN bond ON atom.molecule_id = bond.molecule_id",
+          "atom JOIN connected ON atom.atom_id = connected.atom_id JOIN bond ON connected.bond_id = bond.bond_id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "molecules where all bonds are single (bond_type = '-')",
+          "molecules where at least one bond is single (bond_type = '-')"
+        ],
+        "aggregate:DISTINCT": [
+          "GROUP BY molecule_id",
+          "aggregate across all molecules"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "miss",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table(s) to use for identifying single bond molecules.",
+          "candidate_values": [
+            "bond WHERE bond_type = '-'",
+            "connected JOIN bond ON connected.bond_id = bond.bond_id WHERE bond.bond_type = '-'"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in determining which column(s) to use for identifying the element 'chlorine'.",
+          "candidate_values": [
+            "atom.element = 'cl'",
+            "LOWER(atom.element) = 'cl'"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to associate atoms with single bond molecules.",
+          "candidate_values": [
+            "atom JOIN bond ON atom.molecule_id = bond.molecule_id",
+            "atom JOIN connected ON atom.atom_id = connected.atom_id JOIN bond ON connected.bond_id = bond.bond_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in interpreting the encoding of 'chlorine' as an element.",
+          "candidate_values": [
+            "'cl'",
+            "'Cl'",
+            "'chlorine'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in calculating the percentage composition of chlorine in single bond molecules.",
+          "candidate_values": [
+            "(COUNT(atom.element = 'cl') / COUNT(*)) * 100",
+            "(COUNT(atom.element = 'cl') / COUNT(atom.atom_id)) * 100",
+            "(COUNT(atom.element = 'cl') / COUNT(DISTINCT atom.molecule_id)) * 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in defining what constitutes a 'single bond molecule'.",
+          "candidate_values": [
+            "molecules where all bonds are single (bond_type = '-')",
+            "molecules where at least one bond is single (bond_type = '-')"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining the output format for the percentage composition.",
+          "candidate_values": [
+            "percentage of chlorine per molecule",
+            "overall percentage of chlorine across all single bond molecules"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether the output should be grouped by molecule or aggregated across all molecules.",
+          "candidate_values": [
+            "GROUP BY molecule_id",
+            "aggregate across all molecules"
+          ]
+        }
+      ],
+      "nl_question": "What is the composition of element chlorine in percentage among the single bond molecules?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "347",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 0,
+      "value_semantic_count": 4,
+      "value_miss_count": 0,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5556,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 5,
+      "avg_value_count": 3.0,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "cards",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.uuid = rulings.uuid\", \"target\": \"rulings\", \"type\": \"inner\"}",
+        "filter:WHERE": "cards.artist = 'stephen daniele'",
+        "aggregate:SELECT": "cards.id, rulings.text, cards.hascontentwarning"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "cards.artist = 'Stephen Daniel'",
+          "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+          "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')",
+          "rulings.text",
+          "foreign_data.text",
+          "cards.text",
+          "SELECT rulings.text",
+          "SELECT rulings.text, rulings.date",
+          "SELECT rulings.text, cards.name",
+          "INNER JOIN rulings ON cards.uuid = rulings.uuid",
+          "LEFT JOIN rulings ON cards.uuid = rulings.uuid"
+        ],
+        "aggregate:SELECT": [
+          "cards.artist = 'Stephen Daniel'",
+          "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+          "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')",
+          "rulings.text",
+          "foreign_data.text",
+          "cards.text",
+          "SELECT rulings.text",
+          "SELECT rulings.text, rulings.date",
+          "SELECT rulings.text, cards.name",
+          "INNER JOIN rulings ON cards.uuid = rulings.uuid",
+          "LEFT JOIN rulings ON cards.uuid = rulings.uuid"
+        ],
+        "combine:JOINS": [
+          "cards.artist = 'Stephen Daniel'",
+          "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+          "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')",
+          "rulings.text",
+          "foreign_data.text",
+          "cards.text"
+        ],
+        "filter:WHERE": [
+          "cards.artist = 'Stephen Daniel'",
+          "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+          "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')",
+          "rulings.text",
+          "foreign_data.text",
+          "cards.text",
+          "cards.hasFoil = 0 OR cards.hasNonFoil = 0",
+          "cards.isOversized = 1 OR cards.isTextless = 1",
+          "cards.power IS NULL OR cards.toughness IS NULL",
+          "cards.flavorText IS NULL OR cards.text IS NULL",
+          "COUNT(*) WHERE cards.power IS NULL OR cards.toughness IS NULL",
+          "COUNT(*) WHERE cards.flavorText IS NULL OR cards.text IS NULL",
+          "COUNT(*) WHERE cards.hasFoil = 0 OR cards.hasNonFoil = 0"
+        ],
+        "source:FROM": [
+          "cards.artist = 'Stephen Daniel'",
+          "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+          "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')",
+          "rulings.text",
+          "foreign_data.text",
+          "cards.text"
+        ],
+        "combine:COMBINE_WHERE": [
+          "COUNT(*) WHERE cards.power IS NULL OR cards.toughness IS NULL",
+          "COUNT(*) WHERE cards.flavorText IS NULL OR cards.text IS NULL",
+          "COUNT(*) WHERE cards.hasFoil = 0 OR cards.hasNonFoil = 0"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY cards.convertedManaCost ASC",
+          "ORDER BY cards.edhrecRank DESC",
+          "ORDER BY cards.rarity ASC"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY cards.convertedManaCost ASC",
+          "ORDER BY cards.edhrecRank DESC",
+          "ORDER BY cards.rarity ASC"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT rulings.text",
+          "SELECT rulings.text, rulings.date",
+          "SELECT rulings.text, cards.name",
+          "INNER JOIN rulings ON cards.uuid = rulings.uuid",
+          "LEFT JOIN rulings ON cards.uuid = rulings.uuid"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the table/column for 'cards illustrated by Stephen Daniel'.",
+          "candidate_values": [
+            "cards.artist = 'Stephen Daniel'",
+            "foreign_data.language = 'English' AND cards.artist = 'Stephen Daniel'",
+            "rulings.uuid IN (SELECT uuid FROM cards WHERE artist = 'Stephen Daniel')"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the table/column for 'text of the ruling'.",
+          "candidate_values": [
+            "rulings.text",
+            "foreign_data.text",
+            "cards.text"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in how 'missing or degraded properties and values' is defined.",
+          "candidate_values": [
+            "cards.hasFoil = 0 OR cards.hasNonFoil = 0",
+            "cards.isOversized = 1 OR cards.isTextless = 1",
+            "cards.power IS NULL OR cards.toughness IS NULL",
+            "cards.flavorText IS NULL OR cards.text IS NULL"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in determining what constitutes 'missing or degraded properties and values'.",
+          "candidate_values": [
+            "COUNT(*) WHERE cards.power IS NULL OR cards.toughness IS NULL",
+            "COUNT(*) WHERE cards.flavorText IS NULL OR cards.text IS NULL",
+            "COUNT(*) WHERE cards.hasFoil = 0 OR cards.hasNonFoil = 0"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum / Method / Direction ambiguity",
+          "description": "Ambiguity in how to rank or prioritize cards with missing or degraded properties.",
+          "candidate_values": [
+            "ORDER BY cards.convertedManaCost ASC",
+            "ORDER BY cards.edhrecRank DESC",
+            "ORDER BY cards.rarity ASC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in what specific fields to include in the output for 'describe the text of the ruling'.",
+          "candidate_values": [
+            "SELECT rulings.text",
+            "SELECT rulings.text, rulings.date",
+            "SELECT rulings.text, cards.name"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in whether to include cards with no rulings in the output.",
+          "candidate_values": [
+            "INNER JOIN rulings ON cards.uuid = rulings.uuid",
+            "LEFT JOIN rulings ON cards.uuid = rulings.uuid"
+          ]
+        }
+      ],
+      "nl_question": "Find all cards illustrated by Stephen Daniel and describe the text of the ruling of these cards. State if these cards have missing or degraded properties and values.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "349",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.7143,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.2,
+      "value_exact_count": 0,
+      "value_semantic_count": 1,
+      "value_miss_count": 4,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.4444,
+      "false_positive_axes": [
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 2.71,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "rulings",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.uuid = aggregate_state_query_2.uuid\", \"target\": \"aggregate_state_query_2\", \"type\": \"inner\"}",
+        "aggregate:DISTINCT": "true",
+        "aggregate:SELECT": "uuid",
+        "aggregate:GROUP": "uuid",
+        "aggregate:HAVING": "count(id) = (select max(ruling_count) from (select count(id) as ruling_count from rulings group by uuid))"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "rulings.text",
+          "rulings.date",
+          "cards.text",
+          "cards.artist",
+          "foreign_data.artist",
+          "cards.isPromo",
+          "sets.isFoilOnly",
+          "sets.isForeignOnly",
+          "SELECT cards.name, cards.artist",
+          "SELECT cards.asciiName, cards.artist",
+          "SELECT cards.isPromo",
+          "SELECT sets.isFoilOnly",
+          "SELECT sets.isForeignOnly"
+        ],
+        "aggregate:SELECT": [
+          "rulings.text",
+          "rulings.date",
+          "cards.text",
+          "cards.artist",
+          "foreign_data.artist",
+          "cards.isPromo",
+          "sets.isFoilOnly",
+          "sets.isForeignOnly",
+          "SELECT cards.name, cards.artist",
+          "SELECT cards.asciiName, cards.artist",
+          "SELECT cards.isPromo",
+          "SELECT sets.isFoilOnly",
+          "SELECT sets.isForeignOnly"
+        ],
+        "combine:JOINS": [
+          "rulings.text",
+          "rulings.date",
+          "cards.text",
+          "cards.artist",
+          "foreign_data.artist",
+          "cards.isPromo",
+          "sets.isFoilOnly",
+          "sets.isForeignOnly"
+        ],
+        "filter:WHERE": [
+          "rulings.text",
+          "rulings.date",
+          "cards.text",
+          "cards.artist",
+          "foreign_data.artist",
+          "cards.isPromo",
+          "sets.isFoilOnly",
+          "sets.isForeignOnly",
+          "COUNT(rulings.id)",
+          "MAX(rulings.date)",
+          "MAX(LENGTH(rulings.text))"
+        ],
+        "source:FROM": [
+          "rulings.text",
+          "rulings.date",
+          "cards.text",
+          "cards.artist",
+          "foreign_data.artist",
+          "cards.isPromo",
+          "sets.isFoilOnly",
+          "sets.isForeignOnly"
+        ],
+        "combine:COMBINE_WHERE": [
+          "COUNT(rulings.id)",
+          "MAX(rulings.date)",
+          "MAX(LENGTH(rulings.text))"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY COUNT(rulings.id) DESC",
+          "ORDER BY MAX(rulings.date) DESC",
+          "ORDER BY MAX(LENGTH(rulings.text)) DESC"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY COUNT(rulings.id) DESC",
+          "ORDER BY MAX(rulings.date) DESC",
+          "ORDER BY MAX(LENGTH(rulings.text)) DESC"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT cards.name, cards.artist",
+          "SELECT cards.asciiName, cards.artist",
+          "SELECT cards.isPromo",
+          "SELECT sets.isFoilOnly",
+          "SELECT sets.isForeignOnly"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:GROUP": "miss",
+        "aggregate:SELECT": "miss",
+        "combine:JOINS": "miss",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the table and column for 'ruling information'",
+          "candidate_values": [
+            "rulings.text",
+            "rulings.date",
+            "cards.text"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the table and column for 'artist'",
+          "candidate_values": [
+            "cards.artist",
+            "foreign_data.artist"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the table and column for 'promotional printing'",
+          "candidate_values": [
+            "cards.isPromo",
+            "sets.isFoilOnly",
+            "sets.isForeignOnly"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in determining 'most ruling information'",
+          "candidate_values": [
+            "COUNT(rulings.id)",
+            "MAX(rulings.date)",
+            "MAX(LENGTH(rulings.text))"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum / Method / Direction ambiguity",
+          "description": "Ambiguity in ranking method for 'most ruling information'",
+          "candidate_values": [
+            "ORDER BY COUNT(rulings.id) DESC",
+            "ORDER BY MAX(rulings.date) DESC",
+            "ORDER BY MAX(LENGTH(rulings.text)) DESC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in output structure for 'card name and artist'",
+          "candidate_values": [
+            "SELECT cards.name, cards.artist",
+            "SELECT cards.asciiName, cards.artist"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in output structure for 'promotional printing status'",
+          "candidate_values": [
+            "SELECT cards.isPromo",
+            "SELECT sets.isFoilOnly",
+            "SELECT sets.isForeignOnly"
+          ]
+        }
+      ],
+      "nl_question": "Name the card with the most ruling information and its artist. Also state if the card is a promotional printing.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "366",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 0.5,
+      "value_exact_count": 1,
+      "value_semantic_count": 1,
+      "value_miss_count": 2,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5556,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 5,
+      "avg_value_count": 3.0,
+      "slot_count": 5,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "cards",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.uuid = legalities.uuid\", \"target\": \"legalities\", \"type\": \"inner\"}",
+        "filter:WHERE": "cards.name = 'benalish knight'",
+        "aggregate:SELECT": "legalities.format"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "cards.text",
+          "cards.originalText",
+          "rulings.text",
+          "SELECT cards.text",
+          "SELECT cards.text, cards.name",
+          "SELECT cards.text, cards.name, cards.type"
+        ],
+        "aggregate:SELECT": [
+          "cards.text",
+          "cards.originalText",
+          "rulings.text",
+          "SELECT cards.text",
+          "SELECT cards.text, cards.name",
+          "SELECT cards.text, cards.name, cards.type"
+        ],
+        "combine:JOINS": [
+          "cards.text",
+          "cards.originalText",
+          "rulings.text"
+        ],
+        "filter:WHERE": [
+          "cards.text",
+          "cards.originalText",
+          "rulings.text",
+          "cards.name = 'Benalish Knight'",
+          "cards.asciiName = 'Benalish Knight'",
+          "foreign_data.name = 'Benalish Knight'",
+          "cards.text",
+          "CONCAT(cards.text, rulings.text)",
+          "CONCAT(cards.text, cards.flavorText)"
+        ],
+        "source:FROM": [
+          "cards.text",
+          "cards.originalText",
+          "rulings.text"
+        ],
+        "combine:COMBINE_WHERE": [
+          "cards.text",
+          "CONCAT(cards.text, rulings.text)",
+          "CONCAT(cards.text, cards.flavorText)"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY rulings.date DESC",
+          "ORDER BY cards.name ASC",
+          "ORDER BY cards.edhrecRank ASC"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY rulings.date DESC",
+          "ORDER BY cards.name ASC",
+          "ORDER BY cards.edhrecRank ASC"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT cards.text",
+          "SELECT cards.text, cards.name",
+          "SELECT cards.text, cards.name, cards.type"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "miss",
+        "combine:JOINS": "miss",
+        "filter:WHERE": "exact",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the source of the rule for 'Benalish Knight'. It could be in the `text`, `originalText`, or `rulings` columns.",
+          "candidate_values": [
+            "cards.text",
+            "cards.originalText",
+            "rulings.text"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in how the card name 'Benalish Knight' is matched. It could be matched against `name`, `asciiName`, or `foreign_data.name`.",
+          "candidate_values": [
+            "cards.name = 'Benalish Knight'",
+            "cards.asciiName = 'Benalish Knight'",
+            "foreign_data.name = 'Benalish Knight'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in whether the 'rule' includes only the card's primary text or also its rulings and flavor text.",
+          "candidate_values": [
+            "cards.text",
+            "CONCAT(cards.text, rulings.text)",
+            "CONCAT(cards.text, cards.flavorText)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum / Method / Direction ambiguity",
+          "description": "Ambiguity in prioritizing which rule to display if multiple rules exist (e.g., from `rulings` or `text`).",
+          "candidate_values": [
+            "ORDER BY rulings.date DESC",
+            "ORDER BY cards.name ASC",
+            "ORDER BY cards.edhrecRank ASC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in what information about the card should be included in the output (e.g., just the rule, or additional metadata like `name` or `type`).",
+          "candidate_values": [
+            "SELECT cards.text",
+            "SELECT cards.text, cards.name",
+            "SELECT cards.text, cards.name, cards.type"
+          ]
+        }
+      ],
+      "nl_question": "What is the rule of playing card \"Benalish Knight\"?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "480",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 3,
+      "value_miss_count": 0,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.4286,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.38,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "cards",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"foreign_data.uuid = source_state_query_1.uuid\", \"target\": \"foreign_data\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "cards.name = 'ancestor''s chosen' and foreign_data.language = 'italian'",
+        "aggregate:SELECT": "foreign_data.flavortext"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "cards.flavorText",
+          "foreign_data.flavorText"
+        ],
+        "aggregate:SELECT": [
+          "cards.flavorText",
+          "foreign_data.flavorText",
+          "foreign_data.flavorText",
+          "foreign_data.flavorText, foreign_data.language",
+          "foreign_data.flavorText, cards.name"
+        ],
+        "filter:WHERE": [
+          "cards.flavorText",
+          "foreign_data.flavorText",
+          "'Italian'",
+          "'it'",
+          "'IT'",
+          "'Ancestor's Chosen'",
+          "'Ancestors Chosen'",
+          "'Ancestor\\'s Chosen'",
+          "WHERE foreign_data.language = 'Italian'",
+          "WHERE foreign_data.language IS NOT NULL"
+        ],
+        "aggregate:GROUP": [
+          "cards.flavorText",
+          "foreign_data.flavorText",
+          "LIMIT 1",
+          "ALL ROWS"
+        ],
+        "combine:JOINS": [
+          "cards.uuid = foreign_data.uuid",
+          "cards.name = foreign_data.name"
+        ],
+        "combine:COMBINE_WHERE": [
+          "WHERE foreign_data.language = 'Italian'",
+          "WHERE foreign_data.language IS NOT NULL"
+        ],
+        "aggregate:DISTINCT": [
+          "LIMIT 1",
+          "ALL ROWS"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "exact",
+        "combine:COMBINE_WHERE": "semantic",
+        "combine:JOINS": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the 'Italian flavor text' for the card 'Ancestor's Chosen'.",
+          "candidate_values": [
+            "cards.flavorText",
+            "foreign_data.flavorText"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in determining which column represents the 'Italian flavor text'.",
+          "candidate_values": [
+            "cards.flavorText",
+            "foreign_data.flavorText"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to connect the 'cards' table with the 'foreign_data' table to retrieve the Italian flavor text.",
+          "candidate_values": [
+            "cards.uuid = foreign_data.uuid",
+            "cards.name = foreign_data.name"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in how the language 'Italian' is encoded in the database.",
+          "candidate_values": [
+            "'Italian'",
+            "'it'",
+            "'IT'"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Format Normalization",
+          "description": "Ambiguity in how the card name 'Ancestor's Chosen' is stored in the database (e.g., handling of special characters like the apostrophe).",
+          "candidate_values": [
+            "'Ancestor's Chosen'",
+            "'Ancestors Chosen'",
+            "'Ancestor\\'s Chosen'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in whether the query should retrieve only the Italian flavor text or all available flavor texts for the card.",
+          "candidate_values": [
+            "WHERE foreign_data.language = 'Italian'",
+            "WHERE foreign_data.language IS NOT NULL"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining the exact output column(s) to return for the query.",
+          "candidate_values": [
+            "foreign_data.flavorText",
+            "foreign_data.flavorText, foreign_data.language",
+            "foreign_data.flavorText, cards.name"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether the query should return a single row or multiple rows if there are multiple Italian flavor texts for the card.",
+          "candidate_values": [
+            "LIMIT 1",
+            "ALL ROWS"
+          ]
+        }
+      ],
+      "nl_question": "What is the Italian flavor text of the card \"Ancestor's Chosen\"?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "483",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.4,
+      "value_recall_semantic": 0.6,
+      "value_exact_count": 2,
+      "value_semantic_count": 1,
+      "value_miss_count": 2,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.2857,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.14,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "foreign_data",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"sets.code = cards.setcode\", \"target\": \"sets\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "sets.name = 'coldsnap' and foreign_data.language = 'italian'",
+        "aggregate:DISTINCT": "true",
+        "aggregate:SELECT": "foreign_data.text"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "foreign_data",
+          "rulings"
+        ],
+        "aggregate:GROUP": [
+          "foreign_data.text",
+          "rulings.text",
+          "DISTINCT foreign_data.text",
+          "ALL foreign_data.text"
+        ],
+        "aggregate:SELECT": [
+          "foreign_data.text",
+          "rulings.text",
+          "foreign_data.text",
+          "rulings.text",
+          "cards.name, foreign_data.text"
+        ],
+        "filter:WHERE": [
+          "foreign_data.text",
+          "rulings.text",
+          "foreign_data.language = 'Italian'",
+          "rulings.text (no language filter)",
+          "cards.setCode = 'CSP'",
+          "sets.name = 'Coldsnap'"
+        ],
+        "combine:JOINS": [
+          "cards.uuid = foreign_data.uuid",
+          "cards.uuid = rulings.uuid"
+        ],
+        "combine:COMBINE_WHERE": [
+          "cards.setCode = 'CSP'",
+          "sets.name = 'Coldsnap'"
+        ],
+        "aggregate:DISTINCT": [
+          "DISTINCT foreign_data.text",
+          "ALL foreign_data.text"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:SELECT": "exact",
+        "combine:COMBINE_WHERE": "semantic",
+        "combine:JOINS": "miss",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table ambiguity",
+          "description": "Ambiguity in determining which table contains the 'Italian text ruling' for cards.",
+          "candidate_values": [
+            "foreign_data",
+            "rulings"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column ambiguity",
+          "description": "Ambiguity in identifying the column that represents 'Italian text ruling' for cards.",
+          "candidate_values": [
+            "foreign_data.text",
+            "rulings.text"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the correct join path to connect cards in the 'Coldsnap' set to their 'Italian text ruling'.",
+          "candidate_values": [
+            "cards.uuid = foreign_data.uuid",
+            "cards.uuid = rulings.uuid"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in interpreting 'Italian text ruling' as language-specific text or general ruling text.",
+          "candidate_values": [
+            "foreign_data.language = 'Italian'",
+            "rulings.text (no language filter)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary ambiguity",
+          "description": "Ambiguity in defining the scope of 'all the cards in the set Coldsnap'.",
+          "candidate_values": [
+            "cards.setCode = 'CSP'",
+            "sets.name = 'Coldsnap'"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in determining the exact output columns for the query.",
+          "candidate_values": [
+            "foreign_data.text",
+            "rulings.text",
+            "cards.name, foreign_data.text"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure ambiguity",
+          "description": "Ambiguity in whether the output should include duplicate rows for cards with multiple rulings or translations.",
+          "candidate_values": [
+            "DISTINCT foreign_data.text",
+            "ALL foreign_data.text"
+          ]
+        }
+      ],
+      "nl_question": "Please list the Italian text ruling of all the cards in the set Coldsnap.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "587",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.2,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 4,
+      "value_miss_count": 0,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.2857,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.0,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "comments",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"posts.id = source_state_query_1.postid\", \"target\": \"posts\", \"type\": \"inner\"}",
+        "filter:WHERE": "posts.tags = '<humor>'",
+        "aggregate:SELECT": "avg(posts.viewcount), posts.title, comments.text",
+        "aggregate:GROUP": "posts.title"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "postHistory.Comment",
+          "comments.Text",
+          "posts.Title",
+          "postHistory.Text",
+          "posts.Tags",
+          "tags.TagName",
+          "INNER JOIN comments ON posts.Id = comments.PostId",
+          "LEFT JOIN comments ON posts.Id = comments.PostId",
+          "comments.Text",
+          "(SELECT Text FROM comments WHERE comments.PostId = posts.Id ORDER BY comments.Score DESC LIMIT 1)"
+        ],
+        "aggregate:SELECT": [
+          "postHistory.Comment",
+          "comments.Text",
+          "posts.Title",
+          "postHistory.Text",
+          "posts.Tags",
+          "tags.TagName",
+          "INNER JOIN comments ON posts.Id = comments.PostId",
+          "LEFT JOIN comments ON posts.Id = comments.PostId",
+          "comments.Text",
+          "(SELECT Text FROM comments WHERE comments.PostId = posts.Id ORDER BY comments.Score DESC LIMIT 1)"
+        ],
+        "combine:JOINS": [
+          "postHistory.Comment",
+          "comments.Text",
+          "posts.Title",
+          "postHistory.Text",
+          "posts.Tags",
+          "tags.TagName"
+        ],
+        "filter:WHERE": [
+          "postHistory.Comment",
+          "comments.Text",
+          "posts.Title",
+          "postHistory.Text",
+          "posts.Tags",
+          "tags.TagName",
+          "posts.Tags LIKE '%<humor>%'",
+          "tags.TagName = 'humor'",
+          "AVG(posts.ViewCount)",
+          "SUM(posts.ViewCount) / COUNT(posts.Id)"
+        ],
+        "source:FROM": [
+          "postHistory.Comment",
+          "comments.Text",
+          "posts.Title",
+          "postHistory.Text",
+          "posts.Tags",
+          "tags.TagName"
+        ],
+        "combine:COMBINE_WHERE": [
+          "AVG(posts.ViewCount)",
+          "SUM(posts.ViewCount) / COUNT(posts.Id)"
+        ],
+        "aggregate:DISTINCT": [
+          "INNER JOIN comments ON posts.Id = comments.PostId",
+          "LEFT JOIN comments ON posts.Id = comments.PostId",
+          "comments.Text",
+          "(SELECT Text FROM comments WHERE comments.PostId = posts.Id ORDER BY comments.Score DESC LIMIT 1)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:GROUP": "exact",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the source of the 'comment' for each post.",
+          "candidate_values": [
+            "postHistory.Comment",
+            "comments.Text"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the source of the 'title' for each post.",
+          "candidate_values": [
+            "posts.Title",
+            "postHistory.Text"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the source of the 'tags' to filter posts tagged as 'humor'.",
+          "candidate_values": [
+            "posts.Tags",
+            "tags.TagName"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in how the 'humor' tag is encoded or matched.",
+          "candidate_values": [
+            "posts.Tags LIKE '%<humor>%'",
+            "tags.TagName = 'humor'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in calculating the average view count for posts tagged as 'humor'.",
+          "candidate_values": [
+            "AVG(posts.ViewCount)",
+            "SUM(posts.ViewCount) / COUNT(posts.Id)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in whether to include posts with no associated comments.",
+          "candidate_values": [
+            "INNER JOIN comments ON posts.Id = comments.PostId",
+            "LEFT JOIN comments ON posts.Id = comments.PostId"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in whether to list all comments for a post or only the highest-scoring comment.",
+          "candidate_values": [
+            "comments.Text",
+            "(SELECT Text FROM comments WHERE comments.PostId = posts.Id ORDER BY comments.Score DESC LIMIT 1)"
+          ]
+        }
+      ],
+      "nl_question": "Calculate the average view count of each post tagged as 'humor' and list the title and the comment of each post.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "639",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 2,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.4286,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 3.75,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "users",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"tags.excerptpostid = posthistory.postid\", \"target\": \"tags\", \"type\": \"inner\"}",
+        "filter:WHERE": "users.displayname = 'community'",
+        "aggregate:SELECT": "cast(sum(case when tags.tagname = 'r' then 1 else 0 end) as float) * 100 / count(users.id)"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "posts",
+          "postHistory",
+          "comments"
+        ],
+        "aggregate:SELECT": [
+          "posts.OwnerUserId",
+          "posts.OwnerDisplayName",
+          "comments.UserId",
+          "comments.UserDisplayName",
+          "postHistory.UserId",
+          "(COUNT(posts.Id WHERE posts.Tags LIKE '%<r>%') / COUNT(posts.Id)) * 100",
+          "(COUNT(posts.Id WHERE posts.Body LIKE '%R%') / COUNT(posts.Id)) * 100",
+          "(COUNT(posts.Id WHERE posts.Title LIKE '%R%') / COUNT(posts.Id)) * 100",
+          "(COUNT(posts.Id WHERE posts.Tags LIKE '%<r>%') / COUNT(posts.Id WHERE posts.OwnerUserId = users.Id AND users.DisplayName = 'Community')) * 100",
+          "Single scalar value (e.g., 25%)",
+          "Table with columns: ['Percentage', 'TotalPosts', 'RPosts']",
+          "Table with columns: ['PostId', 'IsRPost']"
+        ],
+        "filter:WHERE": [
+          "posts.OwnerUserId",
+          "posts.OwnerDisplayName",
+          "comments.UserId",
+          "comments.UserDisplayName",
+          "postHistory.UserId",
+          "'Community' in users.DisplayName",
+          "users.Id = -1 (special ID for Community)",
+          "'Community' in posts.OwnerDisplayName",
+          "'Community' in comments.UserDisplayName",
+          "posts.Tags LIKE '%<r>%'",
+          "posts.Body LIKE '%R%'",
+          "posts.Title LIKE '%R%'",
+          "comments.Text LIKE '%R%'"
+        ],
+        "aggregate:GROUP": [
+          "posts.OwnerUserId",
+          "posts.OwnerDisplayName",
+          "comments.UserId",
+          "comments.UserDisplayName",
+          "postHistory.UserId",
+          "Filter posts by Community only",
+          "Include all posts and calculate percentage for Community separately"
+        ],
+        "combine:JOINS": [
+          "posts.OwnerUserId = users.Id",
+          "posts.OwnerDisplayName = users.DisplayName",
+          "comments.UserId = users.Id",
+          "comments.UserDisplayName = users.DisplayName",
+          "postHistory.UserId = users.Id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "posts.Tags LIKE '%<r>%'",
+          "posts.Body LIKE '%R%'",
+          "posts.Title LIKE '%R%'",
+          "comments.Text LIKE '%R%'"
+        ],
+        "aggregate:DISTINCT": [
+          "Filter posts by Community only",
+          "Include all posts and calculate percentage for Community separately"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "miss",
+        "filter:WHERE": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the 'posts posted by Community'.",
+          "candidate_values": [
+            "posts",
+            "postHistory",
+            "comments"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in identifying the column that links posts to the 'Community' user.",
+          "candidate_values": [
+            "posts.OwnerUserId",
+            "posts.OwnerDisplayName",
+            "comments.UserId",
+            "comments.UserDisplayName",
+            "postHistory.UserId"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to associate posts with the 'Community' user.",
+          "candidate_values": [
+            "posts.OwnerUserId = users.Id",
+            "posts.OwnerDisplayName = users.DisplayName",
+            "comments.UserId = users.Id",
+            "comments.UserDisplayName = users.DisplayName",
+            "postHistory.UserId = users.Id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in how the 'Community' user is identified in the database.",
+          "candidate_values": [
+            "'Community' in users.DisplayName",
+            "users.Id = -1 (special ID for Community)",
+            "'Community' in posts.OwnerDisplayName",
+            "'Community' in comments.UserDisplayName"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in how to calculate the percentage of posts using the R language.",
+          "candidate_values": [
+            "(COUNT(posts.Id WHERE posts.Tags LIKE '%<r>%') / COUNT(posts.Id)) * 100",
+            "(COUNT(posts.Id WHERE posts.Body LIKE '%R%') / COUNT(posts.Id)) * 100",
+            "(COUNT(posts.Id WHERE posts.Title LIKE '%R%') / COUNT(posts.Id)) * 100",
+            "(COUNT(posts.Id WHERE posts.Tags LIKE '%<r>%') / COUNT(posts.Id WHERE posts.OwnerUserId = users.Id AND users.DisplayName = 'Community')) * 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in defining what qualifies as a post 'using the R language'.",
+          "candidate_values": [
+            "posts.Tags LIKE '%<r>%'",
+            "posts.Body LIKE '%R%'",
+            "posts.Title LIKE '%R%'",
+            "comments.Text LIKE '%R%'"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining the output format of the percentage calculation.",
+          "candidate_values": [
+            "Single scalar value (e.g., 25%)",
+            "Table with columns: ['Percentage', 'TotalPosts', 'RPosts']",
+            "Table with columns: ['PostId', 'IsRPost']"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether the output should include only posts by 'Community' or all posts.",
+          "candidate_values": [
+            "Filter posts by Community only",
+            "Include all posts and calculate percentage for Community separately"
+          ]
+        }
+      ],
+      "nl_question": "Based on posts posted by Community, calculate the percentage of posts that use the R language.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "829",
+      "gold_axis_count": 4,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.75,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 2,
+      "value_miss_count": 0,
+      "hit_axis_count": 3,
+      "false_positive_rate": 0.6667,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 6,
+      "avg_value_count": 2.22,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "superhero",
+        "aggregate:SELECT": "sum(case when publisher.\"publisher_name\" = 'marvel comics' then 1 end) as marvel_cnt, sum(case when publisher.\"publisher_name\" = 'dc comics' then 1 end) as dc_cnt",
+        "combine:BASE": "source_state_query_2",
+        "combine:JOINS": "{\"on\": \"source_state_query_2.\\\"publisher_id\\\" = publisher.\\\"id\\\"\", \"target\": \"publisher\", \"type\": \"inner\"}"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "superhero",
+          "publisher"
+        ],
+        "aggregate:SELECT": [
+          "superhero.publisher_id",
+          "publisher.publisher_name",
+          "COUNT(superhero.id) WHERE publisher_name = 'DC' - COUNT(superhero.id) WHERE publisher_name = 'Marvel Comics'",
+          "ABS(COUNT(superhero.id) WHERE publisher_name = 'DC' - COUNT(superhero.id) WHERE publisher_name = 'Marvel Comics')",
+          "Output only the difference",
+          "Output the counts for each publisher and the difference"
+        ],
+        "filter:WHERE": [
+          "superhero.publisher_id",
+          "publisher.publisher_name",
+          "'DC'",
+          "'Marvel Comics'",
+          "'DC Comics'",
+          "'Marvel'",
+          "WHERE publisher_id IS NOT NULL",
+          "WHERE publisher_id IS NULL OR publisher_id IS NOT NULL"
+        ],
+        "aggregate:GROUP": [
+          "superhero.publisher_id",
+          "publisher.publisher_name",
+          "Single row with the difference",
+          "Two rows: one for each publisher with their respective counts"
+        ],
+        "combine:JOINS": [
+          "superhero.publisher_id = publisher.id",
+          "superhero.publisher_id = publisher.publisher_name"
+        ],
+        "combine:COMBINE_WHERE": [
+          "WHERE publisher_id IS NOT NULL",
+          "WHERE publisher_id IS NULL OR publisher_id IS NOT NULL"
+        ],
+        "aggregate:ORDERBY": [
+          "Find the absolute difference",
+          "Find which publisher has more superheroes"
+        ],
+        "aggregate:LIMIT": [
+          "Find the absolute difference",
+          "Find which publisher has more superheroes"
+        ],
+        "aggregate:DISTINCT": [
+          "Single row with the difference",
+          "Two rows: one for each publisher with their respective counts"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "source:FROM": "exact"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in identifying the correct table to count superheroes for each publisher.",
+          "candidate_values": [
+            "superhero",
+            "publisher"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in identifying the correct column to group superheroes by publisher.",
+          "candidate_values": [
+            "superhero.publisher_id",
+            "publisher.publisher_name"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the correct join path between `superhero` and `publisher` tables.",
+          "candidate_values": [
+            "superhero.publisher_id = publisher.id",
+            "superhero.publisher_id = publisher.publisher_name"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in how publisher names (e.g., 'DC' and 'Marvel Comics') are encoded in the database.",
+          "candidate_values": [
+            "'DC'",
+            "'Marvel Comics'",
+            "'DC Comics'",
+            "'Marvel'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in how to calculate the difference in the number of superheroes between publishers.",
+          "candidate_values": [
+            "COUNT(superhero.id) WHERE publisher_name = 'DC' - COUNT(superhero.id) WHERE publisher_name = 'Marvel Comics'",
+            "ABS(COUNT(superhero.id) WHERE publisher_name = 'DC' - COUNT(superhero.id) WHERE publisher_name = 'Marvel Comics')"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in whether to include superheroes with missing or null publisher information.",
+          "candidate_values": [
+            "WHERE publisher_id IS NOT NULL",
+            "WHERE publisher_id IS NULL OR publisher_id IS NOT NULL"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum",
+          "description": "Ambiguity in whether the query is asking for the absolute difference or just which publisher has more superheroes.",
+          "candidate_values": [
+            "Find the absolute difference",
+            "Find which publisher has more superheroes"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in what the output should include: just the difference, or also the counts for each publisher.",
+          "candidate_values": [
+            "Output only the difference",
+            "Output the counts for each publisher and the difference"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether the output should be a single row or multiple rows (e.g., one row per publisher).",
+          "candidate_values": [
+            "Single row with the difference",
+            "Two rows: one for each publisher with their respective counts"
+          ]
+        }
+      ],
+      "nl_question": "Which publisher created more superheroes: DC or Marvel Comics? Find the difference in the number of superheroes.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1031",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.6667,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "value_exact_count": 0,
+      "value_semantic_count": 3,
+      "value_miss_count": 1,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 3.0,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "player_attributes",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.player_api_id = player.player_api_id\", \"target\": \"player\", \"type\": \"inner\"}",
+        "filter:WHERE": "strftime('%y', player_attributes.\"date\") >= '2013' and strftime('%y', player_attributes.\"date\") <= '2015' and player_attributes.sprint_speed >= 97",
+        "aggregate:DISTINCT": "true",
+        "aggregate:SELECT": "strftime('%y', current_timestamp()) - strftime('%y', player.birthday) - case when strftime('%m-%d', 'now') < strftime('%m-%d', birthday) then 1 else 0 end as age"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "Player_Attributes.sprint_speed",
+          "Match.home_player_X1 (or other player columns)",
+          "Team_Attributes.buildUpPlaySpeed",
+          "One row per player",
+          "One row per player per year (if multiple records exist for the same player)",
+          "One aggregated row summarizing all players"
+        ],
+        "aggregate:SELECT": [
+          "Player_Attributes.sprint_speed",
+          "Match.home_player_X1 (or other player columns)",
+          "Team_Attributes.buildUpPlaySpeed",
+          "DATEDIFF(CURRENT_DATE, Player.birthday) / 365",
+          "YEAR(CURRENT_DATE) - YEAR(Player.birthday)",
+          "TIMESTAMPDIFF(YEAR, Player.birthday, CURRENT_DATE)",
+          "Player.player_name, Player.birthday, Player_Attributes.sprint_speed",
+          "Player.player_name, Player_Attributes.sprint_speed",
+          "Player.player_name, Player.birthday"
+        ],
+        "filter:WHERE": [
+          "Player_Attributes.sprint_speed",
+          "Match.home_player_X1 (or other player columns)",
+          "Team_Attributes.buildUpPlaySpeed",
+          "sprint_speed >= 97",
+          "sprint_speed > 97",
+          "sprint_speed = 97",
+          "date >= '2013-01-01' AND date <= '2015-12-31'",
+          "date >= '2013-01-01' AND date < '2016-01-01'",
+          "date BETWEEN '2013-01-01' AND '2015-12-31'",
+          "CURRENT_DATE",
+          "'2023-01-01'",
+          "'2023-12-31'"
+        ],
+        "combine:JOINS": [
+          "Player.player_api_id -> Player_Attributes.player_api_id",
+          "Match.home_player_1 -> Player.player_api_id",
+          "Match.away_player_1 -> Player.player_api_id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "CURRENT_DATE",
+          "'2023-01-01'",
+          "'2023-12-31'"
+        ],
+        "aggregate:LIMIT": [
+          "ALL players with sprint_speed >= 97",
+          "TOP 1 player with the highest sprint_speed >= 97",
+          "TOP N players with sprint_speed >= 97"
+        ],
+        "aggregate:ORDERBY": [
+          "ALL players with sprint_speed >= 97",
+          "TOP 1 player with the highest sprint_speed >= 97",
+          "TOP N players with sprint_speed >= 97"
+        ],
+        "aggregate:DISTINCT": [
+          "One row per player",
+          "One row per player per year (if multiple records exist for the same player)",
+          "One aggregated row summarizing all players"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column ambiguity",
+          "description": "Ambiguity in identifying the correct table/column for 'sprint speed'.",
+          "candidate_values": [
+            "Player_Attributes.sprint_speed",
+            "Match.home_player_X1 (or other player columns)",
+            "Team_Attributes.buildUpPlaySpeed"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the join path to connect 'player's age' with 'sprint speed'.",
+          "candidate_values": [
+            "Player.player_api_id -> Player_Attributes.player_api_id",
+            "Match.home_player_1 -> Player.player_api_id",
+            "Match.away_player_1 -> Player.player_api_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in interpreting 'no less than 97' for sprint speed.",
+          "candidate_values": [
+            "sprint_speed >= 97",
+            "sprint_speed > 97",
+            "sprint_speed = 97"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Format Normalization ambiguity",
+          "description": "Ambiguity in interpreting the date range 'between 2013 to 2015'.",
+          "candidate_values": [
+            "date >= '2013-01-01' AND date <= '2015-12-31'",
+            "date >= '2013-01-01' AND date < '2016-01-01'",
+            "date BETWEEN '2013-01-01' AND '2015-12-31'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in calculating the player's age 'at present'.",
+          "candidate_values": [
+            "DATEDIFF(CURRENT_DATE, Player.birthday) / 365",
+            "YEAR(CURRENT_DATE) - YEAR(Player.birthday)",
+            "TIMESTAMPDIFF(YEAR, Player.birthday, CURRENT_DATE)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary ambiguity",
+          "description": "Ambiguity in defining the boundary for 'at present'.",
+          "candidate_values": [
+            "CURRENT_DATE",
+            "'2023-01-01'",
+            "'2023-12-31'"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum ambiguity",
+          "description": "Ambiguity in whether to find all players or just the fastest player(s) with sprint speed >= 97.",
+          "candidate_values": [
+            "ALL players with sprint_speed >= 97",
+            "TOP 1 player with the highest sprint_speed >= 97",
+            "TOP N players with sprint_speed >= 97"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in what to include in the output besides the player's age.",
+          "candidate_values": [
+            "Player.player_name, Player.birthday, Player_Attributes.sprint_speed",
+            "Player.player_name, Player_Attributes.sprint_speed",
+            "Player.player_name, Player.birthday"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure ambiguity",
+          "description": "Ambiguity in how to structure the output rows.",
+          "candidate_values": [
+            "One row per player",
+            "One row per player per year (if multiple records exist for the same player)",
+            "One aggregated row summarizing all players"
+          ]
+        }
+      ],
+      "nl_question": "At present, calculate for the player's age who have a sprint speed of no less than 97 between 2013 to 2015.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1094",
+      "gold_axis_count": 7,
+      "predicted_axis_count": 6,
+      "axis_recall": 0.5714,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "value_exact_count": 0,
+      "value_semantic_count": 3,
+      "value_miss_count": 1,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.3333,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 2,
+      "avg_value_count": 2.86,
+      "slot_count": 7,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "aggregate_state_query_1",
+        "combine:BASE": "source_state_query_3",
+        "combine:JOINS": "{\"on\": \"unknown\", \"target\": \"aggregate_state_query_2\", \"type\": \"cross\"}",
+        "filter:WHERE": "player.player_name = 'paulin puel'",
+        "aggregate:SELECT": "(t3.rating - t4.rating) * 100.0 / t4.rating",
+        "aggregate:ORDERBY": "date desc",
+        "aggregate:LIMIT": "1"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "Player_Attributes.overall_rating",
+          "Player.overall_rating"
+        ],
+        "aggregate:SELECT": [
+          "Player_Attributes.overall_rating",
+          "Player.overall_rating",
+          "((Ariel_rating - Paulin_rating) / Paulin_rating) * 100",
+          "((Ariel_rating - Paulin_rating) / Ariel_rating) * 100",
+          "ABS((Ariel_rating - Paulin_rating) / ((Ariel_rating + Paulin_rating) / 2)) * 100",
+          "SELECT percentage_difference",
+          "SELECT Ariel_rating, Paulin_rating, percentage_difference",
+          "SELECT Ariel_rating, Paulin_rating, percentage_difference, Player.player_name"
+        ],
+        "filter:WHERE": [
+          "Player_Attributes.overall_rating",
+          "Player.overall_rating",
+          "Player.player_name = 'Ariel Borysiuk'",
+          "Player.player_name LIKE '%Ariel%'",
+          "Player.player_name = 'Paulin Puel'",
+          "Player.player_name LIKE '%Paulin%'",
+          "Player_Attributes.date = '2016-02-18 00:00:00'",
+          "Player_Attributes.date = '2015-11-19 00:00:00'",
+          "Player_Attributes.date = MAX(Player_Attributes.date)"
+        ],
+        "combine:JOINS": [
+          "Player.player_api_id = Player_Attributes.player_api_id",
+          "Player.player_fifa_api_id = Player_Attributes.player_fifa_api_id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "Player_Attributes.date = '2016-02-18 00:00:00'",
+          "Player_Attributes.date = '2015-11-19 00:00:00'",
+          "Player_Attributes.date = MAX(Player_Attributes.date)"
+        ],
+        "aggregate:ORDERBY": [
+          "MAX(Player_Attributes.overall_rating)",
+          "AVG(Player_Attributes.overall_rating)",
+          "Player_Attributes.overall_rating WHERE Player_Attributes.date = MAX(Player_Attributes.date)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:ORDERBY": "semantic",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "miss",
+        "filter:WHERE": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column ambiguity",
+          "description": "Ambiguity in identifying the correct table and column for 'Ariel Borysiuk's overall rating' and 'Paulin Puel's overall rating'.",
+          "candidate_values": [
+            "Player_Attributes.overall_rating",
+            "Player.overall_rating"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the join path to connect player names to their attributes.",
+          "candidate_values": [
+            "Player.player_api_id = Player_Attributes.player_api_id",
+            "Player.player_fifa_api_id = Player_Attributes.player_fifa_api_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in identifying the correct encoding for 'Ariel Borysiuk' and 'Paulin Puel' in the database.",
+          "candidate_values": [
+            "Player.player_name = 'Ariel Borysiuk'",
+            "Player.player_name LIKE '%Ariel%'",
+            "Player.player_name = 'Paulin Puel'",
+            "Player.player_name LIKE '%Paulin%'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in how to calculate the percentage difference between the two players' overall ratings.",
+          "candidate_values": [
+            "((Ariel_rating - Paulin_rating) / Paulin_rating) * 100",
+            "((Ariel_rating - Paulin_rating) / Ariel_rating) * 100",
+            "ABS((Ariel_rating - Paulin_rating) / ((Ariel_rating + Paulin_rating) / 2)) * 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary ambiguity",
+          "description": "Ambiguity in determining which date to use for the 'overall_rating' values.",
+          "candidate_values": [
+            "Player_Attributes.date = '2016-02-18 00:00:00'",
+            "Player_Attributes.date = '2015-11-19 00:00:00'",
+            "Player_Attributes.date = MAX(Player_Attributes.date)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method ambiguity",
+          "description": "Ambiguity in how to handle multiple ratings for the same player (e.g., average, max, or latest).",
+          "candidate_values": [
+            "MAX(Player_Attributes.overall_rating)",
+            "AVG(Player_Attributes.overall_rating)",
+            "Player_Attributes.overall_rating WHERE Player_Attributes.date = MAX(Player_Attributes.date)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in determining the output format of the result (e.g., percentage difference only or detailed breakdown).",
+          "candidate_values": [
+            "SELECT percentage_difference",
+            "SELECT Ariel_rating, Paulin_rating, percentage_difference",
+            "SELECT Ariel_rating, Paulin_rating, percentage_difference, Player.player_name"
+          ]
+        }
+      ],
+      "nl_question": "How much higher in percentage is Ariel Borysiuk's overall rating than that of Paulin Puel?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1149",
+      "gold_axis_count": 2,
+      "predicted_axis_count": 9,
+      "axis_recall": 1.0,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "value_exact_count": 0,
+      "value_semantic_count": 1,
+      "value_miss_count": 1,
+      "hit_axis_count": 2,
+      "false_positive_rate": 0.7778,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE",
+        "combine:JOINS",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 7,
+      "avg_value_count": 2.11,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "aggregate_state_query_1",
+        "aggregate:SELECT": "case when in_count > out_count then 'in-patient' else 'outpatient' end, cast(in_count as float) * 100 / out_count as percentage"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "Patient.Admission",
+          "Examination.Thrombosis"
+        ],
+        "aggregate:GROUP": [
+          "Patient.Admission ('+' for in-patient, '-' for outpatient)",
+          "Examination.Thrombosis (numeric values indicating severity or type)",
+          "Group results by gender (e.g., male vs. female)",
+          "Aggregate results for males only"
+        ],
+        "aggregate:SELECT": [
+          "Patient.Admission ('+' for in-patient, '-' for outpatient)",
+          "Examination.Thrombosis (numeric values indicating severity or type)",
+          "(count(male in-patients) - count(male outpatients)) / count(male outpatients) * 100",
+          "(count(male in-patients) - count(male outpatients)) / count(male in-patients) * 100",
+          "Output raw counts of male in-patients and male outpatients",
+          "Output percentage deviation only",
+          "Output both raw counts and percentage deviation"
+        ],
+        "filter:WHERE": [
+          "Patient.Admission ('+' for in-patient, '-' for outpatient)",
+          "Examination.Thrombosis (numeric values indicating severity or type)",
+          "'+' means in-patient, '-' means outpatient",
+          "'+' means admitted, '-' means not admitted, '' means unknown",
+          "Include patients with Admission = ''",
+          "Exclude patients with Admission = ''"
+        ],
+        "combine:JOINS": [
+          "Patient.ID = Examination.ID",
+          "Patient.ID = Laboratory.ID"
+        ],
+        "combine:COMBINE_WHERE": [
+          "Include patients with Admission = ''",
+          "Exclude patients with Admission = ''"
+        ],
+        "aggregate:LIMIT": [
+          "Compare absolute counts of male in-patients and male outpatients",
+          "Compare relative percentages of male in-patients and male outpatients"
+        ],
+        "aggregate:ORDERBY": [
+          "Compare absolute counts of male in-patients and male outpatients",
+          "Compare relative percentages of male in-patients and male outpatients"
+        ],
+        "aggregate:DISTINCT": [
+          "Group results by gender (e.g., male vs. female)",
+          "Aggregate results for males only"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table ambiguity",
+          "description": "Ambiguity in determining which table contains the relevant data for 'in-patient' and 'outpatient'.",
+          "candidate_values": [
+            "Patient.Admission",
+            "Examination.Thrombosis"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column ambiguity",
+          "description": "Ambiguity in determining which column represents 'in-patient' and 'outpatient'.",
+          "candidate_values": [
+            "Patient.Admission ('+' for in-patient, '-' for outpatient)",
+            "Examination.Thrombosis (numeric values indicating severity or type)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in how to join tables to connect 'in-patient'/'outpatient' with gender information.",
+          "candidate_values": [
+            "Patient.ID = Examination.ID",
+            "Patient.ID = Laboratory.ID"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in interpreting the encoding of 'Admission' values ('+', '-', '').",
+          "candidate_values": [
+            "'+' means in-patient, '-' means outpatient",
+            "'+' means admitted, '-' means not admitted, '' means unknown"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in how to calculate the deviation in percentage between male in-patients and male outpatients.",
+          "candidate_values": [
+            "(count(male in-patients) - count(male outpatients)) / count(male outpatients) * 100",
+            "(count(male in-patients) - count(male outpatients)) / count(male in-patients) * 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary ambiguity",
+          "description": "Ambiguity in whether to include patients with unknown 'Admission' values ('').",
+          "candidate_values": [
+            "Include patients with Admission = ''",
+            "Exclude patients with Admission = ''"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum ambiguity",
+          "description": "Ambiguity in whether the query is asking for absolute counts or relative percentages of male in-patients vs. male outpatients.",
+          "candidate_values": [
+            "Compare absolute counts of male in-patients and male outpatients",
+            "Compare relative percentages of male in-patients and male outpatients"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in whether the output should include raw counts, percentages, or both.",
+          "candidate_values": [
+            "Output raw counts of male in-patients and male outpatients",
+            "Output percentage deviation only",
+            "Output both raw counts and percentage deviation"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure ambiguity",
+          "description": "Ambiguity in whether the output should be grouped by gender or presented as a single aggregated result.",
+          "candidate_values": [
+            "Group results by gender (e.g., male vs. female)",
+            "Aggregate results for males only"
+          ]
+        }
+      ],
+      "nl_question": "Are there more in-patient or outpatient who were male? What is the deviation in percentage?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1166",
+      "gold_axis_count": 10,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.8333,
+      "value_exact_count": 0,
+      "value_semantic_count": 5,
+      "value_miss_count": 1,
+      "hit_axis_count": 6,
+      "false_positive_rate": 0.3333,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.62,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "patient",
+        "combine:BASE": "source_state_query_6",
+        "combine:JOINS": "{\"on\": \"source_state_query_6.id = examination.id\", \"target\": \"examination\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "patient.birthday = (select * from aggregate_state_query_2 limit 1) and not examination.symptoms is null",
+        "aggregate:DISTINCT": "true",
+        "aggregate:SELECT": "max(patient.birthday)",
+        "filter:WHERE": "patient.birthday = (select * from aggregate_state_query_5 limit 1)",
+        "set_operation:LEFT": "aggregate_state_query_1",
+        "set_operation:RIGHT": "aggregate_state_query_3",
+        "set_operation:OP": "union"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "Examination(Symptoms)",
+          "Patient(Description)"
+        ],
+        "aggregate:GROUP": [
+          "Patient(Birthday)",
+          "Patient(First Date)",
+          "Patient(Admission)",
+          "LIMIT 1",
+          "All rows with the same minimum date"
+        ],
+        "aggregate:SELECT": [
+          "Patient(Birthday)",
+          "Patient(First Date)",
+          "Patient(Admission)",
+          "Examination(Symptoms), Examination(Diagnosis)",
+          "Patient(Diagnosis), Patient(Description)",
+          "Examination(Symptoms), Patient(Diagnosis)"
+        ],
+        "filter:WHERE": [
+          "Patient(Birthday)",
+          "Patient(First Date)",
+          "Patient(Admission)",
+          "Patient(Birthday) as the earliest date",
+          "Patient(First Date) as the earliest date",
+          "Patient(Description) as the earliest date",
+          "MIN(Patient.Birthday)",
+          "MIN(Patient.First Date)",
+          "MIN(Patient.Description)"
+        ],
+        "combine:JOINS": [
+          "Patient.ID = Examination.ID",
+          "Patient.ID = Laboratory.ID"
+        ],
+        "combine:COMBINE_WHERE": [
+          "MIN(Patient.Birthday)",
+          "MIN(Patient.First Date)",
+          "MIN(Patient.Description)"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY Patient.Birthday ASC",
+          "ORDER BY Patient.First Date ASC",
+          "ORDER BY Patient.Description ASC"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY Patient.Birthday ASC",
+          "ORDER BY Patient.First Date ASC",
+          "ORDER BY Patient.Description ASC"
+        ],
+        "aggregate:DISTINCT": [
+          "LIMIT 1",
+          "All rows with the same minimum date"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:SELECT": "semantic",
+        "combine:COMBINE_WHERE": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "Ambiguity in determining which table contains the 'symptoms' information.",
+          "candidate_values": [
+            "Examination(Symptoms)",
+            "Patient(Description)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "Ambiguity in identifying the column that represents the 'youngest patient'.",
+          "candidate_values": [
+            "Patient(Birthday)",
+            "Patient(First Date)",
+            "Patient(Admission)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "Ambiguity in determining how to join tables to link the patient to their symptoms and diagnosis.",
+          "candidate_values": [
+            "Patient.ID = Examination.ID",
+            "Patient.ID = Laboratory.ID"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "Ambiguity in interpreting the format of the 'youngest patient' based on date columns.",
+          "candidate_values": [
+            "Patient(Birthday) as the earliest date",
+            "Patient(First Date) as the earliest date",
+            "Patient(Description) as the earliest date"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "Ambiguity in defining the boundary for 'youngest patient' (e.g., earliest date).",
+          "candidate_values": [
+            "MIN(Patient.Birthday)",
+            "MIN(Patient.First Date)",
+            "MIN(Patient.Description)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum Ambiguity",
+          "description": "Ambiguity in determining the extremum method for identifying the youngest patient.",
+          "candidate_values": [
+            "ORDER BY Patient.Birthday ASC",
+            "ORDER BY Patient.First Date ASC",
+            "ORDER BY Patient.Description ASC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "Ambiguity in determining which columns to project for the output (e.g., symptoms, diagnosis).",
+          "candidate_values": [
+            "Examination(Symptoms), Examination(Diagnosis)",
+            "Patient(Diagnosis), Patient(Description)",
+            "Examination(Symptoms), Patient(Diagnosis)"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "Ambiguity in determining whether to output a single row or multiple rows for the youngest patient.",
+          "candidate_values": [
+            "LIMIT 1",
+            "All rows with the same minimum date"
+          ]
+        }
+      ],
+      "nl_question": "What are the symptoms observed by the youngest patient to ever did a medical examination? Identify the patient diagnosis.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1255",
+      "gold_axis_count": 9,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8889,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.25,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 6,
+      "hit_axis_count": 8,
+      "false_positive_rate": 0.1111,
+      "false_positive_axes": [
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 1,
+      "avg_value_count": 2.67,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "patient",
+        "aggregate:SELECT": "patient.id, patient.diagnosis",
+        "aggregate:GROUP": "diagnosis",
+        "aggregate:ORDERBY": "count(*) desc",
+        "aggregate:LIMIT": "1",
+        "combine:BASE": "source_state_query_2",
+        "combine:JOINS": "{\"on\": \"source_state_query_2.id = laboratory.id\", \"target\": \"laboratory\", \"type\": \"inner\"}",
+        "filter:WHERE": "laboratory.igm <= 40 or laboratory.igm >= 400",
+        "aggregate:DISTINCT": "true"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "Examination(`aCL IgM`)",
+          "Laboratory(`IGM`)"
+        ],
+        "aggregate:SELECT": [
+          "Examination(`aCL IgM`)",
+          "Laboratory(`IGM`)",
+          "Only the most common disease",
+          "Most common disease and its frequency",
+          "Most common disease and associated patient count"
+        ],
+        "filter:WHERE": [
+          "Examination(`aCL IgM`)",
+          "Laboratory(`IGM`)",
+          "`aCL IgM` > 0.7",
+          "`IGM` > 56",
+          "`aCL IgM` > 1.0",
+          "`IGM` > 100",
+          "`aCL IgM` >= 0.7",
+          "`aCL IgM` > 0.7",
+          "`IGM` >= 56",
+          "`IGM` > 56"
+        ],
+        "aggregate:GROUP": [
+          "Examination(`aCL IgM`)",
+          "Laboratory(`IGM`)",
+          "One row with one disease",
+          "Multiple rows for each tied disease"
+        ],
+        "combine:JOINS": [
+          "Patient -> Examination",
+          "Patient -> Laboratory"
+        ],
+        "combine:COMBINE_WHERE": [
+          "`aCL IgM` >= 0.7",
+          "`aCL IgM` > 0.7",
+          "`IGM` >= 56",
+          "`IGM` > 56"
+        ],
+        "aggregate:ORDERBY": [
+          "COUNT(Diagnosis)",
+          "MODE(Diagnosis)",
+          "Return all tied diseases",
+          "Return the first disease alphabetically",
+          "Return the disease with the highest total Ig M level"
+        ],
+        "aggregate:LIMIT": [
+          "COUNT(Diagnosis)",
+          "MODE(Diagnosis)"
+        ],
+        "aggregate:DISTINCT": [
+          "One row with one disease",
+          "Multiple rows for each tied disease"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:GROUP": "miss",
+        "aggregate:LIMIT": "miss",
+        "aggregate:ORDERBY": "miss",
+        "aggregate:SELECT": "miss",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the 'abnormal Ig M level' data.",
+          "candidate_values": [
+            "Examination(`aCL IgM`)",
+            "Laboratory(`IGM`)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in determining which column represents 'Ig M level'.",
+          "candidate_values": [
+            "Examination(`aCL IgM`)",
+            "Laboratory(`IGM`)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the join path to connect 'patients' with their Ig M levels and diagnoses.",
+          "candidate_values": [
+            "Patient -> Examination",
+            "Patient -> Laboratory"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in defining what constitutes an 'abnormal' Ig M level.",
+          "candidate_values": [
+            "`aCL IgM` > 0.7",
+            "`IGM` > 56",
+            "`aCL IgM` > 1.0",
+            "`IGM` > 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in whether 'abnormal Ig M level' includes boundary values.",
+          "candidate_values": [
+            "`aCL IgM` >= 0.7",
+            "`aCL IgM` > 0.7",
+            "`IGM` >= 56",
+            "`IGM` > 56"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum",
+          "description": "Ambiguity in determining the 'most common disease' metric.",
+          "candidate_values": [
+            "COUNT(Diagnosis)",
+            "MODE(Diagnosis)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method",
+          "description": "Ambiguity in how to calculate the 'most common disease' when there are ties.",
+          "candidate_values": [
+            "Return all tied diseases",
+            "Return the first disease alphabetically",
+            "Return the disease with the highest total Ig M level"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in what to include in the output besides the most common disease.",
+          "candidate_values": [
+            "Only the most common disease",
+            "Most common disease and its frequency",
+            "Most common disease and associated patient count"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether to return one row or multiple rows for tied diseases.",
+          "candidate_values": [
+            "One row with one disease",
+            "Multiple rows for each tied disease"
+          ]
+        }
+      ],
+      "nl_question": "For the patients with an abnormal Ig M level, what is the most common disease they are diagnosed with?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1387",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.75,
+      "value_exact_count": 0,
+      "value_semantic_count": 3,
+      "value_miss_count": 1,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5556,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 5,
+      "avg_value_count": 3.12,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "event",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.event_id = budget.link_to_event\", \"target\": \"budget\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "event.event_name = 'yearly kickoff' and member.position = 'treasurer'",
+        "aggregate:SELECT": "member.first_name, member.last_name"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "member",
+          "expense",
+          "income"
+        ],
+        "aggregate:GROUP": [
+          "member.first_name",
+          "member.last_name",
+          "member.position",
+          "expense.link_to_member",
+          "income.link_to_member",
+          "LIMIT 1 (return a single student)",
+          "ALL (return all students involved)"
+        ],
+        "aggregate:SELECT": [
+          "member.first_name",
+          "member.last_name",
+          "member.position",
+          "expense.link_to_member",
+          "income.link_to_member",
+          "member.first_name, member.last_name",
+          "member.email",
+          "member.position"
+        ],
+        "filter:WHERE": [
+          "member.first_name",
+          "member.last_name",
+          "member.position",
+          "expense.link_to_member",
+          "income.link_to_member",
+          "event.event_name = 'Yearly Kickoff'",
+          "event.notes LIKE '%Yearly Kickoff%'",
+          "event.type = 'Meeting' AND event.status = 'Open'",
+          "expense.link_to_member (students who approved expenses)",
+          "income.link_to_member (students who secured income)",
+          "member.position = 'President' (default assumption of responsibility)"
+        ],
+        "combine:JOINS": [
+          "budget.link_to_event -> event.event_id -> attendance.link_to_event -> attendance.link_to_member -> member.member_id",
+          "budget.link_to_event -> event.event_id -> expense.link_to_budget -> expense.link_to_member -> member.member_id",
+          "budget.link_to_event -> event.event_id -> income.link_to_member -> member.member_id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "expense.link_to_member (students who approved expenses)",
+          "income.link_to_member (students who secured income)",
+          "member.position = 'President' (default assumption of responsibility)"
+        ],
+        "aggregate:LIMIT": [
+          "MAX(expense.cost) (student responsible for the largest expense)",
+          "MAX(income.amount) (student responsible for the largest income)",
+          "COUNT(expense.expense_id) (student with the most expense records)"
+        ],
+        "aggregate:ORDERBY": [
+          "MAX(expense.cost) (student responsible for the largest expense)",
+          "MAX(income.amount) (student responsible for the largest income)",
+          "COUNT(expense.expense_id) (student with the most expense records)"
+        ],
+        "aggregate:DISTINCT": [
+          "LIMIT 1 (return a single student)",
+          "ALL (return all students involved)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:COMBINE_WHERE": "semantic",
+        "combine:JOINS": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "The query does not specify which table contains the information about the student managing the budget.",
+          "candidate_values": [
+            "member",
+            "expense",
+            "income"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "The query does not specify which column identifies the student responsible for managing the budget.",
+          "candidate_values": [
+            "member.first_name",
+            "member.last_name",
+            "member.position",
+            "expense.link_to_member",
+            "income.link_to_member"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "The query does not specify how to join tables to identify the student managing the budget for the event.",
+          "candidate_values": [
+            "budget.link_to_event -> event.event_id -> attendance.link_to_event -> attendance.link_to_member -> member.member_id",
+            "budget.link_to_event -> event.event_id -> expense.link_to_budget -> expense.link_to_member -> member.member_id",
+            "budget.link_to_event -> event.event_id -> income.link_to_member -> member.member_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "The query does not specify how to identify the 'Yearly Kickoff' event, as it is not explicitly listed in the database.",
+          "candidate_values": [
+            "event.event_name = 'Yearly Kickoff'",
+            "event.notes LIKE '%Yearly Kickoff%'",
+            "event.type = 'Meeting' AND event.status = 'Open'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "The query does not specify what 'managing the budget' entails, which could involve different roles or actions.",
+          "candidate_values": [
+            "expense.link_to_member (students who approved expenses)",
+            "income.link_to_member (students who secured income)",
+            "member.position = 'President' (default assumption of responsibility)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum Ambiguity",
+          "description": "The query does not specify how to rank or prioritize students if multiple are involved in managing the budget.",
+          "candidate_values": [
+            "MAX(expense.cost) (student responsible for the largest expense)",
+            "MAX(income.amount) (student responsible for the largest income)",
+            "COUNT(expense.expense_id) (student with the most expense records)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "The query does not specify what information about the student should be returned.",
+          "candidate_values": [
+            "member.first_name, member.last_name",
+            "member.email",
+            "member.position"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "The query does not specify whether to return a single student or all students involved in managing the budget.",
+          "candidate_values": [
+            "LIMIT 1 (return a single student)",
+            "ALL (return all students involved)"
+          ]
+        }
+      ],
+      "nl_question": "Which student has been entrusted to manage the budget for the Yearly Kickoff?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1481",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.4,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 3,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.4444,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 3.0,
+      "slot_count": 6,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "aggregate_state_query_4",
+        "combine:BASE": "source_state_query_4",
+        "combine:JOINS": "{\"on\": \"source_state_query_4.segment = t2.segment and source_state_query_4.leastconsumptioncustomer = t2.totalconsumption\", \"target\": \"aggregate_state_query_2\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "yearmonth.date between '201301' and '201312' and customers.currency = 'czk'",
+        "aggregate:SELECT": "sum(case when segment = 'sme' then annualaverageconsumption else 0 end) - sum(case when segment = 'lam' then annualaverageconsumption else 0 end), sum(case when segment = 'lam' then annualaverageconsumption else 0 end) - sum(case when segment = 'kam' then annualaverageconsumption else 0 end), sum(case when segment = 'kam' then annualaverageconsumption else 0 end) - sum(case when segment = 'sme' then annualaverageconsumption else 0 end)",
+        "aggregate:GROUP": "segment"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "transactions_1k.Price",
+          "customers.CustomerID",
+          "yearmonth.CustomerID",
+          "transactions_1k.CustomerID",
+          "SELECT Segment, AVG(Consumption) GROUP BY Segment",
+          "SELECT Segment, SUM(Consumption) GROUP BY Segment",
+          "SELECT Segment, MIN(Consumption) GROUP BY Segment"
+        ],
+        "aggregate:SELECT": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "transactions_1k.Price",
+          "customers.CustomerID",
+          "yearmonth.CustomerID",
+          "transactions_1k.CustomerID",
+          "SELECT Segment, AVG(Consumption) GROUP BY Segment",
+          "SELECT Segment, SUM(Consumption) GROUP BY Segment",
+          "SELECT Segment, MIN(Consumption) GROUP BY Segment"
+        ],
+        "combine:JOINS": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "transactions_1k.Price",
+          "customers.CustomerID",
+          "yearmonth.CustomerID",
+          "transactions_1k.CustomerID"
+        ],
+        "filter:WHERE": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "transactions_1k.Price",
+          "customers.CustomerID",
+          "yearmonth.CustomerID",
+          "transactions_1k.CustomerID",
+          "Currency = 'CZK'",
+          "Currency = 'EUR'",
+          "Currency conversion from EUR to CZK",
+          "SUM(yearmonth.Consumption) / COUNT(DISTINCT yearmonth.Date)",
+          "SUM(transactions_1k.Amount) / COUNT(DISTINCT transactions_1k.Date)",
+          "AVG(yearmonth.Consumption)"
+        ],
+        "source:FROM": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "transactions_1k.Price",
+          "customers.CustomerID",
+          "yearmonth.CustomerID",
+          "transactions_1k.CustomerID"
+        ],
+        "combine:COMBINE_WHERE": [
+          "SUM(yearmonth.Consumption) / COUNT(DISTINCT yearmonth.Date)",
+          "SUM(transactions_1k.Amount) / COUNT(DISTINCT transactions_1k.Date)",
+          "AVG(yearmonth.Consumption)"
+        ],
+        "aggregate:LIMIT": [
+          "MIN(yearmonth.Consumption)",
+          "MIN(transactions_1k.Amount)",
+          "MIN(transactions_1k.Price)"
+        ],
+        "aggregate:ORDERBY": [
+          "MIN(yearmonth.Consumption)",
+          "MIN(transactions_1k.Amount)",
+          "MIN(transactions_1k.Price)"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT Segment, AVG(Consumption) GROUP BY Segment",
+          "SELECT Segment, SUM(Consumption) GROUP BY Segment",
+          "SELECT Segment, MIN(Consumption) GROUP BY Segment"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:GROUP": "semantic",
+        "aggregate:SELECT": "miss",
+        "combine:COMBINE_WHERE": "semantic",
+        "combine:JOINS": "miss",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the correct table and column for 'annual average consumption'",
+          "candidate_values": [
+            "yearmonth.Consumption",
+            "transactions_1k.Amount",
+            "transactions_1k.Price"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in identifying the correct table and column for 'customers with the least amount of consumption paid in CZK'",
+          "candidate_values": [
+            "customers.CustomerID",
+            "yearmonth.CustomerID",
+            "transactions_1k.CustomerID"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in encoding or normalizing the currency 'CZK'",
+          "candidate_values": [
+            "Currency = 'CZK'",
+            "Currency = 'EUR'",
+            "Currency conversion from EUR to CZK"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in calculating 'annual average consumption'",
+          "candidate_values": [
+            "SUM(yearmonth.Consumption) / COUNT(DISTINCT yearmonth.Date)",
+            "SUM(transactions_1k.Amount) / COUNT(DISTINCT transactions_1k.Date)",
+            "AVG(yearmonth.Consumption)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum / Method / Direction ambiguity",
+          "description": "Ambiguity in determining 'least amount of consumption'",
+          "candidate_values": [
+            "MIN(yearmonth.Consumption)",
+            "MIN(transactions_1k.Amount)",
+            "MIN(transactions_1k.Price)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in structuring the output for differences between segments",
+          "candidate_values": [
+            "SELECT Segment, AVG(Consumption) GROUP BY Segment",
+            "SELECT Segment, SUM(Consumption) GROUP BY Segment",
+            "SELECT Segment, MIN(Consumption) GROUP BY Segment"
+          ]
+        }
+      ],
+      "nl_question": "What is the difference in the annual average consumption of the customers with the least amount of consumption paid in CZK for 2013 between SME and LAM, LAM and KAM, and KAM and SME?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1482",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 0.75,
+      "value_exact_count": 1,
+      "value_semantic_count": 2,
+      "value_miss_count": 1,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 2.0,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "customers",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.customerid = yearmonth.customerid\", \"target\": \"yearmonth\", \"type\": \"inner\"}",
+        "filter:WHERE": "customers.currency = 'eur'",
+        "aggregate:SELECT": "cast((sum(case when customers.segment = 'sme' and yearmonth.date like '2013%' then yearmonth.consumption else 0 end) - sum(case when customers.segment = 'sme' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end)) as float) * 100 / sum(case when customers.segment = 'sme' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end), cast(sum(case when customers.segment = 'lam' and yearmonth.date like '2013%' then yearmonth.consumption else 0 end) - sum(case when customers.segment = 'lam' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end) as float) * 100 / sum(case when customers.segment = 'lam' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end), cast(sum(case when customers.segment = 'kam' and yearmonth.date like '2013%' then yearmonth.consumption else 0 end) - sum(case when customers.segment = 'kam' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end) as float) * 100 / sum(case when customers.segment = 'kam' and yearmonth.date like '2012%' then yearmonth.consumption else 0 end)"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "yearmonth",
+          "transactions_1k"
+        ],
+        "aggregate:SELECT": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "((Consumption_2013 - Consumption_2012) / Consumption_2012) * 100",
+          "((Consumption_2013 / Consumption_2012) - 1) * 100",
+          "Segment, percentage_change",
+          "Segment, Consumption_2012, Consumption_2013, percentage_change"
+        ],
+        "filter:WHERE": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "customers.Currency = 'EUR'",
+          "transactions_1k.Price in EUR (conversion required)",
+          "yearmonth.Date LIKE '2012%' AND yearmonth.Date LIKE '2013%'",
+          "transactions_1k.Date BETWEEN '2012-01-01' AND '2013-12-31'"
+        ],
+        "aggregate:GROUP": [
+          "yearmonth.Consumption",
+          "transactions_1k.Amount",
+          "GROUP BY customers.Segment",
+          "No grouping, individual rows for each customer"
+        ],
+        "combine:JOINS": [
+          "customers.CustomerID = yearmonth.CustomerID",
+          "customers.CustomerID = transactions_1k.CustomerID"
+        ],
+        "combine:COMBINE_WHERE": [
+          "yearmonth.Date LIKE '2012%' AND yearmonth.Date LIKE '2013%'",
+          "transactions_1k.Date BETWEEN '2012-01-01' AND '2013-12-31'"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY percentage_change ASC",
+          "ORDER BY percentage_change DESC"
+        ],
+        "aggregate:DISTINCT": [
+          "GROUP BY customers.Segment",
+          "No grouping, individual rows for each customer"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "exact",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the relevant consumption data for the query.",
+          "candidate_values": [
+            "yearmonth",
+            "transactions_1k"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column",
+          "description": "Ambiguity in identifying the column that represents 'consumption' in the query.",
+          "candidate_values": [
+            "yearmonth.Consumption",
+            "transactions_1k.Amount"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining the correct join path to link customers to their consumption data.",
+          "candidate_values": [
+            "customers.CustomerID = yearmonth.CustomerID",
+            "customers.CustomerID = transactions_1k.CustomerID"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in interpreting the 'Currency' filter for EUR, as it is not explicitly linked to consumption data.",
+          "candidate_values": [
+            "customers.Currency = 'EUR'",
+            "transactions_1k.Price in EUR (conversion required)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in calculating the percentage increase or decrease in consumption.",
+          "candidate_values": [
+            "((Consumption_2013 - Consumption_2012) / Consumption_2012) * 100",
+            "((Consumption_2013 / Consumption_2012) - 1) * 100"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary",
+          "description": "Ambiguity in defining the time boundaries for 2012 and 2013 consumption.",
+          "candidate_values": [
+            "yearmonth.Date LIKE '2012%' AND yearmonth.Date LIKE '2013%'",
+            "transactions_1k.Date BETWEEN '2012-01-01' AND '2013-12-31'"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Direction",
+          "description": "Ambiguity in whether the query should rank by increase or decrease in consumption.",
+          "candidate_values": [
+            "ORDER BY percentage_change ASC",
+            "ORDER BY percentage_change DESC"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining the exact output columns for the query.",
+          "candidate_values": [
+            "Segment, percentage_change",
+            "Segment, Consumption_2012, Consumption_2013, percentage_change"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure",
+          "description": "Ambiguity in whether the output should group by segment or provide individual rows for each customer.",
+          "candidate_values": [
+            "GROUP BY customers.Segment",
+            "No grouping, individual rows for each customer"
+          ]
+        }
+      ],
+      "nl_question": "Provide the percentage increase or decrease in consumption paid in EUR between 2012 and 2013 for SME, LAM, and KAM respectively.",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "1338",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 7,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.25,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 3,
+      "value_miss_count": 0,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.4286,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.38,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "event",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.event_id = budget.link_to_event\", \"target\": \"budget\", \"type\": \"inner\"}",
+        "filter:WHERE": "event.event_name = 'october meeting' and event.event_date like '2019-10-08%'",
+        "aggregate:SELECT": "expense.approved"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "event.event_name",
+          "budget.link_to_event",
+          "expense.link_to_budget"
+        ],
+        "aggregate:GROUP": [
+          "expense.approved",
+          "budget.event_status",
+          "SELECT expense.approved",
+          "SELECT expense.expense_id, expense.approved, expense.expense_description"
+        ],
+        "aggregate:SELECT": [
+          "expense.approved",
+          "budget.event_status",
+          "GROUP BY expense.expense_id, return 'true' or 'false' for each expense",
+          "AGGREGATE: return 'true' if all expenses are approved, otherwise 'false'"
+        ],
+        "filter:WHERE": [
+          "expense.approved",
+          "budget.event_status",
+          "'October Meeting' matches event.event_name",
+          "'October Meeting' matches event.notes",
+          "'October Meeting' matches event.type = 'Meeting' AND event.event_date LIKE '2019-10%'",
+          "'2019-10-08'",
+          "'October 8, 2019'",
+          "'2019-10-08T00:00:00'",
+          "expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'",
+          "expense.expense_date = '2019-10-08' AND expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'"
+        ],
+        "combine:JOINS": [
+          "expense.link_to_budget -> budget.link_to_event -> event.event_id",
+          "expense.link_to_budget -> budget.link_to_event -> event.event_name"
+        ],
+        "combine:COMBINE_WHERE": [
+          "expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'",
+          "expense.expense_date = '2019-10-08' AND expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT expense.approved",
+          "SELECT expense.expense_id, expense.approved, expense.expense_description"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "exact",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "The query references 'October Meeting', but it is unclear which table contains the relevant event information.",
+          "candidate_values": [
+            "event.event_name",
+            "budget.link_to_event",
+            "expense.link_to_budget"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column Ambiguity",
+          "description": "The query references 'approved', but it is unclear if this refers to the `expense.approved` column or another approval-related column.",
+          "candidate_values": [
+            "expense.approved",
+            "budget.event_status"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "The query requires linking expenses to events, but the join path between `expense`, `budget`, and `event` is underspecified.",
+          "candidate_values": [
+            "expense.link_to_budget -> budget.link_to_event -> event.event_id",
+            "expense.link_to_budget -> budget.link_to_event -> event.event_name"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "The query references 'October Meeting', but it is unclear how this name is encoded in the database.",
+          "candidate_values": [
+            "'October Meeting' matches event.event_name",
+            "'October Meeting' matches event.notes",
+            "'October Meeting' matches event.type = 'Meeting' AND event.event_date LIKE '2019-10%'"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Format Normalization Ambiguity",
+          "description": "The query references 'October 8, 2019', but the date format in the database may differ.",
+          "candidate_values": [
+            "'2019-10-08'",
+            "'October 8, 2019'",
+            "'2019-10-08T00:00:00'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "The query asks about 'each expense in October Meeting', but it is unclear if this includes all expenses linked to the event or only those on October 8, 2019.",
+          "candidate_values": [
+            "expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'",
+            "expense.expense_date = '2019-10-08' AND expense.link_to_budget -> budget.link_to_event = event.event_id AND event.event_name = 'October Meeting'"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "The query asks for 'true' or 'false', but it is unclear if this should be aggregated for all expenses or returned for each expense individually.",
+          "candidate_values": [
+            "GROUP BY expense.expense_id, return 'true' or 'false' for each expense",
+            "AGGREGATE: return 'true' if all expenses are approved, otherwise 'false'"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "The query does not specify whether the output should include additional details about the expenses or just the approval status.",
+          "candidate_values": [
+            "SELECT expense.approved",
+            "SELECT expense.expense_id, expense.approved, expense.expense_description"
+          ]
+        }
+      ],
+      "nl_question": "Was each expense in October Meeting on October 8, 2019 approved? 'true' or 'false'",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "959",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 6,
+      "axis_recall": 0.6,
+      "value_recall_exact": 0.3333,
+      "value_recall_semantic": 1.0,
+      "value_exact_count": 1,
+      "value_semantic_count": 2,
+      "value_miss_count": 0,
+      "hit_axis_count": 3,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.17,
+      "slot_count": 6,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "results",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.raceid = races.raceid\", \"target\": \"races\", \"type\": \"inner\"}",
+        "combine:COMBINE_WHERE": "races.year = 2009 and results.time like '_:%:__.___'",
+        "aggregate:SELECT": "results.fastestlap"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "results.fastestLap",
+          "lapTimes.lap"
+        ],
+        "combine:JOINS": [
+          "driverStandings.position = 1 AND driverStandings.raceId = races.raceId",
+          "constructorStandings.position = 1 AND constructorStandings.raceId = races.raceId"
+        ],
+        "filter:WHERE": [
+          "races.year = 2009",
+          "driverStandings.raceId IN (SELECT raceId FROM races WHERE year = 2009)"
+        ],
+        "aggregate:SELECT": [
+          "results.fastestLap",
+          "lapTimes.lap WHERE lapTimes.milliseconds = MIN(lapTimes.milliseconds)",
+          "lapTimes.lap",
+          "results.fastestLap",
+          "lapTimes.time"
+        ],
+        "aggregate:ORDERBY": [
+          "MIN(lapTimes.milliseconds)",
+          "MAX(results.fastestLapSpeed)"
+        ],
+        "aggregate:LIMIT": [
+          "MIN(lapTimes.milliseconds)",
+          "MAX(results.fastestLapSpeed)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "exact",
+        "combine:JOINS": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table",
+          "description": "Ambiguity in determining which table contains the 'fastest lap numbers' of champions.",
+          "candidate_values": [
+            "results.fastestLap",
+            "lapTimes.lap"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path",
+          "description": "Ambiguity in determining how to join tables to identify 'champions' in 2009.",
+          "candidate_values": [
+            "driverStandings.position = 1 AND driverStandings.raceId = races.raceId",
+            "constructorStandings.position = 1 AND constructorStandings.raceId = races.raceId"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding",
+          "description": "Ambiguity in interpreting the year '2009' as a filter for races or standings.",
+          "candidate_values": [
+            "races.year = 2009",
+            "driverStandings.raceId IN (SELECT raceId FROM races WHERE year = 2009)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula",
+          "description": "Ambiguity in defining 'fastest lap numbers'—whether it refers to the lap number or the lap time.",
+          "candidate_values": [
+            "results.fastestLap",
+            "lapTimes.lap WHERE lapTimes.milliseconds = MIN(lapTimes.milliseconds)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum",
+          "description": "Ambiguity in determining the extremum for 'fastest'—whether it refers to the minimum lap time or the maximum lap speed.",
+          "candidate_values": [
+            "MIN(lapTimes.milliseconds)",
+            "MAX(results.fastestLapSpeed)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection",
+          "description": "Ambiguity in determining what to project as the output—lap numbers, lap times, or associated metadata.",
+          "candidate_values": [
+            "lapTimes.lap",
+            "results.fastestLap",
+            "lapTimes.time"
+          ]
+        }
+      ],
+      "nl_question": "What were the fastest lap numbers of the champions in 2009?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "391",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 9,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.8,
+      "value_exact_count": 0,
+      "value_semantic_count": 4,
+      "value_miss_count": 1,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.4444,
+      "false_positive_axes": [
+        "aggregate:GROUP",
+        "aggregate:LIMIT",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 2.44,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "cards",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.uuid = foreign_data.uuid\", \"target\": \"foreign_data\", \"type\": \"inner\"}",
+        "filter:WHERE": "cards.originaltype = 'artifact' and cards.colors = 'b'",
+        "aggregate:DISTINCT": "true",
+        "aggregate:SELECT": "cards.name"
+      },
+      "predicted_atomic_candidates": {
+        "aggregate:GROUP": [
+          "cards.type = 'Artifact'",
+          "cards.types LIKE '%Artifact%'",
+          "cards.colors = 'B'",
+          "cards.colorIdentity = 'B'",
+          "cards.colorIndicator = 'B'",
+          "foreign_data.language IS NOT NULL",
+          "sets.isForeignOnly = 1",
+          "set_translations.language IS NOT NULL",
+          "SELECT cards.name, cards.type, cards.colors",
+          "SELECT cards.name, cards.type, cards.colors, foreign_data.language",
+          "SELECT *",
+          "GROUP BY cards.uuid",
+          "No GROUP BY (one row per card-language pair)"
+        ],
+        "aggregate:SELECT": [
+          "cards.type = 'Artifact'",
+          "cards.types LIKE '%Artifact%'",
+          "cards.colors = 'B'",
+          "cards.colorIdentity = 'B'",
+          "cards.colorIndicator = 'B'",
+          "foreign_data.language IS NOT NULL",
+          "sets.isForeignOnly = 1",
+          "set_translations.language IS NOT NULL",
+          "SELECT cards.name, cards.type, cards.colors",
+          "SELECT cards.name, cards.type, cards.colors, foreign_data.language",
+          "SELECT *",
+          "GROUP BY cards.uuid",
+          "No GROUP BY (one row per card-language pair)"
+        ],
+        "combine:JOINS": [
+          "cards.type = 'Artifact'",
+          "cards.types LIKE '%Artifact%'",
+          "cards.colors = 'B'",
+          "cards.colorIdentity = 'B'",
+          "cards.colorIndicator = 'B'",
+          "foreign_data.language IS NOT NULL",
+          "sets.isForeignOnly = 1",
+          "set_translations.language IS NOT NULL"
+        ],
+        "filter:WHERE": [
+          "cards.type = 'Artifact'",
+          "cards.types LIKE '%Artifact%'",
+          "cards.colors = 'B'",
+          "cards.colorIdentity = 'B'",
+          "cards.colorIndicator = 'B'",
+          "foreign_data.language IS NOT NULL",
+          "sets.isForeignOnly = 1",
+          "set_translations.language IS NOT NULL",
+          "'B' (single character for black)",
+          "'Black' (full word for black)",
+          "cards.colors = 'B'",
+          "cards.colors LIKE '%B%'",
+          "foreign_data.language IS NOT NULL",
+          "foreign_data.language IN ('German', 'Spanish', 'French')"
+        ],
+        "source:FROM": [
+          "cards.type = 'Artifact'",
+          "cards.types LIKE '%Artifact%'",
+          "cards.colors = 'B'",
+          "cards.colorIdentity = 'B'",
+          "cards.colorIndicator = 'B'",
+          "foreign_data.language IS NOT NULL",
+          "sets.isForeignOnly = 1",
+          "set_translations.language IS NOT NULL"
+        ],
+        "combine:COMBINE_WHERE": [
+          "cards.colors = 'B'",
+          "cards.colors LIKE '%B%'",
+          "foreign_data.language IS NOT NULL",
+          "foreign_data.language IN ('German', 'Spanish', 'French')"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY cards.edhrecRank ASC",
+          "ORDER BY cards.convertedManaCost ASC",
+          "No specific ranking"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY cards.edhrecRank ASC",
+          "ORDER BY cards.convertedManaCost ASC",
+          "No specific ranking"
+        ],
+        "aggregate:DISTINCT": [
+          "SELECT cards.name, cards.type, cards.colors",
+          "SELECT cards.name, cards.type, cards.colors, foreign_data.language",
+          "SELECT *",
+          "GROUP BY cards.uuid",
+          "No GROUP BY (one row per card-language pair)"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:DISTINCT": "miss",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "semantic",
+        "source:FROM": "semantic"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in determining which table and column to use for 'Artifact cards'.",
+          "candidate_values": [
+            "cards.type = 'Artifact'",
+            "cards.types LIKE '%Artifact%'"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in determining how to identify 'black color' cards.",
+          "candidate_values": [
+            "cards.colors = 'B'",
+            "cards.colorIdentity = 'B'",
+            "cards.colorIndicator = 'B'"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Table / Column / Join Path ambiguity",
+          "description": "Ambiguity in determining how to identify cards with 'foreign language translation'.",
+          "candidate_values": [
+            "foreign_data.language IS NOT NULL",
+            "sets.isForeignOnly = 1",
+            "set_translations.language IS NOT NULL"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding / Format Normalization ambiguity",
+          "description": "Ambiguity in interpreting the encoding of 'black color' in the database.",
+          "candidate_values": [
+            "'B' (single character for black)",
+            "'Black' (full word for black)"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in whether 'black color' includes cards with only black or also multicolor cards containing black.",
+          "candidate_values": [
+            "cards.colors = 'B'",
+            "cards.colors LIKE '%B%'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula / Numeric / Boundary ambiguity",
+          "description": "Ambiguity in whether 'foreign language translation' includes all translations or only specific languages.",
+          "candidate_values": [
+            "foreign_data.language IS NOT NULL",
+            "foreign_data.language IN ('German', 'Spanish', 'French')"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum / Method / Direction ambiguity",
+          "description": "Ambiguity in whether the query should return all matching cards or only the most relevant ones.",
+          "candidate_values": [
+            "ORDER BY cards.edhrecRank ASC",
+            "ORDER BY cards.convertedManaCost ASC",
+            "No specific ranking"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in determining which columns to include in the output.",
+          "candidate_values": [
+            "SELECT cards.name, cards.type, cards.colors",
+            "SELECT cards.name, cards.type, cards.colors, foreign_data.language",
+            "SELECT *"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection / Row Structure ambiguity",
+          "description": "Ambiguity in whether to return one row per card or one row per card-language pair.",
+          "candidate_values": [
+            "GROUP BY cards.uuid",
+            "No GROUP BY (one row per card-language pair)"
+          ]
+        }
+      ],
+      "nl_question": "Among the Artifact cards, which are black color and comes with foreign languague translation?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "145",
+      "gold_axis_count": 5,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.8,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.5,
+      "value_exact_count": 0,
+      "value_semantic_count": 2,
+      "value_miss_count": 2,
+      "hit_axis_count": 4,
+      "false_positive_rate": 0.5,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "aggregate:ORDERBY",
+        "combine:COMBINE_WHERE"
+      ],
+      "false_positive_count": 4,
+      "avg_value_count": 2.5,
+      "slot_count": 8,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "trans",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.account_id = account.account_id\", \"target\": \"account\", \"type\": \"inner\"}",
+        "filter:WHERE": "strftime('%y', date) = '1998'",
+        "aggregate:SELECT": "avg(amount)"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "account.account_id",
+          "client.client_id",
+          "disp.client_id"
+        ],
+        "combine:JOINS": [
+          "trans.account_id -> account.account_id -> disp.account_id -> card.disp_id",
+          "trans.account_id -> account.account_id -> disp.account_id -> disp.client_id -> card.disp_id"
+        ],
+        "filter:WHERE": [
+          "card.type = 'gold'",
+          "card.type = 'classic'",
+          "card.type = 'junior'",
+          "trans.date >= '1998-01-01' AND trans.date <= '1998-12-31'",
+          "trans.date LIKE '1998%'"
+        ],
+        "aggregate:SELECT": [
+          "AVG(trans.amount) WHERE trans.date LIKE '1998%'",
+          "AVG(trans.amount) WHERE trans.type = 'VYDAJ'",
+          "AVG(trans.amount) WHERE trans.type = 'PRIJEM'",
+          "account.account_id",
+          "client.client_id",
+          "disp.client_id"
+        ],
+        "combine:COMBINE_WHERE": [
+          "trans.date >= '1998-01-01' AND trans.date <= '1998-12-31'",
+          "trans.date LIKE '1998%'"
+        ],
+        "aggregate:ORDERBY": [
+          "trans.amount < AVG(trans.amount)",
+          "trans.amount <= AVG(trans.amount)"
+        ],
+        "aggregate:DISTINCT": [
+          "DISTINCT account.account_id",
+          "account.account_id"
+        ],
+        "aggregate:GROUP": [
+          "DISTINCT account.account_id",
+          "account.account_id"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "filter:WHERE": "miss",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table Ambiguity",
+          "description": "Ambiguity in identifying the table containing 'account holder identification numbers'.",
+          "candidate_values": [
+            "account.account_id",
+            "client.client_id",
+            "disp.client_id"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path Ambiguity",
+          "description": "Ambiguity in determining the join path to connect transactions to the credit card.",
+          "candidate_values": [
+            "trans.account_id -> account.account_id -> disp.account_id -> card.disp_id",
+            "trans.account_id -> account.account_id -> disp.account_id -> disp.client_id -> card.disp_id"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding Ambiguity",
+          "description": "Ambiguity in interpreting 'credit card' type.",
+          "candidate_values": [
+            "card.type = 'gold'",
+            "card.type = 'classic'",
+            "card.type = 'junior'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula Ambiguity",
+          "description": "Ambiguity in calculating the 'overall average' for transaction amounts.",
+          "candidate_values": [
+            "AVG(trans.amount) WHERE trans.date LIKE '1998%'",
+            "AVG(trans.amount) WHERE trans.type = 'VYDAJ'",
+            "AVG(trans.amount) WHERE trans.type = 'PRIJEM'"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Boundary Ambiguity",
+          "description": "Ambiguity in defining the time range for transactions in 1998.",
+          "candidate_values": [
+            "trans.date >= '1998-01-01' AND trans.date <= '1998-12-31'",
+            "trans.date LIKE '1998%'"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method Ambiguity",
+          "description": "Ambiguity in determining how to compare transaction amounts to the overall average.",
+          "candidate_values": [
+            "trans.amount < AVG(trans.amount)",
+            "trans.amount <= AVG(trans.amount)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection Ambiguity",
+          "description": "Ambiguity in determining the output column for 'account holder identification numbers'.",
+          "candidate_values": [
+            "account.account_id",
+            "client.client_id",
+            "disp.client_id"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure Ambiguity",
+          "description": "Ambiguity in whether to output distinct account holder IDs or include duplicates.",
+          "candidate_values": [
+            "DISTINCT account.account_id",
+            "account.account_id"
+          ]
+        }
+      ],
+      "nl_question": "Who are the account holder identification numbers whose who have transactions on the credit card with the amount is less than the overall average, in 1998?",
+      "n_worlds_hint": null
+    },
+    {
+      "qid": "894",
+      "gold_axis_count": 6,
+      "predicted_axis_count": 8,
+      "axis_recall": 0.8333,
+      "value_recall_exact": 0.0,
+      "value_recall_semantic": 0.6,
+      "value_exact_count": 0,
+      "value_semantic_count": 3,
+      "value_miss_count": 2,
+      "hit_axis_count": 5,
+      "false_positive_rate": 0.375,
+      "false_positive_axes": [
+        "aggregate:DISTINCT",
+        "aggregate:GROUP",
+        "filter:WHERE"
+      ],
+      "false_positive_count": 3,
+      "avg_value_count": 2.11,
+      "slot_count": 9,
+      "unmapped_llm_axes": [],
+      "gold_axes": {
+        "source:FROM": "drivers",
+        "combine:BASE": "source_state_query_1",
+        "combine:JOINS": "{\"on\": \"source_state_query_1.driverid = laptimes.driverid\", \"target\": \"laptimes\", \"type\": \"inner\"}",
+        "aggregate:SELECT": "laptimes.milliseconds, drivers.forename, drivers.surname, races.name",
+        "aggregate:ORDERBY": "laptimes.milliseconds asc",
+        "aggregate:LIMIT": "1"
+      },
+      "predicted_atomic_candidates": {
+        "source:FROM": [
+          "lapTimes(`time`)",
+          "results(`fastestLapTime`)"
+        ],
+        "aggregate:GROUP": [
+          "lapTimes(`time`)",
+          "lapTimes(`milliseconds`)",
+          "results(`fastestLapTime`)",
+          "LIMIT 1",
+          "ALL rows with the same best lap time"
+        ],
+        "aggregate:SELECT": [
+          "lapTimes(`time`)",
+          "lapTimes(`milliseconds`)",
+          "results(`fastestLapTime`)",
+          "MIN(lapTimes.`time`)",
+          "MIN(lapTimes.`milliseconds`)",
+          "SELECT lapTimes.`time`, drivers.`forename`, drivers.`surname`, races.`name`",
+          "SELECT lapTimes.`milliseconds`, drivers.`driverRef`, races.`name`"
+        ],
+        "filter:WHERE": [
+          "lapTimes(`time`)",
+          "lapTimes(`milliseconds`)",
+          "results(`fastestLapTime`)",
+          "lapTimes(`time`) as string format 'MM:SS.mmm'",
+          "lapTimes(`milliseconds`) as numeric format"
+        ],
+        "combine:JOINS": [
+          "lapTimes JOIN drivers ON lapTimes.driverId = drivers.driverId JOIN races ON lapTimes.raceId = races.raceId",
+          "results JOIN drivers ON results.driverId = drivers.driverId JOIN races ON results.raceId = races.raceId"
+        ],
+        "aggregate:LIMIT": [
+          "ORDER BY lapTimes.`milliseconds` ASC",
+          "ORDER BY lapTimes.`milliseconds` DESC"
+        ],
+        "aggregate:ORDERBY": [
+          "ORDER BY lapTimes.`milliseconds` ASC",
+          "ORDER BY lapTimes.`milliseconds` DESC",
+          "MIN(lapTimes.`milliseconds`)",
+          "AVG(lapTimes.`milliseconds`)"
+        ],
+        "aggregate:DISTINCT": [
+          "LIMIT 1",
+          "ALL rows with the same best lap time"
+        ]
+      },
+      "value_tiers": {
+        "aggregate:LIMIT": "miss",
+        "aggregate:ORDERBY": "semantic",
+        "aggregate:SELECT": "semantic",
+        "combine:JOINS": "semantic",
+        "source:FROM": "miss"
+      },
+      "predicted_slots": [
+        {
+          "axis": "Reference Grounding: Table ambiguity",
+          "description": "Ambiguity in determining which table contains the 'best lap time recorded'.",
+          "candidate_values": [
+            "lapTimes(`time`)",
+            "results(`fastestLapTime`)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Column ambiguity",
+          "description": "Ambiguity in determining which column represents the 'best lap time'.",
+          "candidate_values": [
+            "lapTimes(`time`)",
+            "lapTimes(`milliseconds`)",
+            "results(`fastestLapTime`)"
+          ]
+        },
+        {
+          "axis": "Reference Grounding: Join Path ambiguity",
+          "description": "Ambiguity in determining the join path to associate lap times with drivers and races.",
+          "candidate_values": [
+            "lapTimes JOIN drivers ON lapTimes.driverId = drivers.driverId JOIN races ON lapTimes.raceId = races.raceId",
+            "results JOIN drivers ON results.driverId = drivers.driverId JOIN races ON results.raceId = races.raceId"
+          ]
+        },
+        {
+          "axis": "Value Grounding: Value Encoding ambiguity",
+          "description": "Ambiguity in the format of the lap time (e.g., string vs. numeric).",
+          "candidate_values": [
+            "lapTimes(`time`) as string format 'MM:SS.mmm'",
+            "lapTimes(`milliseconds`) as numeric format"
+          ]
+        },
+        {
+          "axis": "Measure Construction: Formula ambiguity",
+          "description": "Ambiguity in how 'best lap time' is calculated (e.g., minimum time vs. minimum milliseconds).",
+          "candidate_values": [
+            "MIN(lapTimes.`time`)",
+            "MIN(lapTimes.`milliseconds`)"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Extremum ambiguity",
+          "description": "Ambiguity in determining the 'best lap time' (e.g., fastest vs. slowest).",
+          "candidate_values": [
+            "ORDER BY lapTimes.`milliseconds` ASC",
+            "ORDER BY lapTimes.`milliseconds` DESC"
+          ]
+        },
+        {
+          "axis": "Ranking Target: Method ambiguity",
+          "description": "Ambiguity in the method used to rank lap times (e.g., single lap vs. average lap time).",
+          "candidate_values": [
+            "MIN(lapTimes.`milliseconds`)",
+            "AVG(lapTimes.`milliseconds`)"
+          ]
+        },
+        {
+          "axis": "Output Control: Projection ambiguity",
+          "description": "Ambiguity in determining which columns to include in the output.",
+          "candidate_values": [
+            "SELECT lapTimes.`time`, drivers.`forename`, drivers.`surname`, races.`name`",
+            "SELECT lapTimes.`milliseconds`, drivers.`driverRef`, races.`name`"
+          ]
+        },
+        {
+          "axis": "Output Control: Row Structure ambiguity",
+          "description": "Ambiguity in whether to return only the single best lap time or multiple rows for ties.",
+          "candidate_values": [
+            "LIMIT 1",
+            "ALL rows with the same best lap time"
+          ]
+        }
+      ],
+      "nl_question": "What is the best lap time recorded? List the recorded lap time, driver, and race.",
+      "n_worlds_hint": null
+    }
+  ],
+  "aggregate": {
+    "n_cases": 30,
+    "avg_axis_recall": 0.7673,
+    "axis_recall_100pct_cases": 1,
+    "axis_recall_lt_half_cases": 1,
+    "avg_value_recall_semantic": 0.7306,
+    "avg_value_recall_exact": 0.1089,
+    "micro_value_exact_rate": 0.1053,
+    "micro_value_semantic_rate": 0.6992,
+    "micro_value_miss_rate": 0.3008,
+    "avg_false_positive_rate": 0.4163,
+    "total_predicted_atomic_axes": 230,
+    "total_false_positive_axes": 97,
+    "avg_slot_value_count": 2.53,
+    "median_slot_value_count": 2,
+    "max_slot_value_count": 5,
+    "min_slot_value_count": 2,
+    "verdict": "Stage 1 prompt 需要工程改进, 但 framework 可行, 建议先做 prompt iteration",
+    "viability": "mid",
+    "judgment": {
+      "Q1_axis_coverage": "partial",
+      "Q2_value_recall": "yes",
+      "Q3_false_positive": "partial",
+      "Q4_value_list_size": "yes"
+    }
+  },
+  "trace_qids": [
+    "1149",
+    "1255",
+    "829",
+    "349",
+    "125"
+  ]
+}
