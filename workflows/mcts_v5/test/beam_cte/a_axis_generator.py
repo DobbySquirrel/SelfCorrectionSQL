@@ -66,6 +66,9 @@ Hard rules:
 - Output format: ```sql\\n...\\n```
 - SQLite syntax. INNER/LEFT JOIN must be explicit (do not use ',' joins).
 - Use backticks for column/table names with whitespace or special chars.
+- A-axis ONLY handles JOIN structure and entity reference resolution.
+  DO NOT include: extremum filtering (MAX/MIN/youngest/oldest/highest/lowest),
+  value filters, or LIMIT clauses — those belong to axes B/D respectively.
 /no_think"""
 
 _A_AXIS_USER_TEMPLATE = """Question: {question}
@@ -91,6 +94,41 @@ Selection priority:
 3. Otherwise, INNER JOIN is the safe default.
 4. An invalid (non-executable) candidate must be ranked last.
 /no_think"""
+
+_SELECT_TOPK_SET_SEMANTICS = """
+**Special case — set-semantics questions:**
+If the evidence or question contains any of:
+  - "but not" / "except" / "doesn't have ... but has" / "without ... but with"
+  - "X without Y" / explicit set difference language
+THEN SUBQUERY form is the STRONGLY preferred choice, regardless of probe rows.
+The reason: set difference at the entity level (uuid IN ... EXCEPT ...) is
+fundamentally a structure choice, and INNER/LEFT JOIN with NOT IN on join-
+expanded rows is NOT semantically equivalent.
+
+In this special case:
+1. SUBQUERY first
+2. LEFT second (only as fallback if SUBQUERY is invalid)
+3. INNER last
+"""
+
+
+def _set_semantics_triggered(question: str, evidence: str) -> bool:
+    q = f"{question} {evidence or ''}".lower()
+    triggers = (
+        "but not",
+        "except",
+        "doesn't have",
+        "does not have",
+        "without",
+        "but has",
+        "but with",
+        "doesn't have",
+    )
+    if any(t in q for t in triggers):
+        return True
+    if re.search(r"\bwithout\b.+\bbut\b", q):
+        return True
+    return False
 
 
 def _truncate_schema(schema_text: str, limit: int = 1500) -> str:
@@ -363,8 +401,12 @@ def select_topk_axis_a(
         f"Schema (truncated):\n{_truncate_schema(schema_text)}\n\n"
         f"Candidates:\n" + "\n".join(lines)
     )
+    system = _SELECT_TOPK_SYSTEM
+    if _set_semantics_triggered(question, evidence):
+        system = _SELECT_TOPK_SET_SEMANTICS + "\n" + system
+
     messages = [
-        {"role": "system", "content": _SELECT_TOPK_SYSTEM},
+        {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
 
