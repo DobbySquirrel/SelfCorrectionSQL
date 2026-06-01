@@ -102,7 +102,7 @@ class SQLResultProcessor:
                     except Exception:
                         query_result = []
                 if query_result and len(query_result) > 0:
-                    key = MCTSUtils.create_result_signature(res)
+                    key = MCTSUtils.bucket_key_for_search(res)
                     sql_with_signatures.append((sql, key))
                     
                     # 提取列顺序
@@ -161,7 +161,7 @@ class SQLResultProcessor:
             best_result = None
             for res in execution_results:
                 if res.get('valid', False):
-                    if MCTSUtils.create_result_signature(res) == best_key:
+                    if MCTSUtils.bucket_key_for_search(res) == best_key:
                         best_result = res.get('query_result', None)
                         break
             
@@ -265,7 +265,7 @@ class SQLResultProcessor:
                     except Exception:
                         query_result = []
                 if query_result and len(query_result) > 0:
-                    sql_info['result_signature'] = MCTSUtils.create_result_signature(res)
+                    sql_info['result_signature'] = MCTSUtils.bucket_key_for_search(res)
                     sql_info['result_row_count'] = len(query_result)
             all_sql_variants.append(sql_info)
         

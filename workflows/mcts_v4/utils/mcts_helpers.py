@@ -334,7 +334,7 @@ class MCTSUtils:
                     query_result = []
             if not query_result:
                 continue
-            key = MCTSUtils.create_result_signature(res)
+            key = MCTSUtils.bucket_key_for_search(res)
             buckets[key] += 1
         best_key = max(buckets, key=buckets.get) if buckets else ""
         return dict(buckets), best_key
