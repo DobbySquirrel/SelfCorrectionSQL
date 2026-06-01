@@ -1,0 +1,1063 @@
+{
+  "airline": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:54:56",
+      "total_relationships": 0,
+      "total_tables": 3
+    }
+  },
+  "california_schools": {
+    "relationships": [
+      {
+        "table1": "frpm",
+        "col1": "CDSCode",
+        "table2": "schools",
+        "col2": "CDSCode",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "satscores",
+        "col1": "cds",
+        "table2": "schools",
+        "col2": "CDSCode",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:54:56",
+      "total_relationships": 2,
+      "total_tables": 4
+    }
+  },
+  "car_retails": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 10:51:41",
+      "total_relationships": 0,
+      "total_tables": 8
+    }
+  },
+  "card_games": {
+    "relationships": [
+      {
+        "table1": "foreign_data",
+        "col1": "uuid",
+        "table2": "cards",
+        "col2": "uuid",
+        "relationship_type": "N:1",
+        "description": "Multiple records in foreign_data can map to one record in cards. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "legalities",
+        "col1": "uuid",
+        "table2": "cards",
+        "col2": "uuid",
+        "relationship_type": "N:1",
+        "description": "Multiple records in legalities can map to one record in cards. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "set_translations",
+        "col1": "setCode",
+        "table2": "sets",
+        "col2": "code",
+        "relationship_type": "N:1",
+        "description": "Multiple records in set_translations can map to one record in sets. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "rulings",
+        "col1": "uuid",
+        "table2": "cards",
+        "col2": "uuid",
+        "relationship_type": "N:1",
+        "description": "Multiple records in rulings can map to one record in cards. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:56:35",
+      "total_relationships": 4,
+      "total_tables": 7
+    }
+  },
+  "codebase_community": {
+    "relationships": [
+      {
+        "table1": "badges",
+        "col1": "UserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in badges can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "comments",
+        "col1": "UserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in comments can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "comments",
+        "col1": "PostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in comments can map to one record in posts. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "postHistory",
+        "col1": "UserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in postHistory can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "postHistory",
+        "col1": "PostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in postHistory can map to one record in posts. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "postLinks",
+        "col1": "RelatedPostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in postLinks can map to one record in posts. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "postLinks",
+        "col1": "PostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in postLinks can map to one record in posts. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "posts",
+        "col1": "OwnerUserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in posts can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "posts",
+        "col1": "LastEditorUserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in posts can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "tags",
+        "col1": "ExcerptPostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "votes",
+        "col1": "UserId",
+        "table2": "users",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in votes can map to one record in users. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "votes",
+        "col1": "PostId",
+        "table2": "posts",
+        "col2": "Id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in votes can map to one record in posts. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:56:41",
+      "total_relationships": 12,
+      "total_tables": 9
+    }
+  },
+  "debit_card_specializing": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 10:51:42",
+      "total_relationships": 0,
+      "total_tables": 6
+    }
+  },
+  "disney": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:56:41",
+      "total_relationships": 0,
+      "total_tables": 5
+    }
+  },
+  "european_football_2": {
+    "relationships": [
+      {
+        "table1": "Player_Attributes",
+        "col1": "player_api_id",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Player_Attributes, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Player_Attributes",
+        "col1": "player_fifa_api_id",
+        "table2": "Player",
+        "col2": "player_fifa_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Player_Attributes, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Team_Attributes",
+        "col1": "team_api_id",
+        "table2": "Team",
+        "col2": "team_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Team_Attributes, Parent: Team).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Team_Attributes",
+        "col1": "team_fifa_api_id",
+        "table2": "Team",
+        "col2": "team_fifa_api_id",
+        "relationship_type": "M:N",
+        "description": "Many-to-Many relationship. Cartesian product risk.",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_11",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_10",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_9",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_8",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_7",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_6",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_5",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_4",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_3",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_2",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_player_1",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_11",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_10",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_9",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_8",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_7",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_6",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_5",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_4",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_3",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_2",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_player_1",
+        "table2": "Player",
+        "col2": "player_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Player).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "away_team_api_id",
+        "table2": "Team",
+        "col2": "team_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Team).",
+        "method": "foreign_key"
+      },
+      {
+        "table1": "Match",
+        "col1": "home_team_api_id",
+        "table2": "Team",
+        "col2": "team_api_id",
+        "relationship_type": "N:1",
+        "description": "Many-to-One relationship (Child: Match, Parent: Team).",
+        "method": "foreign_key"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 10:51:47",
+      "total_relationships": 28,
+      "total_tables": 8
+    }
+  },
+  "financial": {
+    "relationships": [
+      {
+        "table1": "account",
+        "col1": "district_id",
+        "table2": "district",
+        "col2": "district_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in account can map to one record in district. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "card",
+        "col1": "disp_id",
+        "table2": "disp",
+        "col2": "disp_id",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "client",
+        "col1": "district_id",
+        "table2": "district",
+        "col2": "district_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in client can map to one record in district. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "disp",
+        "col1": "client_id",
+        "table2": "client",
+        "col2": "client_id",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "disp",
+        "col1": "account_id",
+        "table2": "account",
+        "col2": "account_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in disp can map to one record in account. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "loan",
+        "col1": "account_id",
+        "table2": "account",
+        "col2": "account_id",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "order",
+        "col1": "account_id",
+        "table2": "account",
+        "col2": "account_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in order can map to one record in account. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "trans",
+        "col1": "account_id",
+        "table2": "account",
+        "col2": "account_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in trans can map to one record in account. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:57:03",
+      "total_relationships": 8,
+      "total_tables": 9
+    }
+  },
+  "food_inspection": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:57:03",
+      "total_relationships": 0,
+      "total_tables": 3
+    }
+  },
+  "formula_1": {
+    "relationships": [
+      {
+        "table1": "races",
+        "col1": "circuitId",
+        "table2": "circuits",
+        "col2": "circuitId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in races can map to one record in circuits. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "races",
+        "col1": "year",
+        "table2": "seasons",
+        "col2": "year",
+        "relationship_type": "N:1",
+        "description": "Multiple records in races can map to one record in seasons. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "constructorResults",
+        "col1": "constructorId",
+        "table2": "constructors",
+        "col2": "constructorId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in constructorResults can map to one record in constructors. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "constructorResults",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in constructorResults can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "constructorStandings",
+        "col1": "constructorId",
+        "table2": "constructors",
+        "col2": "constructorId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in constructorStandings can map to one record in constructors. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "constructorStandings",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in constructorStandings can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "driverStandings",
+        "col1": "driverId",
+        "table2": "drivers",
+        "col2": "driverId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in driverStandings can map to one record in drivers. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "driverStandings",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in driverStandings can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "lapTimes",
+        "col1": "driverId",
+        "table2": "drivers",
+        "col2": "driverId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in lapTimes can map to one record in drivers. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "lapTimes",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in lapTimes can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "pitStops",
+        "col1": "driverId",
+        "table2": "drivers",
+        "col2": "driverId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in pitStops can map to one record in drivers. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "pitStops",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in pitStops can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "qualifying",
+        "col1": "constructorId",
+        "table2": "constructors",
+        "col2": "constructorId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in qualifying can map to one record in constructors. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "qualifying",
+        "col1": "driverId",
+        "table2": "drivers",
+        "col2": "driverId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in qualifying can map to one record in drivers. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "qualifying",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in qualifying can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "results",
+        "col1": "statusId",
+        "table2": "status",
+        "col2": "statusId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in results can map to one record in status. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "results",
+        "col1": "constructorId",
+        "table2": "constructors",
+        "col2": "constructorId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in results can map to one record in constructors. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "results",
+        "col1": "driverId",
+        "table2": "drivers",
+        "col2": "driverId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in results can map to one record in drivers. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "results",
+        "col1": "raceId",
+        "table2": "races",
+        "col2": "raceId",
+        "relationship_type": "N:1",
+        "description": "Multiple records in results can map to one record in races. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:57:03",
+      "total_relationships": 19,
+      "total_tables": 14
+    }
+  },
+  "retail_complains": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:57:04",
+      "total_relationships": 0,
+      "total_tables": 6
+    }
+  },
+  "retail_world": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:57:04",
+      "total_relationships": 0,
+      "total_tables": 8
+    }
+  },
+  "sales_in_weather": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:09",
+      "total_relationships": 0,
+      "total_tables": 3
+    }
+  },
+  "student_club": {
+    "relationships": [
+      {
+        "table1": "attendance",
+        "col1": "link_to_member",
+        "table2": "member",
+        "col2": "member_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in attendance can map to one record in member. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "attendance",
+        "col1": "link_to_event",
+        "table2": "event",
+        "col2": "event_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in attendance can map to one record in event. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "budget",
+        "col1": "link_to_event",
+        "table2": "event",
+        "col2": "event_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in budget can map to one record in event. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "expense",
+        "col1": "link_to_member",
+        "table2": "member",
+        "col2": "member_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in expense can map to one record in member. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "expense",
+        "col1": "link_to_budget",
+        "table2": "budget",
+        "col2": "budget_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in expense can map to one record in budget. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "income",
+        "col1": "link_to_member",
+        "table2": "member",
+        "col2": "member_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in income can map to one record in member. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "member",
+        "col1": "zip",
+        "table2": "zip_code",
+        "col2": "zip_code",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "member",
+        "col1": "link_to_major",
+        "table2": "major",
+        "col2": "major_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in member can map to one record in major. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:10",
+      "total_relationships": 8,
+      "total_tables": 9
+    }
+  },
+  "superhero": {
+    "relationships": [
+      {
+        "table1": "superhero",
+        "col1": "skin_colour_id",
+        "table2": "colour",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in colour. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "race_id",
+        "table2": "race",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in race. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "publisher_id",
+        "table2": "publisher",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in publisher. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "hair_colour_id",
+        "table2": "colour",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in colour. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "gender_id",
+        "table2": "gender",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in gender. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "eye_colour_id",
+        "table2": "colour",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in colour. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "superhero",
+        "col1": "alignment_id",
+        "table2": "alignment",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in superhero can map to one record in alignment. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "hero_attribute",
+        "col1": "hero_id",
+        "table2": "superhero",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in hero_attribute can map to one record in superhero. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "hero_attribute",
+        "col1": "attribute_id",
+        "table2": "attribute",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in hero_attribute can map to one record in attribute. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "hero_power",
+        "col1": "power_id",
+        "table2": "superpower",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in hero_power can map to one record in superpower. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "hero_power",
+        "col1": "hero_id",
+        "table2": "superhero",
+        "col2": "id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in hero_power can map to one record in superhero. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:11",
+      "total_relationships": 11,
+      "total_tables": 11
+    }
+  },
+  "synthea": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 10:51:52",
+      "total_relationships": 0,
+      "total_tables": 11
+    }
+  },
+  "thrombosis_prediction": {
+    "relationships": [
+      {
+        "table1": "Examination",
+        "col1": "ID",
+        "table2": "Patient",
+        "col2": "ID",
+        "relationship_type": "1:1",
+        "description": "These tables are vertically partitioned or have a one-to-one relationship. Join them to access full details from both tables.",
+        "confidence": "high"
+      },
+      {
+        "table1": "Laboratory",
+        "col1": "ID",
+        "table2": "Patient",
+        "col2": "ID",
+        "relationship_type": "N:1",
+        "description": "Multiple records in Laboratory can map to one record in Patient. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:11",
+      "total_relationships": 2,
+      "total_tables": 4
+    }
+  },
+  "toxicology": {
+    "relationships": [
+      {
+        "table1": "atom",
+        "col1": "molecule_id",
+        "table2": "molecule",
+        "col2": "molecule_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in atom can map to one record in molecule. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "bond",
+        "col1": "molecule_id",
+        "table2": "molecule",
+        "col2": "molecule_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in bond can map to one record in molecule. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "connected",
+        "col1": "bond_id",
+        "table2": "bond",
+        "col2": "bond_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in connected can map to one record in bond. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "connected",
+        "col1": "atom_id2",
+        "table2": "atom",
+        "col2": "atom_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in connected can map to one record in atom. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      },
+      {
+        "table1": "connected",
+        "col1": "atom_id",
+        "table2": "atom",
+        "col2": "atom_id",
+        "relationship_type": "N:1",
+        "description": "Multiple records in connected can map to one record in atom. Use DISTINCT or aggregation if needed.",
+        "confidence": "high"
+      }
+    ],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:11",
+      "total_relationships": 5,
+      "total_tables": 5
+    }
+  },
+  "trains": {
+    "relationships": [],
+    "metadata": {
+      "processed_at": "2025-12-10 08:58:11",
+      "total_relationships": 0,
+      "total_tables": 2
+    }
+  }
+}

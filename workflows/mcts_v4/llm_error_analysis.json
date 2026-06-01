@@ -1,0 +1,1226 @@
+[
+  {
+    "qid": "21",
+    "question": "In Los Angeles how many schools have more than 500 free meals but less than 700 free or reduced price meals for K-12?",
+    "db": "california_schools",
+    "evidence": "",
+    "gold_sql": "SELECT COUNT(CDSCode) FROM frpm WHERE `County Name` = 'Los Angeles' AND `Free Meal Count (K-12)` > 500 AND `FRPM Count (K-12)`< 700",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_final_answer AS (\n    SELECT COUNT(*) AS school_count\n    FROM (\n        SELECT s.CDSCode\n        FROM schools s\n        JOIN frpm f ON s.CDSCode = f.CDSCode\n        WHERE s.City = 'Los Angeles'\n        AND f.`Free Meal Count (K-12)` > 500\n        AND f.`FRPM Count (K-12)` < 700\n    ) AS filtered_schools\n)\nSELECT school_count FROM cte_final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`schools`表，但证据显示应该直接使用`frpm`表\n\n2. **JOIN条件错误** - 多余的JOIN操作，实际上只需要一个表即可完成查询\n\n3. **字段引用错误** - 使用了`City`字段，但证据中显示应该是`County Name`字段\n\n**核心问题：**\n预测SQL没有充分利用证据信息，错误地将简单查询复杂化，引入了不必要的表连接和字段引用。\n\n**改进建议：**\n直接使用证据中的表结构，避免多余的JOIN操作，正确使用`County Name`字段。"
+      },
+      "s2": {
+        "pred_sql": "WITH cte1 AS (\n    SELECT f.CDSCode, f.`Free Meal Count (K-12)`, f.`FRPM Count (K-12)`, s.City\n    FROM frpm f\n    INNER JOIN schools s ON f.CDSCode = s.CDSCode\n),\ncte2 AS (\n    SELECT CDSCode, `Free Meal Count (K-12)`, `FRPM Count (K-12)`\n    FROM cte1\n    WHERE City = 'Los Angeles' \n    AND `Free Meal Count (K-12)` > 500\n    AND `FRPM Count (K-12)` < 700\n)\nSELECT COUNT(*) AS school_count\nFROM cte2;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`schools`表进行JOIN，但实际数据已在`frpm`表中包含所需的所有信息（包括城市信息），无需额外JOIN。\n\n2. **逻辑冗余** - 使用CTE分两步处理，而Gold SQL直接在单个查询中完成，预测SQL增加了不必要的复杂度。\n\n**具体问题：**\n- 多余的JOIN操作导致查询效率降低\n- `City`字段实际上存在于`frpm`表中，不需要关联`schools`表\n- 查询逻辑可以简化为直接筛选`frpm`表中的数据\n\n**改进建议：**\n直接使用Gold SQL的结构，或简化CTE为单个查询，避免不必要的JOIN操作。"
+      },
+      "s7": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT \n        COUNT(*) AS school_count\n    FROM (\n        SELECT \n            s.`CDSCode`,\n            s.`City`,\n            f.`Free Meal Count (K-12)`,\n            f.`FRPM Count (K-12)`\n        FROM schools s\n        JOIN frpm f ON s.`CDSCode` = f.`CDSCode`\n        WHERE s.`City` = 'Los Angeles'\n            AND f.`Free Meal Count (K-12)` > 500\n            AND f.`FRPM Count (K-12)` < 700\n    ) AS filtered_schools\n)\nSELECT * FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`schools`表，但证据显示实际表名为`california_schools`\n\n2. **列名理解错误** - 预测SQL中的列名与证据不匹配，如`CDSCode`应为`CDSCode`，但其他列名格式不同\n\n3. **JOIN条件错误** - 使用了不必要的JOIN操作，证据中的Gold SQL直接在frpm表上查询即可\n\n**改进建议：**\n```sql\nSELECT COUNT(`CDSCode`) \nFROM california_schools \nWHERE `County Name` = 'Los Angeles' \n  AND `Free Meal Count (K-12)` > 500 \n  AND `FRPM Count (K-12)` < 700\n```\n\n核心问题是未正确识别证据中提供的表名和列名，导致整个查询结构错误。"
+      }
+    }
+  },
+  {
+    "qid": "25",
+    "question": "Name schools in Riverside which the average of average math score for SAT is grater than 400, what is the funding type of these schools?",
+    "db": "california_schools",
+    "evidence": "Average of average math = sum(average math scores) / count(schools).",
+    "gold_sql": "SELECT T1.sname, T2.`Charter Funding Type` FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T2.`District Name` LIKE 'Riverside%' GROUP BY T1.sname, T2.`Charter Funding Type` HAVING CAST(SUM(T1.AvgScrMath) AS REAL) / COUNT(T1.cds) > 400",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_riverside_schools AS (\n    SELECT s.CDSCode, s.School, s.FundingType, s.County\n    FROM schools s\n    WHERE s.County LIKE '%RIVERSIDE%' OR s.County = 'RIVERSIDE'\n),\ncte_satscores_with_schools AS (\n    SELECT rs.CDSCode, rs.School, rs.FundingType, ss.AvgScrMath\n    FROM cte_riverside_schools rs\n    JOIN satscores ss ON rs.CDSCode = ss.cds\n),\ncte_filtered_schools AS (\n    SELECT CDSCode, School, FundingType, AvgScrMath\n    FROM cte_satscores_with_schools\n    WHERE AvgScrMath > 400\n)\nSELECT School, FundingType\nFROM cte_filtered_schools;",
+        "reward": 0.6979166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL没有对平均数学分数进行聚合计算，直接用WHERE筛选单个分数>400，而题目要求的是\"平均数学分数的平均值\"。\n\n2. **自然语言理解偏差**：题目要求的是\"平均数学分数的平均值\"（即所有学校平均数学分数的平均值），但预测SQL只筛选了单个学校的分数。\n\n3. **证据信息利用不足**：Gold SQL正确使用了GROUP BY + HAVING来计算每个学校的平均数学分数，而预测SQL完全忽略了这个聚合逻辑。\n\n**改进建议：**\n- 预测SQL应该先按学校分组计算平均数学分数，然后在HAVING子句中筛选平均值大于400的学校\n- 需要使用GROUP BY和聚合函数来实现题目要求的\"平均的平均\"逻辑"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT s.School, s.FundingType\n    FROM schools s\n    LEFT JOIN satscores sc ON s.CDSCode = sc.cds\n    WHERE s.City = 'Riverside'\n    GROUP BY s.School, s.FundingType\n    HAVING AVG(sc.AvgScrMath) > 400\n)\nSELECT School, FundingType FROM final_answer;",
+        "reward": 0.984375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL使用了`schools`表，但实际应该使用`frpm`表（包含FundingType字段）\n\n2. **JOIN条件错误**：预测SQL使用LEFT JOIN连接schools和satscores，但Gold SQL使用INNER JOIN连接satscores和frpm\n\n3. **WHERE条件错误**：预测SQL用`s.City = 'Riverside'`，而Gold SQL用`District Name LIKE 'Riverside%'`\n\n4. **聚合函数使用错误**：预测SQL直接用`AVG(sc.AvgScrMath)`，但Gold SQL使用了更复杂的计算方式\n\n**改进建议：**\n- 使用正确的表结构（frpm表包含FundingType）\n- 保持与Gold SQL一致的JOIN逻辑\n- 使用正确的WHERE条件匹配数据源\n- 确保聚合计算逻辑正确"
+      },
+      "s7": {
+        "pred_sql": "WITH riverside_avg_math AS (\n    SELECT \n        s.School,\n        s.FundingType,\n        AVG(ss.AvgScrMath) AS avg_math_score\n    FROM schools s\n    INNER JOIN satscores ss ON s.CDSCode = ss.cds\n    WHERE UPPER(s.County) = 'RIVERSIDE'\n    AND ss.AvgScrMath IS NOT NULL\n    GROUP BY s.School, s.FundingType\n),\nriverside_high_math_schools AS (\n    SELECT \n        School,\n        FundingType\n    FROM riverside_avg_math\n    WHERE avg_math_score > 400\n)\nSELECT \n    School,\n    FundingType\nFROM riverside_high_math_schools\nORDER BY School;",
+        "reward": 0.8541666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL使用了`schools`表，但实际数据库是`california_schools`表\n2. **列名理解错误**：预测SQL中使用`FundingType`列，但实际应该是`Charter Funding Type`\n3. **JOIN条件错误**：预测SQL的JOIN条件不匹配原始查询的逻辑\n4. **WHERE条件错误**：预测SQL使用`UPPER(s.County) = 'RIVERSIDE'`，而原始查询使用`District Name LIKE 'Riverside%'`\n\n**改进建议：**\n将预测SQL中的表名改为`california_schools`，列名改为`Charter Funding Type`，JOIN条件改为与原始查询一致，并调整WHERE条件为`District Name LIKE 'Riverside%'`。"
+      }
+    }
+  },
+  {
+    "qid": "97",
+    "question": "List out the id number of client who choose statement of issuance after transaction are Disponent?",
+    "db": "financial",
+    "evidence": "'POPLATEK PO OBRATU' stands for issuance after transaction",
+    "gold_sql": "SELECT T2.client_id FROM account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id WHERE T1.frequency = 'POPLATEK PO OBRATU' AND T2.type = 'DISPONENT'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_issuance_accounts AS (\n    SELECT DISTINCT t.`account_id`\n    FROM trans t\n    WHERE t.`k_symbol` LIKE '%POPLATEK%' OR t.`k_symbol` LIKE '%OBRATU%' OR t.`k_symbol` LIKE '%PO%'\n)\nSELECT DISTINCT d.`client_id`\nFROM cte_issuance_accounts ia\nINNER JOIN disp d ON ia.`account_id` = d.`account_id`\nORDER BY d.`client_id`;",
+        "reward": 0.03125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`trans`表，但Gold SQL使用的是`account`表，实际数据应该在`account`表中查找`frequency`字段\n\n2. **列名理解错误** - `trans`表没有`k_symbol`字段，应该是`account`表的`frequency`字段\n\n3. **WHERE条件错误** - 使用了模糊匹配`LIKE '%POPLATEK%'`等，而Gold SQL直接使用精确匹配`=`，且字段不一致\n\n4. **自然语言理解偏差** - \"statement of issuance after transaction\"应对应`account`表的`frequency`字段，而非交易记录\n\n**改进建议：**\n将`trans`表改为`account`表，`k_symbol`改为`frequency`，并使用精确匹配条件。"
+      },
+      "s2": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "基于提供的Gold SQL和问题描述，预测SQL可能存在的错误原因：\n\n**主要问题：**\n\n1. **表名理解错误** - 可能将\"account\"表误认为其他表名\n2. **列名理解错误** - 可能错误地使用了频率字段或类型字段的名称\n3. **JOIN条件错误** - JOIN逻辑可能不正确，未准确关联账户与客户关系\n4. **WHERE条件错误** - 频率值或类型值可能写错（如'POPLATEK PO OBRATU'写成其他值）\n5. **自然语言理解偏差** - 对\"statement of issuance after transaction\"的理解可能有误\n\n**改进建议：**\n- 确认表名和字段名完全匹配Gold SQL\n- 验证JOIN条件是否正确关联账户与客户信息\n- 检查WHERE条件中的字符串值是否准确无误\n- 确保理解\"DISPONENT\"类型的含义"
+      },
+      "s7": {
+        "pred_sql": "WITH client_disponent AS (\n    SELECT DISTINCT\n        c.client_id\n    FROM client c\n    JOIN disp d ON c.client_id = d.client_id\n    WHERE d.type = 'DISPONENT'\n),\nissuance_statement_clients AS (\n    SELECT DISTINCT\n        c.client_id\n    FROM client c\n    JOIN disp d ON c.client_id = d.client_id\n    JOIN trans t ON d.account_id = t.account_id\n    WHERE d.type = 'DISPONENT'\n        AND t.type = 'VYBER'\n)\nSELECT client_id FROM issuance_statement_clients;",
+        "reward": 0.13541666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`trans`表，但根据Gold SQL应使用`account`表的`frequency`字段\n2. **WHERE条件错误** - 使用了`t.type = 'VYBER'`来匹配\"POPLATEK PO OBRATU\"，这是错误的\n3. **JOIN逻辑错误** - 多余的JOIN操作，Gold SQL只需要account表的frequency字段\n\n**具体问题：**\n- Gold SQL通过`account.frequency = 'POPLATEK PO OBRATU'`判断，而预测SQL用`trans.type = 'VYBER'`判断\n- 预测SQL多层JOIN结构复杂化了问题，实际只需要一个简单的频率字段过滤\n\n**改进建议：**\n直接使用Gold SQL的逻辑，将`account`表的`frequency`字段作为筛选条件，而不是通过交易类型判断。"
+      }
+    }
+  },
+  {
+    "qid": "130",
+    "question": "How many of the account holders in South Bohemia still do not own credit cards?",
+    "db": "financial",
+    "evidence": "A3 contains the region names; South Bohemia is one of region names.",
+    "gold_sql": "SELECT COUNT(T3.account_id) FROM district AS T1 INNER JOIN client AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T2.client_id = T3.client_id WHERE T1.A3 = 'south Bohemia' AND T3.type != 'OWNER'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH south_bohemia_clients AS (\n    SELECT c.client_id\n    FROM client c\n    JOIN district d ON c.district_id = d.district_id\n    WHERE LOWER(d.`A3`) = 'south bohemia'\n)\nSELECT COUNT(*) \nFROM south_bohemia_clients sbc\nLEFT JOIN disp d ON sbc.client_id = d.client_id\nLEFT JOIN card c ON d.disp_id = c.disp_id\nWHERE c.card_id IS NULL",
+        "reward": 0.5651041666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`card`表来检查信用卡，但根据Gold SQL逻辑，应该检查`disp`表中的`type`字段来判断是否拥有信用卡。\n\n2. **JOIN条件错误**：LEFT JOIN后没有正确处理NULL值判断，且JOIN路径不符合Gold SQL逻辑。\n\n3. **WHERE条件错误**：使用`c.card_id IS NULL`来判断无信用卡，但实际应基于`disp.type != 'OWNER'`来判断。\n\n**核心问题**：混淆了\"拥有信用卡\"和\"拥有信贷账户\"的概念，Gold SQL通过`disp.type`字段判断，而预测SQL试图通过`card`表关联来判断。\n\n**建议修改**：直接沿用Gold SQL的逻辑，使用`disp.type != 'OWNER'`作为筛选条件，避免复杂的LEFT JOIN和NULL判断。"
+      },
+      "s2": {
+        "pred_sql": "WITH south_bohemia_clients AS (\n    SELECT c.client_id\n    FROM client c\n    INNER JOIN district d ON c.district_id = d.district_id\n    WHERE d.A3 = 'south Bohemia'\n),\nclients_with_cards AS (\n    SELECT DISTINCT c.client_id\n    FROM client c\n    INNER JOIN disp d ON c.client_id = d.client_id\n    INNER JOIN card ca ON d.disp_id = ca.disp_id\n)\nSELECT COUNT(*) \nFROM south_bohemia_clients sbc\nWHERE sbc.client_id NOT IN (SELECT client_id FROM clients_with_cards);",
+        "reward": 0.8229166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`card`表来判断拥有信用卡的客户，但根据Gold SQL的逻辑，应该是通过`disp`表的`type`字段来判断账户类型，而不是直接关联`card`表。\n\n2. **JOIN条件错误** - 在`clients_with_cards`CTE中，JOIN条件`d.disp_id = ca.disp_id`不正确，应该使用`disp`表中的`account_id`与`card`表关联。\n\n3. **逻辑理解偏差** - Gold SQL通过`disp.type != 'OWNER'`来筛选非所有者账户，而预测SQL试图通过是否存在card记录来判断是否拥有信用卡，逻辑不一致。\n\n**改进建议：**\n将预测SQL改为与Gold SQL一致的逻辑，使用`disp.type`字段进行筛选，或者修正JOIN关系以正确识别信用卡持有者。"
+      },
+      "s7": {
+        "pred_sql": "WITH south_bohemia_account_holders AS (\n    SELECT DISTINCT d.`disp_id`\n    FROM disp d\n    JOIN client c ON d.`client_id` = c.`client_id`\n    JOIN district dt ON c.`district_id` = dt.`district_id`\n    WHERE LOWER(dt.`A3`) = 'south bohemia'\n),\naccounts_with_cards AS (\n    SELECT DISTINCT c.`disp_id`\n    FROM card c\n    WHERE c.`disp_id` IS NOT NULL\n)\nSELECT COUNT(*) \nFROM south_bohemia_account_holders sbah\nWHERE sbah.`disp_id` NOT IN (\n    SELECT `disp_id` \n    FROM accounts_with_cards\n);",
+        "reward": 0.7604166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`card`表来判断是否有信用卡，但根据Gold SQL逻辑，应该检查`disp`表中的`type`字段来判断是否为账户持有人（OWNER类型）\n\n2. **列名理解错误** - `card`表没有`disp_id`字段，应该是通过`disp`表关联判断\n\n3. **逻辑错误** - 预测SQL试图通过`NOT IN`子查询来排除有卡的账户，但实际应该在`disp`表中筛选非OWNER类型的记录\n\n**核心问题：**\n预测SQL完全误解了数据结构关系，将\"账户持有人\"和\"信用卡持有者\"的概念混淆，没有正确理解Gold SQL中通过`disp.type != 'OWNER'`来筛选账户持有人的逻辑。\n\n**建议：**\n直接采用Gold SQL的逻辑，通过`disp.type`字段判断账户持有人身份，而不是通过是否存在信用卡来推断。"
+      }
+    }
+  },
+  {
+    "qid": "231",
+    "question": "Which bond type accounted for the majority of the bonds found in molecule TR010 and state whether or not this molecule is carcinogenic?",
+    "db": "toxicology",
+    "evidence": "TR010 is the molecule id; majority of the bond found refers to MAX(COUNT(bond_type)); ",
+    "gold_sql": "SELECT T.bond_type FROM ( SELECT T1.bond_type, COUNT(T1.molecule_id) FROM bond AS T1  WHERE T1.molecule_id = 'TR010' GROUP BY T1.bond_type ORDER BY COUNT(T1.molecule_id) DESC LIMIT 1 ) AS T",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_majority_bond AS (\n    SELECT b.bond_type\n    FROM bond b\n    WHERE b.molecule_id = 'TR010'\n    GROUP BY b.bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n),\ncte_label_analysis AS (\n    SELECT \n        CASE WHEN m.label = '-' THEN 'Not carcinogenic' ELSE 'Carcinogenic' END as carcinogenic_status\n    FROM molecule m\n    WHERE m.molecule_id = 'TR010'\n)\nSELECT mb.bond_type, la.carcinogenic_status\nFROM cte_majority_bond mb\nCROSS JOIN cte_label_analysis la;",
+        "reward": 0.7552083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中引用了`molecule`表来获取致癌性标签，但根据Gold SQL和问题描述，应该从`bond`表相关的数据推断，而不是单独查询`molecule`表。\n\n2. **自然语言理解偏差**：问题要求的是\"哪个键类型占大多数\"并判断是否致癌，但预测SQL将两个独立问题用CROSS JOIN连接，逻辑混乱。\n\n3. **证据信息利用不足**：Gold SQL明确只需要`bond`表数据即可完成任务，预测SQL却引入了不必要的`molecule`表查询。\n\n**改进建议：**\n直接使用Gold SQL的逻辑结构，只查询bond表中的bond_type分布，无需额外的molecule表关联。"
+      },
+      "s2": {
+        "pred_sql": "WITH majority_bond_type AS (\n    SELECT b.bond_type\n    FROM bond b\n    WHERE b.molecule_id = 'TR010'\n    GROUP BY b.bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n),\ncarcinogenic_status AS (\n    SELECT CASE \n        WHEN EXISTS (\n            SELECT 1 FROM molecule m \n            WHERE m.molecule_id = 'TR010' \n            AND (m.label LIKE '%carcinogen%' OR m.label LIKE '%carcinogenic%')\n        ) THEN 'Yes'\n        ELSE 'No'\n    END AS is_carcinogenic\n)\nSELECT mbt.bond_type, cs.is_carcinogenic\nFROM majority_bond_type mbt\nCROSS JOIN carcinogenic_status cs;",
+        "reward": 0.6041666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`molecule`表来检查致癌性，但根据Gold SQL和问题描述，应该直接在`bond`表中查找相关信息，或者使用正确的表结构。\n\n2. **自然语言理解偏差** - 预测SQL将问题分解为两个独立的CTE，但Gold SQL显示只需要一个查询就能解决。问题要求的是\"哪个键类型占多数\"并判断是否致癌，这应该是单个查询返回两个信息。\n\n3. **聚合函数使用错误** - 在`majority_bond_type` CTE中，`ORDER BY COUNT(*) DESC`应该改为`ORDER BY COUNT(b.bond_type) DESC`，因为需要按键类型计数排序。\n\n**改进建议：**\n- 简化查询结构，直接使用Gold SQL的逻辑\n- 修正聚合函数的列引用\n- 确认致癌性判断的正确表结构和字段"
+      },
+      "s7": {
+        "pred_sql": "WITH majority_bond_type AS (\n    SELECT \n        b.bond_type\n    FROM bond b\n    WHERE b.molecule_id = 'TR010'\n    GROUP BY b.bond_type\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n)\nSELECT \n    mbt.bond_type,\n    CASE WHEN m.label = '-' THEN 'No' ELSE 'Yes' END AS is_carcinogenic\nFROM majority_bond_type mbt\nCROSS JOIN molecule m\nWHERE m.molecule_id = 'TR010';",
+        "reward": 0.9114583333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`molecule`表来获取致癌性信息，但根据Gold SQL逻辑，应该从`toxicology`数据库中查找相关数据，且题目未明确说明致癌性字段在哪个表。\n\n2. **JOIN条件错误** - 使用了`CROSS JOIN`和`WHERE m.molecule_id = 'TR010'`，这会生成笛卡尔积再过滤，逻辑错误且效率低下。\n\n3. **自然语言理解偏差** - 题目要求\"state whether or not this molecule is carcinogenic\"，但预测SQL假设存在一个`label`字段表示致癌性，而Gold SQL并未涉及此逻辑。\n\n**改进建议：**\n- 简化为Gold SQL的结构，只查询bond类型\n- 如果需要致癌性信息，应明确数据源表结构\n- 去除不必要的JOIN操作"
+      }
+    }
+  },
+  {
+    "qid": "267",
+    "question": "List down the bond type for molecules from molecule id TR000 to TR050.",
+    "db": "toxicology",
+    "evidence": "double bond refers to bond_type = ' = '; single bond refers to bond_type = '-'; triple bond refers to bond_type = '#';",
+    "gold_sql": "SELECT T2.molecule_id, T2.bond_type FROM molecule AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.molecule_id BETWEEN 'TR000' AND 'TR050'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "SELECT DISTINCT b.bond_type\nFROM bond b\nWHERE b.molecule_id BETWEEN 'TR000' AND 'TR050'\nORDER BY b.bond_type",
+        "reward": 0.9791666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出分子的键类型\"，但预测SQL只返回了bond_type，没有包含molecule_id，不符合题目要求\n\n2. **证据信息利用不足** - 没有根据证据中不同bond_type对应的符号来区分双键、单键、三键\n\n3. **查询目标不完整** - 题目要求显示分子ID和键类型，预测SQL只显示了键类型\n\n**改进建议：**\n```sql\nSELECT DISTINCT T1.molecule_id, T2.bond_type \nFROM molecule AS T1 \nINNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id \nWHERE T1.molecule_id BETWEEN 'TR000' AND 'TR050'\nORDER BY T1.molecule_id, T2.bond_type\n```\n\n核心问题是未正确理解\"列出分子的键类型\"的完整含义，遗漏了分子ID的显示。"
+      },
+      "s2": {
+        "pred_sql": "SELECT DISTINCT bond_type\nFROM bond\nWHERE molecule_id BETWEEN 'TR000' AND 'TR050'\nORDER BY bond_type;",
+        "reward": 0.9791666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出分子的键类型\"，但预测SQL只返回了bond_type，没有显示对应的分子ID\n\n2. **证据信息利用不足** - 没有根据题目中关于不同键类型的定义（=、-、#）来正确处理数据\n\n3. **表连接缺失** - 需要通过molecule表验证分子ID范围，而预测SQL直接在bond表查询\n\n**具体问题：**\n- 预测SQL缺少molecule_id字段输出，不符合\"列出分子的键类型\"的要求\n- 没有使用JOIN操作，无法确保数据关联性\n- 未考虑题目提供的键类型定义信息\n\n**改进建议：**\n```sql\nSELECT DISTINCT T1.molecule_id, T2.bond_type \nFROM molecule AS T1 \nINNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id \nWHERE T1.molecule_id BETWEEN 'TR000' AND 'TR050'\nORDER BY T1.molecule_id, T2.bond_type;\n```"
+      },
+      "s7": {
+        "pred_sql": "WITH bond_types_list AS (\n    SELECT DISTINCT\n        b.bond_type\n    FROM bond b\n    WHERE b.molecule_id BETWEEN 'TR000' AND 'TR050'\n    ORDER BY b.bond_type\n)\nSELECT bond_type FROM bond_types_list;",
+        "reward": 0.953125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出分子从TR000到TR050的键类型\"，但预测SQL只返回了bond_type列表，没有显示对应的分子ID。\n\n2. **证据信息利用不足** - 没有根据题目中\"双键=，单键-，三键#\"的说明来正确处理bond_type值。\n\n3. **查询目标不匹配** - Gold SQL返回的是(molecule_id, bond_type)对，而预测SQL只返回bond_type，不符合题目要求。\n\n**改进建议：**\n预测SQL应该返回包含分子ID和键类型的完整信息，且需要根据证据说明正确识别键类型含义。"
+      }
+    }
+  },
+  {
+    "qid": "286",
+    "question": "Among all chemical compounds identified in the database, what percent of compounds form a triple-bond.",
+    "db": "toxicology",
+    "evidence": "triple bond refers to bond_type = '#';",
+    "gold_sql": "SELECT CAST(COUNT(CASE WHEN T.bond_type = '#' THEN T.bond_id ELSE NULL END) AS REAL) * 100 / COUNT(T.bond_id) FROM bond AS T",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_molecules AS (\n    SELECT m.molecule_id\n    FROM molecule m\n),\ncte_triple_bonds AS (\n    SELECT DISTINCT b.molecule_id\n    FROM bond b\n    WHERE b.bond_type = '#'\n)\nSELECT \n    (SELECT COUNT(*) FROM cte_triple_bonds) * 100.0 / COUNT(*) AS percentage_triple_bond\nFROM cte_molecules;",
+        "reward": 0.9583333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL假设存在`molecule`表，但实际应使用`bond`表进行统计\n2. **逻辑错误**：用`COUNT(*)`计算总分子数，但应该统计所有键的数量\n3. **聚合函数使用错误**：在子查询中使用了错误的计数逻辑\n\n**具体问题：**\n- 预测SQL试图通过`molecule`表计算百分比，但题目要求是基于`bond`表中的键进行统计\n- `cte_molecules`没有实际意义，因为需要的是键而不是分子\n- 最终计算方式不正确，应该直接统计键的数量而非分子数量\n\n**改进建议：**\n直接使用原始Gold SQL的逻辑，但确保表名为`bond`，并正确处理`bond_type = '#'`的条件判断。"
+      },
+      "s2": {
+        "pred_sql": "WITH triple_bond_percentage AS (\n    SELECT \n        (COUNT(DISTINCT CASE WHEN b.bond_type = '#' THEN m.molecule_id END) * 100.0 / COUNT(DISTINCT m.molecule_id)) AS percentage\n    FROM molecule m\n    LEFT JOIN bond b ON m.molecule_id = b.molecule_id\n)\nSELECT percentage FROM triple_bond_percentage;",
+        "reward": 0.953125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL使用了`molecule`表，但题目明确要求在`bond`表中查找三键化合物，应该直接在`bond`表操作。\n\n2. **聚合函数使用错误**：使用了`COUNT(DISTINCT ...)`统计分子数量，但题目要求是统计化合物（分子）中形成三键的比例，应使用`COUNT(*)`或直接在bond表统计。\n\n3. **自然语言理解偏差**：将\"compounds\"理解为分子，但实际应理解为化合物中的三键比例，应该基于bond表进行统计。\n\n**改进建议：**\n直接使用原始Gold SQL的逻辑，从bond表出发，统计bond_type='#'的记录占总bond记录的比例。"
+      },
+      "s7": {
+        "pred_sql": "WITH percentage_result AS (\n    SELECT \n        (COUNT(DISTINCT CASE WHEN b.bond_type = '#' THEN m.molecule_id END) * 100.0 / COUNT(DISTINCT m.molecule_id)) AS percentage\n    FROM molecule m\n    LEFT JOIN bond b ON m.molecule_id = b.molecule_id\n)\nSELECT percentage FROM percentage_result;",
+        "reward": 0.9166666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL使用了`molecule`表，但题目明确要求在`bond`表中查找三键化合物，应该直接在`bond`表操作。\n\n2. **聚合函数使用错误**：使用了`COUNT(DISTINCT ...)`统计分子数量，但题目要求是统计键的数量百分比，应统计键的总数。\n\n3. **自然语言理解偏差**：将\"compounds that form a triple-bond\"理解为\"具有三键的分子\"，而实际应该是\"具有三键的键\"。\n\n**改进建议：**\n```sql\nSELECT CAST(COUNT(CASE WHEN bond_type = '#' THEN 1 END) AS REAL) * 100 / COUNT(*) \nFROM bond\n```\n\n核心问题是混淆了分子和键的概念，以及错误地使用了DISTINCT计数。"
+      }
+    }
+  },
+  {
+    "qid": "288",
+    "question": "Identify whether the molecule that contains atom TR001_1 is carcinogenic.",
+    "db": "toxicology",
+    "evidence": "label = '+' mean molecules are carcinogenic;",
+    "gold_sql": "SELECT T2.label AS flag_carcinogenic FROM atom AS T1 INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.atom_id = 'TR001_1'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH atom_info AS (\n    SELECT atom_id, molecule_id\n    FROM atom\n    WHERE atom_id = 'TR001_1'\n)\nSELECT CASE WHEN m.label = '+' THEN 'Yes' ELSE 'No' END AS is_carcinogenic\nFROM atom_info a\nJOIN molecule m ON a.molecule_id = m.molecule_id;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL将\"carcinogenic\"理解为需要判断是否为'+',而实际应该是直接返回label值\n\n2. **逻辑处理错误** - 使用了CASE WHEN来转换标签，但Gold SQL直接返回label值即可，不需要额外转换\n\n**具体问题：**\n- Gold SQL中label='+'表示致癌，直接返回该值即可\n- 预测SQL多此一举地用CASE WHEN转换，且逻辑不清晰\n\n**改进建议：**\n直接使用Gold SQL的结构，或简化为：\n```sql\nSELECT T2.label \nFROM atom AS T1 \nINNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id \nWHERE T1.atom_id = 'TR001_1'\n```\n\n核心问题是将简单的问题复杂化了。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT CASE WHEN m.label = '+' THEN 'Yes' ELSE 'No' END AS carcinogenic_status\n    FROM atom a\n    INNER JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE a.atom_id = 'TR001_1'\n)\nSELECT carcinogenic_status FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求判断分子是否致癌，但预测SQL返回的是\"carcinogenic_status\"而非题目要求的\"flag_carcinogenic\"\n\n2. **列名不匹配** - Gold SQL中使用的是`T2.label`作为结果列，而预测SQL使用了`carcinogenic_status`，与题目期望的结果格式不符\n\n3. **字段含义理解错误** - 题目明确说明`label = '+'`表示致癌，但预测SQL的输出格式不符合原始查询的预期格式\n\n**改进建议：**\n将预测SQL中的列名改为`flag_carcinogenic`以匹配Gold SQL的输出格式，或根据实际需求调整输出字段名。"
+      },
+      "s7": {
+        "pred_sql": "WITH atom_info AS (\n    SELECT atom_id, molecule_id\n    FROM atom\n    WHERE atom_id = 'TR001_1'\n)\nSELECT \n    CASE \n        WHEN m.label = '+' THEN 'Yes'\n        ELSE 'No'\n    END AS carcinogenic\nFROM atom_info ai\nJOIN molecule m ON ai.molecule_id = m.molecule_id;",
+        "reward": 0.984375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL将结果转换为'Yes'/'No'字符串，而Gold SQL返回的是原始标签值'+'/'-'，与问题要求不符\n\n2. **证据信息利用不足** - 没有按照证据中\"label = '+' 表示致癌\"的规则来正确处理结果\n\n**具体问题：**\n- Gold SQL直接返回flag_carcinogenic字段，而预测SQL重新构建了逻辑\n- 预测SQL的CASE语句虽然逻辑正确，但输出格式不符合原问题要求\n- 两个SQL在功能上等价，但预测SQL增加了不必要的复杂性\n\n**改进建议：**\n直接使用Gold SQL的结构，保持输出格式一致即可。"
+      }
+    }
+  },
+  {
+    "qid": "309",
+    "question": "List out the atom id that belongs to the TR346 molecule and how many bond type can be created by this molecule?",
+    "db": "toxicology",
+    "evidence": "",
+    "gold_sql": "SELECT T1.atom_id, COUNT(DISTINCT T2.bond_type),T1.molecule_id FROM atom AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.molecule_id = 'TR000' GROUP BY T1.atom_id, T2.bond_type",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH molecule_info AS (\n    SELECT molecule_id, label\n    FROM molecule\n    WHERE molecule_id = 'TR346'\n),\natom_ids AS (\n    SELECT atom_id\n    FROM atom\n    WHERE molecule_id = 'TR346'\n),\nbond_types AS (\n    SELECT COUNT(DISTINCT bond_type) as bond_type_count\n    FROM bond\n    WHERE molecule_id = 'TR346'\n)\nSELECT \n    a.atom_id,\n    b.bond_type_count\nFROM atom_ids a\nCROSS JOIN bond_types b;",
+        "reward": 0.010416666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`molecule`表，但实际应该使用`atom`表来获取原子信息\n\n2. **JOIN条件错误**：使用了`CROSS JOIN`，这会生成笛卡尔积，而不是正确的关联关系\n\n3. **聚合函数使用错误**：`bond_types`子查询中的`COUNT(DISTINCT bond_type)`是对整个分子的统计，而非每个原子对应的键类型数量\n\n4. **自然语言理解偏差**：题目要求是\"每个原子有多少种键类型\"，而预测SQL返回的是所有原子共享的键类型总数\n\n**改进建议：**\n```sql\nSELECT \n    a.atom_id,\n    COUNT(DISTINCT b.bond_type) as bond_type_count\nFROM atom a\nLEFT JOIN bond b ON a.molecule_id = b.molecule_id\nWHERE a.molecule_id = 'TR346'\nGROUP BY a.atom_id\n```"
+      },
+      "s2": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n1. **表名理解错误**：使用了`atom`表，但证据显示应为`atom`表（实际表名正确，但可能有其他表名混淆）\n\n2. **列名理解错误**：`molecule_id`列在原子表中不存在，应该是`molecule_id`在bond表中\n\n3. **JOIN条件错误**：JOIN条件应该连接`atom.molecule_id = bond.molecule_id`，但实际逻辑不清晰\n\n4. **WHERE条件错误**：WHERE条件使用了`'TR000'`，但题目要求是`TR346`\n\n5. **聚合函数使用错误**：COUNT(DISTINCT T2.bond_type)应该针对每个atom_id统计不同bond_type数量\n\n6. **自然语言理解偏差**：题目要求列出原子ID及该分子可创建的键类型数量，但GROUP BY错误\n\n**改进建议：**\n- 将WHERE条件改为`T1.molecule_id = 'TR346'`\n- 修正GROUP BY为`GROUP BY T1.atom_id`\n- 确保JOIN条件正确连接两个表\n- 统计每个原子对应的键类型数量"
+      },
+      "s7": {
+        "pred_sql": "WITH molecule_info AS (\n    SELECT molecule_id, label\n    FROM molecule\n    WHERE molecule_id = 'TR346'\n),\natom_ids AS (\n    SELECT atom_id\n    FROM atom\n    WHERE molecule_id = 'TR346'\n),\nbond_types_count AS (\n    SELECT COUNT(DISTINCT bond_type) as bond_type_count\n    FROM bond\n    WHERE molecule_id = 'TR346'\n)\nSELECT \n    a.atom_id,\n    b.bond_type_count\nFROM atom_ids a\nCROSS JOIN bond_types_count b\nORDER BY a.atom_id;",
+        "reward": 0.03125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`molecule`表，但实际应该使用`atom`表来获取原子信息\n\n2. **JOIN条件错误**：预测SQL没有正确关联原子和键的信息，而是使用了CROSS JOIN\n\n3. **聚合函数使用错误**：预测SQL试图计算整个分子的键类型数量，但题目要求是每个原子能创建多少种键类型\n\n**具体问题：**\n- 预测SQL中的`molecule_info`子查询是多余的\n- `CROSS JOIN`导致结果集膨胀，不是笛卡尔积而是重复计算\n- 没有正确实现\"每个原子能创建多少种键类型\"的需求\n\n**改进建议：**\n```sql\nSELECT \n    a.atom_id,\n    COUNT(DISTINCT b.bond_type) as bond_type_count\nFROM atom a\nJOIN bond b ON a.molecule_id = b.molecule_id\nWHERE a.molecule_id = 'TR346'\nGROUP BY a.atom_id\nORDER BY a.atom_id;\n```\n\n核心问题是将简单的一对多关系查询误判为复杂的多表关联问题。"
+      }
+    }
+  },
+  {
+    "qid": "326",
+    "question": "Which molecule consisted of Sulphur atom with double bond?",
+    "db": "toxicology",
+    "evidence": "sulphur refers to element - 's'; double bond refers to bond_type = ' = ';",
+    "gold_sql": "SELECT DISTINCT T1.molecule_id FROM atom AS T1 INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.element = 's' AND T2.bond_type = '='",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_correct_double_bonds AS (\n    SELECT DISTINCT m.label\n    FROM atom a\n    INNER JOIN bond b ON a.molecule_id = b.molecule_id\n    INNER JOIN molecule m ON a.molecule_id = m.molecule_id\n    WHERE a.element = 's' \n    AND b.bond_type = '='\n)\nSELECT label FROM cte_correct_double_bonds;",
+        "reward": 0.7447916666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`molecule m`表，但原始Gold SQL中没有使用molecule表，直接通过atom和bond表关联即可。\n\n2. **列名理解错误**：预测SQL中使用了`m.label`，但Gold SQL中是`T1.molecule_id`，说明应该返回的是分子ID而不是label。\n\n3. **JOIN条件错误**：多加了不必要的molecule表JOIN，造成逻辑冗余。\n\n**改进建议：**\n删除多余的molecule表JOIN，保持与Gold SQL一致的结构，返回正确的列名。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_molecules AS (\n    SELECT DISTINCT m.label\n    FROM molecule m\n    JOIN atom a ON m.molecule_id = a.molecule_id\n    JOIN bond b ON m.molecule_id = b.molecule_id\n    WHERE a.element = 's' \n    AND b.bond_type = '='\n)\nSELECT label FROM final_molecules;",
+        "reward": 0.703125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`molecule`表，但Gold SQL使用的是`atom`表作为主表，应该以原子表为起点查找硫原子。\n\n2. **列名理解错误**：预测SQL中使用了`m.label`，但Gold SQL中是`T1.molecule_id`，应该是分子ID而非标签。\n\n3. **JOIN条件错误**：虽然JOIN逻辑正确，但基于错误的表结构理解导致整个查询逻辑偏差。\n\n**核心问题**：将\"查找含硫原子的分子\"理解为\"查找分子标签\"，而实际上应该返回分子ID。\n\n**改进建议**：直接使用Gold SQL的结构，将`atom`表作为主表，通过`element = 's'`和`bond_type = '='`条件筛选，返回正确的`molecule_id`。"
+      },
+      "s7": {
+        "pred_sql": "WITH final_molecules AS (\n    SELECT DISTINCT\n        m.label\n    FROM molecule m\n    INNER JOIN atom a ON m.molecule_id = a.molecule_id\n    INNER JOIN connected c ON a.atom_id = c.atom_id\n    INNER JOIN bond b ON c.bond_id = b.bond_id\n    WHERE a.element = 's' \n    AND b.bond_type = '='\n)\nSELECT label FROM final_molecules;",
+        "reward": 0.796875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了不存在的`connected`表，实际应使用`bond`表直接关联\n\n2. **JOIN条件错误** - 多余的`connected`表连接，破坏了原有的原子-键关联逻辑\n\n3. **列名理解错误** - 使用了`m.label`而非`m.molecule_id`，与Gold SQL不一致\n\n**核心问题：**\n预测SQL在Gold SQL基础上增加了不必要的表连接，将简单的原子-键关系复杂化，导致查询逻辑错误。\n\n**改进建议：**\n删除`connected`表相关连接，保持与Gold SQL相同的结构，使用正确的列名`molecule_id`。"
+      }
+    }
+  },
+  {
+    "qid": "338",
+    "question": "What is the atom ID of double bonded carbon in TR012 molecule?",
+    "db": "toxicology",
+    "evidence": "carbon refers to element = 'c'; double bond refers to bond_type = ' = ';",
+    "gold_sql": "SELECT T1.atom_id FROM atom AS T1 INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id INNER JOIN bond AS T3 ON T2.molecule_id = T3.molecule_id WHERE T2.molecule_id = 'TR012' AND T3.bond_type = '=' AND T1.element = 'c'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_molecule_id AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE molecule_id = 'TR012'\n),\ncte_carbon_atoms AS (\n    SELECT a.atom_id, a.molecule_id, a.element\n    FROM atom a\n    JOIN cte_molecule_id m ON a.molecule_id = m.molecule_id\n    WHERE a.element = 'c'\n),\ncte_double_bonds AS (\n    SELECT b.bond_id, b.molecule_id, b.bond_type\n    FROM bond b\n    JOIN cte_molecule_id m ON b.molecule_id = m.molecule_id\n    WHERE b.bond_type = '='\n)\nSELECT DISTINCT ca.atom_id\nFROM cte_carbon_atoms ca\nJOIN connected c ON ca.atom_id = c.atom_id\nJOIN cte_double_bonds db ON c.bond_id = db.bond_id",
+        "reward": 0.026041666666666668,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 使用了不存在的`connected`表，应该直接通过`bond`表关联原子\n\n2. **JOIN逻辑错误** - 预测SQL试图通过`connected`表建立原子间连接关系，但实际应直接通过`bond`表的原子ID字段关联\n\n3. **自然语言理解偏差** - 错误地认为需要额外的\"连接\"逻辑，而实际上双键碳原子就是通过bond表中bond_type='='直接关联的\n\n**改进建议：**\n删除`connected`表相关逻辑，直接在`bond`表中查找bond_type='='的记录，然后通过bond表中的atom_id字段与atom表关联即可。\n\n**核心问题：** 混淆了原子连接关系的表示方式，错误地引入了不存在的中间表。"
+      },
+      "s2": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n主要问题：\n1. **JOIN条件错误** - `T1.molecule_id = T2.molecule_id` 应该是 `T1.molecule_id = T2.molecule_id`，但实际应该通过bond表的连接关系正确关联\n2. **WHERE条件错误** - 缺少对bond表中bond_type的过滤条件\n3. **自然语言理解偏差** - 没有正确理解\"double bonded carbon\"需要同时满足碳原子和双键两个条件\n\n**改进建议：**\n- 确保正确的JOIN路径：atom→molecule→bond\n- 添加bond_type='='的过滤条件\n- 确保所有相关条件都包含在WHERE子句中\n\n**核心错误**：缺少了bond表的正确关联和bond_type过滤条件，导致无法准确筛选出双键碳原子。"
+      },
+      "s7": {
+        "pred_sql": "WITH molecule_info AS (\n    SELECT molecule_id\n    FROM molecule\n    WHERE molecule_id = 'TR012'\n),\ncarbon_atoms AS (\n    SELECT a.atom_id\n    FROM atom a\n    INNER JOIN molecule_info m ON a.molecule_id = m.molecule_id\n    WHERE a.element = 'c'\n),\ndouble_bonded_carbon AS (\n    SELECT DISTINCT ca.atom_id\n    FROM carbon_atoms ca\n    INNER JOIN connected c ON ca.atom_id = c.atom_id\n    INNER JOIN bond b ON c.bond_id = b.bond_id\n    WHERE b.bond_type = 'double' OR b.bond_type = '=' OR b.bond_type = '2'\n)\nSELECT atom_id\nFROM double_bonded_carbon;",
+        "reward": 0.010416666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 使用了不存在的`connected`表，应使用`bond`表直接关联原子\n\n2. **JOIN条件错误** - `connected`表不存在，无法通过`atom_id = atom_id`和`bond_id = bond_id`关联\n\n3. **自然语言理解偏差** - \"double bonded\"应直接匹配`bond_type = '='`，而非复杂的条件判断\n\n**改进建议：**\n- 删除`connected`表相关逻辑，直接使用`bond`表\n- 简化WHERE条件为`b.bond_type = '='`\n- 保持与Gold SQL一致的JOIN结构\n\n**核心问题：** 预测SQL引入了不存在的表结构，偏离了原始查询逻辑。"
+      }
+    }
+  },
+  {
+    "qid": "347",
+    "question": "Find all cards illustrated by Stephen Daniel and describe the text of the ruling of these cards. State if these cards have missing or degraded properties and values.",
+    "db": "card_games",
+    "evidence": "cards have missing or degraded properties and value refers to hasContentWarning = 1; 'Stephen Daniele' is artist; Find all cards refers to return card id",
+    "gold_sql": "SELECT T1.id, T2.text, T1.hasContentWarning FROM cards AS T1 INNER JOIN rulings AS T2 ON T1.uuid = T2.uuid WHERE T1.artist = 'Stephen Daniele'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_complete_card_info AS (\n    SELECT \n        c.id,\n        r.text as ruling_text,\n        CASE \n            WHEN c.hasContentWarning = 1 THEN 'Yes'\n            ELSE 'No'\n        END as has_missing_or_degraded_properties\n    FROM cards c\n    JOIN rulings r ON c.uuid = r.uuid\n    WHERE c.artist = 'Stephen Daniele'\n)\nSELECT id, ruling_text, has_missing_or_degraded_properties\nFROM cte_complete_card_info;",
+        "reward": 0.7552083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"描述规则文本\"，但预测SQL将ruling_text作为rulings表的text列，实际上应该返回rulings表的text字段\n\n2. **列名理解错误** - 题目中\"hasContentWarning = 1\"表示缺失或降级属性，但预测SQL将其转换为\"是否缺失\"的字符串，逻辑不匹配\n\n3. **证据信息利用不足** - 没有正确处理\"missing or degraded properties and values\"与hasContentWarning的关系\n\n**具体问题：**\n- `has_missing_or_degraded_properties`字段命名和逻辑都与题目要求不符\n- 应该直接返回hasContentWarning值而不是转换为\"Yes/No\"\n\n**建议修改：**\n```sql\nSELECT c.id, r.text as ruling_text, c.hasContentWarning \nFROM cards c \nJOIN rulings r ON c.uuid = r.uuid \nWHERE c.artist = 'Stephen Daniele'\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH step1 AS (\n    SELECT id, artist, hasContentWarning\n    FROM cards\n    WHERE artist = 'Stephen Daniele'\n)\nSELECT \n    c.id AS card_id,\n    r.text AS ruling_text,\n    CASE \n        WHEN c.hasContentWarning = 1 THEN 'Yes'\n        ELSE 'No'\n    END AS has_missing_or_degraded_properties\nFROM step1 c\nLEFT JOIN rulings r ON c.id = r.id",
+        "reward": 0.921875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **JOIN条件错误** - 预测SQL使用`c.id = r.id`，但实际应该使用`c.uuid = r.uuid`（证据中明确提到cards表的uuid字段与rulings表关联）\n\n2. **表名理解错误** - 预测SQL中`rulings`表的JOIN方式不正确，应该基于uuid而不是id\n\n3. **自然语言理解偏差** - 问题要求\"描述规则文本\"，但预测SQL没有处理可能的NULL值情况\n\n**改进建议：**\n将JOIN条件改为`c.uuid = r.uuid`，并添加适当的NULL处理逻辑。\n\n**核心问题：** JOIN键选择错误，应使用uuid而非id进行关联。"
+      },
+      "s7": {
+        "pred_sql": "WITH step_4_final_verification AS (\n    SELECT \n        c.id,\n        c.artist,\n        CASE \n            WHEN c.hasContentWarning = 1 THEN 'Yes'\n            ELSE 'No'\n        END AS has_missing_or_degraded_properties,\n        r.text AS ruling_text\n    FROM cards c\n    LEFT JOIN rulings r ON c.id = r.id\n    WHERE c.artist LIKE '%Stephen Daniel%'\n)\nSELECT \n    id,\n    ruling_text,\n    has_missing_or_degraded_properties\nFROM step_4_final_verification;",
+        "reward": 0.8697916666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **JOIN条件错误**：预测SQL使用`c.id = r.id`，但实际应该使用`c.uuid = r.uuid`（证据中明确说明了关联字段）\n\n2. **WHERE条件错误**：使用`LIKE '%Stephen Daniel%'`，但证据显示应该是精确匹配`'Stephen Daniele'`\n\n3. **表名理解错误**：预测SQL中的`cards`表在Gold SQL中是`cards`，但可能需要确认是否为同一张表\n\n4. **自然语言理解偏差**：Gold SQL只返回card id、ruling text和hasContentWarning，而预测SQL返回了额外的artist字段\n\n**改进建议：**\n- 使用正确的JOIN条件`c.uuid = r.uuid`\n- 使用精确匹配`c.artist = 'Stephen Daniele'`\n- 删除不必要的artist字段\n- 确认表名一致性"
+      }
+    }
+  },
+  {
+    "qid": "387",
+    "question": "What are the cards for set OGW? State the colour for these cards.",
+    "db": "card_games",
+    "evidence": "set OGW refers to setCode = 'OGW';",
+    "gold_sql": "SELECT id, colors FROM cards WHERE id IN ( SELECT id FROM set_translations WHERE setCode = 'OGW' )",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "SELECT c.name, c.colors\nFROM cards c\nWHERE c.setCode = 'OGW';",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误** - 预测SQL中使用了`c.setName`，但实际表中应该是`c.setCode`\n\n2. **表结构理解错误** - 预测SQL假设cards表中有`name`字段，但Gold SQL显示应该查询的是`id`字段\n\n**具体问题：**\n- `c.setName` 应该是 `c.setCode`\n- 查询字段应该是 `id` 而不是 `name`\n- 缺少对setCode的正确关联处理\n\n**改进建议：**\n```sql\nSELECT c.id, c.colors \nFROM cards c \nWHERE c.setCode = 'OGW'\n```\n\n或者使用Gold SQL的逻辑：\n```sql\nSELECT c.id, c.colors \nFROM cards c \nWHERE c.id IN (SELECT id FROM set_translations WHERE setCode = 'OGW')\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH ogw_cards AS (\n    SELECT name, colors\n    FROM cards\n    WHERE setCode = 'OGW'\n)\nSELECT name, colors FROM ogw_cards;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL直接使用`cards`表，但实际应该使用`set_translations`表来关联setCode\n\n2. **列名理解错误** - `cards`表中没有`setCode`列，应该通过`set_translations`表获取setCode\n\n3. **逻辑关系错误** - 预测SQL假设`cards`表有`setCode`字段，但实际上需要通过中间表`set_translations`建立关联\n\n**具体问题：**\n- `cards`表结构不包含`setCode`字段\n- 缺少必要的表连接逻辑\n- 混淆了主表和关联表的关系\n\n**改进建议：**\n使用Gold SQL的逻辑，通过`set_translations`表先获取setCode对应的card id，再从`cards`表获取详细信息。"
+      },
+      "s7": {
+        "pred_sql": "SELECT \n    name,\n    colors\nFROM cards\nWHERE setCode = 'OGW'\nORDER BY name;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL直接使用`cards`表，但实际应该使用`set_translations`表来获取setCode对应的card id\n\n2. **列名理解错误** - 预测SQL选择`name`列，但Gold SQL显示需要的是`id`和`colors`，且`cards`表中可能没有`name`字段或不是目标字段\n\n3. **WHERE条件错误** - 预测SQL使用`setCode = 'OGW'`直接在cards表上过滤，但根据证据，setCode存储在`set_translations`表中\n\n**核心问题：**\n预测SQL没有正确理解数据模型结构，应该通过`set_translations`表关联获取卡片ID，再从`cards`表获取颜色信息。\n\n**改进建议：**\n使用Gold SQL的逻辑，先通过`set_translations`表找到setCode='OGW'对应的card id，再用这些id从`cards`表获取colors信息。"
+      }
+    }
+  },
+  {
+    "qid": "423",
+    "question": "Please provide the ids of top three powerful pairs of Kingdom Foil and Kingdom Cards sorted by Kingdom Foil id in alphabetical order.",
+    "db": "card_games",
+    "evidence": "poweful refers to cardKingdomFoilId is not null AND cardKingdomId is not null",
+    "gold_sql": "SELECT cardKingdomFoilId, cardKingdomId FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL ORDER BY cardKingdomFoilId LIMIT 3",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_powerful_cards AS (\n    SELECT id, cardKingdomFoilId, cardKingdomId\n    FROM cards\n    WHERE cardKingdomFoilId IS NOT NULL \n    AND cardKingdomId IS NOT NULL\n)\nSELECT id\nFROM cte_powerful_cards\nORDER BY cardKingdomFoilId ASC\nLIMIT 3;",
+        "reward": 0.515625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求返回\"top three powerful pairs\"，即需要同时返回`cardKingdomFoilId`和`cardKingdomId`两个字段，但预测SQL只返回了`id`字段。\n\n2. **列名理解错误** - 预测SQL中使用了`id`字段，但根据题目描述和Gold SQL，应该返回的是`cardKingdomFoilId`和`cardKingdomId`这两个配对字段。\n\n**改进建议：**\n将SELECT语句改为返回两个必要的字段：`cardKingdomFoilId`和`cardKingdomId`，而不是`id`。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_ids AS (\n    SELECT \n        id\n    FROM cards\n    WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL\n    ORDER BY cardKingdomFoilId\n    LIMIT 3\n)\nSELECT * FROM final_ids;",
+        "reward": 0.6302083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误** - 预测SQL只选择了`id`列，但题目要求的是`cardKingdomFoilId`和`cardKingdomId`两个列\n\n2. **自然语言理解偏差** - 题目明确要求返回\"pair\"（成对）的ID，即需要同时返回两个ID字段，而不是单个id\n\n**具体问题：**\n- Gold SQL返回：`cardKingdomFoilId, cardKingdomId`（正确）\n- 预测SQL返回：`id`（错误）\n\n**改进建议：**\n将预测SQL中的`SELECT id`改为`SELECT cardKingdomFoilId, cardKingdomId`，并移除不必要的CTE结构。\n\n```sql\nSELECT cardKingdomFoilId, cardKingdomId \nFROM cards \nWHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL \nORDER BY cardKingdomFoilId \nLIMIT 3\n```"
+      },
+      "s7": {
+        "pred_sql": "WITH powerful_cards AS (\n    SELECT \n        id,\n        cardKingdomFoilId,\n        cardKingdomId\n    FROM cards\n    WHERE cardKingdomFoilId IS NOT NULL \n    AND cardKingdomId IS NOT NULL\n)\nSELECT \n    id\nFROM powerful_cards\nORDER BY cardKingdomFoilId ASC\nLIMIT 3",
+        "reward": 0.7916666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求返回\"top three powerful pairs\"，即需要同时返回`cardKingdomFoilId`和`cardKingdomId`两个字段，但预测SQL只选择了`id`字段。\n\n2. **列名理解错误** - 预测SQL中使用了`id`字段，但根据Gold SQL和题目描述，应该返回的是`cardKingdomFoilId`和`cardKingdomId`这两个字段。\n\n**改进建议：**\n将SELECT语句改为选择`cardKingdomFoilId`和`cardKingdomId`两个字段，而不是`id`字段，并且需要按照题目要求返回完整的\"pairs\"信息。"
+      }
+    }
+  },
+  {
+    "qid": "436",
+    "question": "How many cards have frame effect as extendedart? List out the id of those cards.",
+    "db": "card_games",
+    "evidence": "\nframe effect as extendedart refers to frameEffects = 'extendedart'\n",
+    "gold_sql": "SELECT id FROM cards WHERE frameEffects = 'extendedart' GROUP BY id",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "SELECT \n    COUNT(*) AS total_cards,\n    GROUP_CONCAT(id) AS card_ids\nFROM cards\nWHERE frameEffects = 'extendedart';",
+        "reward": 0.890625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL使用了`COUNT(*)`和`GROUP_CONCAT()`，但题目只要求统计数量和列出ID，不需要聚合操作。\n\n2. **自然语言理解偏差**：将简单查询误解为需要聚合统计的复杂查询。\n\n**具体问题：**\n- 题目要求\"How many cards\"应该返回数量，而`COUNT(*)`会统计行数，但`GROUP_CONCAT(id)`会将所有ID连接成一个字符串，不符合需求\n- `GROUP BY id`在预测SQL中被省略，但实际应该用`GROUP BY id`来确保每个ID只出现一次（如果存在重复）\n\n**改进建议：**\n```sql\n-- 正确答案应该是：\nSELECT COUNT(*) AS total_cards, GROUP_CONCAT(id) AS card_ids\nFROM (SELECT id FROM cards WHERE frameEffects = 'extendedart' GROUP BY id) AS unique_cards;\n```\n\n或者更简单的：\n```sql\nSELECT COUNT(*) AS total_cards FROM cards WHERE frameEffects = 'extendedart';\nSELECT id FROM cards WHERE frameEffects = 'extendedart';\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH extended_art_cards AS (\n    SELECT id\n    FROM cards\n    WHERE frameEffects = 'extendedart'\n)\nSELECT COUNT(*) AS total_count\nFROM extended_art_cards;",
+        "reward": 0.8385416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出id\"，但预测SQL只返回count数量\n2. **证据信息利用不足** - 没有按照证据中\"frameEffects = 'extendedart'\"的条件正确应用\n\n**具体问题：**\n- 预测SQL使用了COUNT(*)而不是SELECT id，完全偏离了题目要求\n- 虽然WHERE条件逻辑正确，但最终输出不符合题目\"列出id\"的要求\n\n**改进建议：**\n```sql\nSELECT id FROM cards WHERE frameEffects = 'extendedart'\n```\n或如果需要计数+列表：\n```sql\nSELECT id FROM cards WHERE frameEffects = 'extendedart';\nSELECT COUNT(*) FROM cards WHERE frameEffects = 'extendedart';\n```"
+      },
+      "s7": {
+        "pred_sql": "WITH card_info AS (\n    SELECT \n        COUNT(id) AS total_count,\n        GROUP_CONCAT(id, ', ') AS card_ids\n    FROM cards\n    WHERE frameEffects = 'extendedart'\n)\nSELECT * FROM card_info;",
+        "reward": 0.9427083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`COUNT(id)`和`GROUP_CONCAT()`，但题目只要求列出ID，不需要计数和拼接\n\n2. **自然语言理解偏差**：将简单查询误解为需要统计和汇总的复杂查询\n\n3. **证据信息利用不足**：没有充分利用\"列出ID\"这一明确要求\n\n**具体问题：**\n- 预测SQL添加了不必要的聚合操作（COUNT、GROUP_CONCAT）\n- 没有按要求直接返回ID列表\n- 多余的CTE结构使查询变得复杂化\n\n**改进建议：**\n直接使用Gold SQL的逻辑，去掉聚合函数，保持简单查询即可。"
+      }
+    }
+  },
+  {
+    "qid": "448",
+    "question": "Name the foreign name of the card that has abzan watermark? List out the type of this card.",
+    "db": "card_games",
+    "evidence": "",
+    "gold_sql": "SELECT DISTINCT T1.name, T1.type FROM cards AS T1 INNER JOIN foreign_data AS T2 ON T2.uuid = T1.uuid WHERE T1.watermark = 'abzan'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_abzan_card AS (\n    SELECT id, uuid, name, type\n    FROM cards\n    WHERE LOWER(watermark) = 'abzan'\n)\nSELECT f.name AS foreign_name, c.type\nFROM cte_abzan_card c\nJOIN foreign_data f ON c.uuid = f.uuid\nLIMIT 1;",
+        "reward": 0.84375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`foreign_data`表，但实际应该使用`foreign_names`表（从Gold SQL可见）\n\n2. **列名理解错误** - `foreign_data`表中的列名不是`name`，而是`foreign_name`\n\n3. **JOIN条件错误** - 基于错误的表名和列名进行连接\n\n**改进建议：**\n```sql\nWITH cte_abzan_card AS (\n    SELECT id, uuid, name, type\n    FROM cards\n    WHERE LOWER(watermark) = 'abzan'\n)\nSELECT f.foreign_name, c.type\nFROM cte_abzan_card c\nJOIN foreign_names f ON c.uuid = f.uuid\nLIMIT 1;\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH cte1 AS (\n    SELECT id, name, watermark, types, uuid\n    FROM cards\n    WHERE watermark = 'abzan'\n)\nSELECT f.name AS foreignName, c.types\nFROM cte1 c\nLEFT JOIN foreign_data f ON c.uuid = f.uuid\nLIMIT 1;",
+        "reward": 0.8385416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`foreign_data`表，但实际应该使用`foreign_names`表来获取外语名称\n\n2. **列名理解错误** - `foreign_data`表中存储的是`foreign_name`字段，而非`name`字段\n\n3. **JOIN条件错误** - 虽然JOIN逻辑基本正确，但基于错误的表名导致整个查询失效\n\n**改进建议：**\n将`foreign_data`改为`foreign_names`，`f.name`改为`f.foreign_name`，并确保JOIN条件正确。\n\n**核心问题：** 对数据库表结构理解有误，使用了不存在的表名和字段名。"
+      },
+      "s7": {
+        "pred_sql": "WITH abzan_cards AS (\n    SELECT DISTINCT\n        fd.name AS foreign_name,\n        c.type\n    FROM cards c\n    JOIN foreign_data fd ON c.uuid = fd.uuid\n    WHERE c.watermark LIKE '%abzan%'\n)\nSELECT foreign_name, type FROM abzan_cards LIMIT 1;",
+        "reward": 0.984375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`foreign_data`表，但根据Gold SQL显示应为`foreign_names`表（或类似名称）\n\n2. **列名理解错误** - 预测SQL使用`fd.name`作为外国名称，但实际应该是`fd.foreign_name`或其他特定列名\n\n3. **自然语言理解偏差** - 问题要求\"foreign name\"，但预测SQL的别名`foreign_name`与实际数据结构不符\n\n**改进建议：**\n```sql\nSELECT DISTINCT fd.foreign_name, c.type \nFROM cards c \nJOIN foreign_data fd ON c.uuid = fd.uuid \nWHERE c.watermark = 'abzan'\n```\n\n关键是要确认`foreign_data`表的实际结构和列名，而不是基于推测命名。"
+      }
+    }
+  },
+  {
+    "qid": "470",
+    "question": "When was the set of cards with \"Ancestor's Chosen\" released?",
+    "db": "card_games",
+    "evidence": "card set \"Ancestor's Chosen\" refers to name = 'Ancestor''s Chosen'; when released refers to releaseDate",
+    "gold_sql": "SELECT DISTINCT T2.releaseDate FROM cards AS T1 INNER JOIN sets AS T2 ON T2.code = T1.setCode WHERE T1.name = 'Ancestor''s Chosen'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH set_of_ancestors_chosen AS (\n    SELECT s.releaseDate\n    FROM cards c\n    JOIN sets s ON c.setCode = s.code\n    WHERE c.name = 'Ancestor''s Chosen'\n    LIMIT 1\n)\nSELECT releaseDate FROM set_of_ancestors_chosen;",
+        "reward": 0.828125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`cards`和`sets`表，但实际数据库名为`card_games`（根据问题描述）\n\n2. **列名理解错误** - 预测SQL中的`releaseDate`列在`card_games`数据库中可能不存在，应该使用`releaseDate`或类似字段\n\n3. **JOIN条件错误** - 假设了`cards`表有`setName`字段，但实际可能是`code`字段\n\n4. **WHERE条件错误** - 使用了`c.name = 'Ancestor''s Chosen'`，但实际应该是`name = 'Ancestor''s Chosen'`\n\n**改进建议：**\n- 使用正确的数据库名`card_games`\n- 确认表结构和字段名是否正确\n- 检查JOIN条件是否匹配实际表结构\n- 验证WHERE条件中的字段名是否准确\n\n**核心问题：** 预测SQL没有基于实际的数据库结构进行设计，而是凭猜测构建，导致多个关键元素都可能出现错误。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT s.releaseDate\n    FROM cards c\n    INNER JOIN sets s ON c.setCode = s.code\n    WHERE c.name = 'Ancestor''s Chosen'\n    LIMIT 1\n)\nSELECT * FROM final_answer;",
+        "reward": 0.9895833333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`cards`和`sets`表，但根据证据信息，实际应使用`card_games`数据库中的`cards`和`sets`表，表名不匹配。\n\n2. **WHERE条件错误** - 预测SQL的WHERE条件正确，但因为表名错误导致无法执行。\n\n**改进建议：**\n将表名从`cards`和`sets`改为`card_games.cards`和`card_games.sets`，或者在查询前使用`USE card_games`指定数据库。\n\n**其他问题：**\n- `LIMIT 1`可能掩盖了多条记录的情况（证据显示需要DISTINCT）\n- 使用CTE结构复杂化了简单查询\n\n**核心问题：** 表名与数据库结构不符导致查询失败。"
+      },
+      "s7": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n**主要问题：**\n1. **表名理解错误** - 可能将`cards`和`sets`表的位置搞反了\n2. **JOIN条件错误** - `T2.code = T1.setCode`可能是错误的关联字段\n3. **WHERE条件错误** - 字符串匹配可能缺少转义或格式错误\n\n**具体分析：**\n- 如果预测SQL中JOIN条件写成`T1.setCode = T2.code`但实际表结构相反，则会导致无法正确关联\n- 字符串中的撇号未正确转义（虽然Gold SQL显示已正确处理）\n- 可能误用了表别名或字段名\n\n**改进建议：**\n确认表结构中正确的关联字段，确保JOIN条件与实际表结构一致，验证字符串转义是否正确。"
+      }
+    }
+  },
+  {
+    "qid": "484",
+    "question": "Please list the Italian names of the cards in the set Coldsnap with the highest converted mana cost.",
+    "db": "card_games",
+    "evidence": "card set Coldsnap refers to name = 'Coldsnap'; Italian refers to language = 'Italian'; highest converted mana cost refers to MAX(convertedManaCost)",
+    "gold_sql": "SELECT T2.name FROM foreign_data AS T1 INNER JOIN cards AS T2 ON T2.uuid = T1.uuid INNER JOIN sets AS T3 ON T3.code = T2.setCode WHERE T3.name = 'Coldsnap' AND T1.language = 'Italian' ORDER BY T2.convertedManaCost DESC",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_final_result AS (\n    SELECT fd.name\n    FROM foreign_data fd\n    JOIN cards c ON fd.uuid = c.uuid\n    WHERE fd.language = 'Italian'\n    AND c.setCode = 'CSP'\n    AND c.convertedManaCost = (SELECT MAX(convertedManaCost) FROM cards WHERE setCode = 'CSP')\n)\nSELECT name FROM cte_final_result;",
+        "reward": 0.8125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`foreign_data`和`cards`表，但实际应该使用`card_games`数据库中的对应表结构\n\n2. **列名理解错误**：`cards`表中的`convertedManaCost`列在实际数据库中可能是`cmc`或其他名称\n\n3. **WHERE条件错误**：使用了`c.setCode = 'CSP'`，但题目明确要求是`name = 'Coldsnap'`，应该用sets表的name字段\n\n4. **聚合函数使用错误**：子查询中没有关联到正确的set，导致获取的是所有卡牌的最大CMC而非特定set内的最大CMC\n\n**改进建议：**\n- 使用正确的表名（如`cards`、`sets`、`foreign_names`等）\n- 使用`sets.name = 'Coldsnap'`而不是`setCode = 'CSP'`\n- 确保子查询正确关联到指定set\n- 验证列名是否匹配实际数据库结构"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT st.translation\n    FROM cards c\n    INNER JOIN sets s ON c.setCode = s.code\n    INNER JOIN set_translations st ON s.code = st.setCode\n    WHERE s.name = 'Coldsnap' \n    AND c.convertedManaCost = (\n        SELECT MAX(c2.convertedManaCost)\n        FROM cards c2\n        INNER JOIN sets s2 ON c2.setCode = s2.code\n        WHERE s2.name = 'Coldsnap'\n    )\n    AND st.language = 'Italian'\n)\nSELECT translation FROM final_answer;",
+        "reward": 0.90625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`set_translations`表，但实际应该使用`foreign_data`表来获取意大利语名称\n\n2. **列名理解错误** - 预测SQL使用`translation`列，但实际应该使用`foreign_data`表中的`name`列\n\n3. **JOIN逻辑错误** - 预测SQL的JOIN结构与Gold SQL不匹配，缺少了正确的关联关系\n\n**核心问题：**\n预测SQL完全偏离了原始查询的逻辑结构，将简单的语言过滤（language='Italian'）复杂化为多表关联，且表名和列名都用错了。\n\n**改进建议：**\n直接采用Gold SQL的结构，只需将`T1.name`改为`T2.name`即可，保持原有的三表JOIN逻辑。"
+      },
+      "s7": {
+        "pred_sql": "WITH coldsnap_set AS (\n    SELECT code \n    FROM sets \n    WHERE name = 'Coldsnap'\n),\nmax_cmc AS (\n    SELECT MAX(c.convertedManaCost) AS max_cost\n    FROM cards c\n    JOIN coldsnap_set cs ON c.setCode = cs.code\n)\nSELECT fd.name\nFROM cards c\nJOIN coldsnap_set cs ON c.setCode = cs.code\nJOIN foreign_data fd ON c.uuid = fd.uuid\nJOIN max_cmc mc ON c.convertedManaCost = mc.max_cost\nWHERE fd.language = 'Italian'",
+        "reward": 0.8333333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`foreign_data`表，但实际应该使用`foreign_names`表来获取意大利语名称\n\n2. **JOIN条件错误**：在获取最高CMC的子查询中，JOIN条件应该是`c.uuid = fd.uuid`而不是`c.setCode = cs.code`\n\n3. **聚合函数使用错误**：在`max_cmc`子查询中，应该基于`cards`表的`convertedManaCost`进行聚合，而不是在`foreign_data`表上操作\n\n**改进建议：**\n- 将`foreign_data`改为`foreign_names`\n- 修正JOIN条件为正确的UUID关联\n- 确保聚合函数作用于正确的表和字段"
+      }
+    }
+  },
+  {
+    "qid": "515",
+    "question": "When was the oldest mythic card released and what are its legal play formats?",
+    "db": "card_games",
+    "evidence": "the oldest card refers to MIN(originalReleaseDate); mythic card refers to rarity = 'mythic'; legal play refers to status = 'legal'; play format refers to format",
+    "gold_sql": "SELECT T1.originalReleaseDate, T2.format FROM cards AS T1 INNER JOIN legalities AS T2 ON T1.uuid = T2.uuid WHERE T1.rarity = 'mythic' AND T1.originalReleaseDate IS NOT NULL AND T2.status = 'Legal' ORDER BY T1.originalReleaseDate LIMIT 1",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_oldest_mythic AS (\n    SELECT id, name, originalReleaseDate, rarity, uuid\n    FROM cards\n    WHERE rarity = 'mythic'\n    ORDER BY originalReleaseDate ASC\n    LIMIT 1\n),\ncte_legal_formats AS (\n    SELECT l.format\n    FROM legalities l\n    JOIN cte_oldest_mythic c ON l.uuid = c.uuid\n    WHERE l.status = 'legal'\n)\nSELECT c.originalReleaseDate, lf.format\nFROM cte_oldest_mythic c\nLEFT JOIN cte_legal_formats lf ON 1=1;",
+        "reward": 0.08333333333333333,
+        "llm_analysis": "**主要错误原因：**\n\n1. **JOIN条件错误**：`LEFT JOIN cte_legal_formats lf ON 1=1` 是错误的，应该使用实际的JOIN条件 `ON l.uuid = c.uuid`\n\n2. **列名理解错误**：预测SQL中使用了 `id, name` 等字段，但原始查询只涉及 `originalReleaseDate` 和 `format`，且表结构可能不包含这些字段\n\n3. **逻辑冗余**：使用CTE后又用LEFT JOIN连接，实际上应该直接JOIN\n\n**改进建议：**\n```sql\nWITH cte_oldest_mythic AS (\n    SELECT uuid, originalReleaseDate\n    FROM cards\n    WHERE rarity = 'mythic'\n    ORDER BY originalReleaseDate ASC\n    LIMIT 1\n)\nSELECT c.originalReleaseDate, l.format\nFROM cte_oldest_mythic c\nJOIN legalities l ON c.uuid = l.uuid\nWHERE l.status = 'Legal';\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH oldest_mythic_card AS (\n    SELECT id, name, originalReleaseDate\n    FROM cards\n    WHERE rarity = 'mythic'\n    ORDER BY originalReleaseDate ASC\n    LIMIT 1\n)\nSELECT omc.originalReleaseDate, l.format\nFROM oldest_mythic_card omc\nJOIN legalities l ON omc.id = l.id\nWHERE l.status = 'Legal'\nORDER BY l.format;",
+        "reward": 0.34375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **JOIN条件错误**：预测SQL使用`omc.id = l.id`作为连接条件，但实际数据库结构中应该是`cards.uuid = legalities.uuid`\n\n2. **列名理解错误**：预测SQL中使用了`id`列，但Gold SQL显示应该使用`uuid`列进行关联\n\n3. **表名理解错误**：预测SQL中的`oldest_mythic_card`是CTE别名，但实际查询涉及的是`cards`和`legalities`两个表\n\n**改进建议：**\n将JOIN条件改为`omc.uuid = l.uuid`，并确保使用正确的列名匹配。"
+      },
+      "s7": {
+        "pred_sql": "WITH oldest_mythic_card AS (\n    SELECT \n        id,\n        originalReleaseDate\n    FROM cards\n    WHERE rarity = 'mythic'\n    ORDER BY originalReleaseDate ASC\n    LIMIT 1\n)\nSELECT \n    omc.originalReleaseDate,\n    l.format\nFROM oldest_mythic_card omc\nJOIN legalities l ON omc.id = l.id\nWHERE l.status = 'Legal';",
+        "reward": 0.14583333333333334,
+        "llm_analysis": "**主要错误原因：3. JOIN条件错误**\n\n**具体问题：**\n- 预测SQL中使用 `omc.id = l.id` 作为JOIN条件，但实际表结构中应该是 `omc.uuid = l.uuid`\n- Gold SQL使用的是 `uuid` 字段进行关联，而预测SQL错误地使用了 `id` 字段\n\n**改进建议：**\n将JOIN条件改为 `omc.uuid = l.uuid` 即可修正错误。\n\n其他问题：\n- 4. WHERE条件错误：预测SQL中WHERE条件写成了 `l.status = 'Legal'`（大小写不一致），应为 `'Legal'`\n- 1. 表名理解错误：预测SQL中假设表名为 `cards` 和 `legalities`，但实际可能不同\n\n最核心问题是JOIN字段不匹配导致无法正确关联数据。"
+      }
+    }
+  },
+  {
+    "qid": "520",
+    "question": "Who is the illustrator that illustrated the least amount of cards? List the format of play of the cards that he/she illustrated.",
+    "db": "card_games",
+    "evidence": "format of the cards refers to format; illustrator refers to artist; the least amount of cards refers to MIN(artist)",
+    "gold_sql": "SELECT T1.artist, T2.format FROM cards AS T1 INNER JOIN legalities AS T2 ON T2.uuid = T1.uuid GROUP BY T1.artist ORDER BY COUNT(T1.id) ASC LIMIT 1",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_min_artist AS (\n    SELECT artist\n    FROM cards\n    WHERE artist IS NOT NULL\n    GROUP BY artist\n    ORDER BY COUNT(*) ASC\n    LIMIT 1\n)\nSELECT DISTINCT l.format\nFROM cte_min_artist ma\nJOIN cards c ON ma.artist = c.artist\nJOIN legalities l ON c.id = l.id\nWHERE l.format IS NOT NULL\nORDER BY l.format;",
+        "reward": 0.2916666666666667,
+        "llm_analysis": "**主要错误原因：**\n\n1. **JOIN条件错误**：预测SQL中使用`c.id = l.id`作为连接条件，但根据Gold SQL应为`l.uuid = T1.uuid`，两个表通过uuid字段关联。\n\n2. **聚合函数使用错误**：预测SQL在CTE中使用了`COUNT(*)`但没有正确统计卡片数量来确定最少的插画师。\n\n3. **自然语言理解偏差**：Gold SQL中的`T1.artist`是主表字段，而预测SQL的CTE中虽然逻辑上想找出最少的艺术家，但实现方式有误。\n\n**改进建议：**\n- 使用正确的JOIN条件`l.uuid = c.uuid`\n- 保持与Gold SQL一致的逻辑结构，先找出最少卡片数的艺术家再关联查询格式信息\n- 确保聚合统计的准确性"
+      },
+      "s2": {
+        "pred_sql": "WITH artist_card_counts AS (\n    SELECT artist, COUNT(*) as card_count\n    FROM cards\n    WHERE artist IS NOT NULL AND artist != ''\n    GROUP BY artist\n    ORDER BY card_count ASC\n    LIMIT 10\n),\nmin_artist AS (\n    SELECT artist\n    FROM artist_card_counts\n    ORDER BY card_count ASC\n    LIMIT 1\n)\nSELECT DISTINCT c.artist, l.format\nFROM cards c\nLEFT JOIN legalities l ON c.uuid = l.uuid\nWHERE c.artist = (SELECT artist FROM min_artist);",
+        "reward": 0.40625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`cards`表和`legalities`表，但Gold SQL中是`cards`和`legalities`，实际表结构可能不同。\n\n2. **JOIN条件错误**：预测SQL使用了`LEFT JOIN`，而Gold SQL使用`INNER JOIN`，可能导致数据不一致。\n\n3. **聚合函数使用错误**：预测SQL在子查询中使用了`ORDER BY card_count ASC LIMIT 10`，然后又在`min_artist`中重新排序，逻辑冗余且可能出错。\n\n4. **自然语言理解偏差**：预测SQL过度复杂化，Gold SQL的简洁写法更准确。\n\n**改进建议：**\n- 直接使用Gold SQL的结构，避免不必要的子查询\n- 确认JOIN条件应为INNER JOIN以匹配原始逻辑\n- 移除多余的ORDER BY和LIMIT层级结构"
+      },
+      "s7": {
+        "pred_sql": "WITH artist_card_counts AS (\n    SELECT \n        artist,\n        COUNT(*) AS card_count\n    FROM cards\n    WHERE artist IS NOT NULL\n    GROUP BY artist\n),\nmin_artist AS (\n    SELECT artist\n    FROM artist_card_counts\n    WHERE card_count = (SELECT MIN(card_count) FROM artist_card_counts)\n)\nSELECT DISTINCT\n    c.artist,\n    l.format\nFROM cards c\nJOIN legalities l ON c.uuid = l.uuid\nWHERE c.artist IN (SELECT artist FROM min_artist)\nAND l.format IS NOT NULL\nORDER BY c.artist, l.format;",
+        "reward": 0.23958333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`cards`和`legalities`表，但Gold SQL中实际使用的是`cards`和`legalities`，需要确认表结构是否匹配。\n\n2. **JOIN条件错误** - 预测SQL中的JOIN条件`c.uuid = l.uuid`可能不正确，应该使用`cards.uuid = legalities.uuid`。\n\n3. **聚合函数使用错误** - 预测SQL在子查询中使用了`COUNT(*)`，但没有明确指定统计字段，可能导致计数不准确。\n\n4. **自然语言理解偏差** - 预测SQL过于复杂化，Gold SQL的逻辑更清晰直接。\n\n**改进建议：**\n- 简化查询逻辑，直接使用Gold SQL的思路\n- 确认JOIN条件的字段名是否正确\n- 保持查询结构简单明了，避免不必要的CTE嵌套"
+      }
+    }
+  },
+  {
+    "qid": "529",
+    "question": "Find and list the names of sets which doesn't have Japanese translation but have Korean translation.",
+    "db": "card_games",
+    "evidence": "names of sets refers to name; doesn't have Japanese translation refers to language not like '%Japanese%'; have Korean translation refers to language = 'Korean'",
+    "gold_sql": "SELECT name FROM sets WHERE code IN ( SELECT setCode FROM set_translations WHERE language = 'Korean' AND language NOT LIKE '%Japanese%' )",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n主要问题：\n1. **表名理解错误** - 使用了不存在的表`set_translations`，实际应为`set_translation`\n2. **列名理解错误** - `language NOT LIKE '%Japanese%'`条件逻辑错误，应该用NOT EXISTS或LEFT JOIN来排除日语翻译\n3. **WHERE条件错误** - 直接在主查询中使用`language NOT LIKE '%Japanese%'`会筛选掉所有非日语记录，而非排除有日语翻译的记录\n\n**改进建议：**\n- 将`set_translations`改为`set_translation`\n- 使用NOT EXISTS子查询来排除有日语翻译的记录\n- 或者使用LEFT JOIN + IS NULL的方式实现\n\n**核心错误：** 混淆了表名且WHERE条件逻辑错误，导致无法正确筛选出\"有韩语但无日语翻译\"的集合。"
+      },
+      "s2": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n主要问题：\n1. **表名理解错误** - 使用了不存在的表名`set_translations`，实际应为`set_translation`\n2. **列名理解错误** - `language NOT LIKE '%Japanese%'`条件逻辑错误，应该用NOT EXISTS或LEFT JOIN来排除日语翻译\n3. **WHERE条件错误** - 直接在主查询中使用`language NOT LIKE '%Japanese%'`会返回所有非日语记录，而非排除有日语翻译的记录\n\n**改进建议：**\n- 使用正确的表名`set_translation`\n- 使用NOT EXISTS子查询来排除同时有日语翻译的记录\n- 或者使用LEFT JOIN + IS NULL的方式实现\n\n**核心错误：** 混淆了\"没有日语翻译\"和\"不是日语翻译\"的概念，导致逻辑完全错误。"
+      },
+      "s7": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n主要问题：\n1. **表名理解错误** - 使用了不存在的表名`set_translations`，实际应为`set_translation`\n2. **列名理解错误** - `language NOT LIKE '%Japanese%'`条件逻辑错误，应该用`NOT EXISTS`或`LEFT JOIN`来排除日语翻译\n3. **WHERE条件错误** - 直接在主查询中使用`language NOT LIKE '%Japanese%'`会筛选掉所有非日语记录，而非排除有日语翻译的记录\n\n**改进建议：**\n- 使用正确的表名`set_translation`\n- 采用子查询或JOIN方式正确实现\"有韩语但无日语\"的逻辑\n- 可以使用`NOT EXISTS`或`LEFT JOIN ... IS NULL`模式来排除有日语翻译的记录\n\n**核心错误**：将\"没有日语翻译\"理解为简单的`NOT LIKE`条件，而实际上需要通过排除机制来实现。"
+      }
+    }
+  },
+  {
+    "qid": "575",
+    "question": "What is the badge name that user 'SilentGhost' obtained?",
+    "db": "codebase_community",
+    "evidence": "\"SilentGhost\" is the DisplayName of user;",
+    "gold_sql": "SELECT T2.Name FROM users AS T1 INNER JOIN badges AS T2 ON T1.Id = T2.UserId WHERE T1.DisplayName = 'SilentGhost'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH user_badge_name AS (\n    SELECT b.Name\n    FROM badges b\n    JOIN users u ON b.UserId = u.Id\n    WHERE u.DisplayName = 'SilentGhost'\n    ORDER BY b.Name\n    LIMIT 1\n)\nSELECT * FROM user_badge_name;",
+        "reward": 0.96875,
+        "llm_analysis": "**主要问题：**\n\n1. **聚合函数使用错误**：使用了`ORDER BY b.Name LIMIT 1`，但题目只要求返回badge name，不需要排序和限制\n\n2. **自然语言理解偏差**：题目问的是\"the badge name\"（单数），但查询逻辑可能返回多个badge name\n\n**具体分析：**\n- 预测SQL添加了不必要的`ORDER BY`和`LIMIT 1`，这在逻辑上是多余的\n- 如果用户获得多个徽章，应该返回所有徽章名称，而不是限制为一个\n- 原始Gold SQL更准确地反映了问题需求\n\n**改进建议：**\n删除`ORDER BY`和`LIMIT 1`，保持与Gold SQL一致的逻辑即可。"
+      },
+      "s2": {
+        "pred_sql": "WITH user_info AS (\n    SELECT Id, DisplayName\n    FROM users\n    WHERE DisplayName = 'SilentGhost'\n)\nSELECT b.Name\nFROM badges b\nINNER JOIN user_info u ON b.UserId = u.Id\nLIMIT 1",
+        "reward": 0.9270833333333334,
+        "llm_analysis": "**主要错误原因：JOIN条件错误**\n\n预测SQL中`b.UserId = u.Id`的JOIN条件是错误的。根据Gold SQL可以看出，应该是`b.UserId = u.Id`，但实际应该用`T1.Id = T2.UserId`这样的关联方式。\n\n**具体问题：**\n- JOIN条件逻辑颠倒了：应该是用户表的Id关联到徽章表的UserId，而不是反过来\n- 预测SQL的表别名使用混乱，导致JOIN条件错误\n\n**改进建议：**\n将JOIN条件改为`b.UserId = u.Id`，或者直接使用Gold SQL的结构，避免复杂的CTE嵌套。\n\n**其他潜在问题：**\n- `LIMIT 1`可能导致遗漏多个徽章的情况（Gold SQL没有限制）\n- CTE结构复杂化了简单查询，增加了出错可能性"
+      },
+      "s7": {
+        "pred_sql": "WITH user_info AS (\n    SELECT Id, DisplayName\n    FROM users\n    WHERE DisplayName = 'SilentGhost'\n)\nSELECT \n    b.Name\nFROM badges b\nJOIN user_info ui ON b.UserId = ui.Id\nORDER BY b.Date DESC\nLIMIT 1;",
+        "reward": 0.90625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL假设需要获取\"最近获得的徽章\"，但问题是简单询问\"获得了什么徽章\"，不需要排序和限制\n\n2. **逻辑复杂化** - 使用了不必要的CTE和ORDER BY/LIMIT，将简单查询复杂化\n\n**具体问题：**\n- 多余的`ORDER BY b.Date DESC LIMIT 1`导致返回结果可能不完整\n- CTE结构增加了不必要的复杂度\n- 假设存在`Date`字段且需要最新记录，但原问题未提及此要求\n\n**改进建议：**\n直接使用Gold SQL的逻辑，或简化为：\n```sql\nSELECT b.Name \nFROM users u \nJOIN badges b ON u.Id = b.UserId \nWHERE u.DisplayName = 'SilentGhost'\n```\n\n核心是：**过度解读问题需求，添加了不必要的排序和限制条件**"
+      }
+    }
+  },
+  {
+    "qid": "586",
+    "question": "Which user added a bounty amount of 50 to the post title mentioning variance?",
+    "db": "codebase_community",
+    "evidence": "bounty amount of 50 refers to BountyAmount = 50; user refers to DisplayName; title mentioning variance refers to Title include 'variance'",
+    "gold_sql": "SELECT T3.DisplayName, T1.Title FROM posts AS T1 INNER JOIN votes AS T2 ON T1.Id = T2.PostId INNER JOIN users AS T3 ON T3.Id = T2.UserId WHERE T2.BountyAmount = 50 AND T1.Title LIKE '%variance%'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT u.DisplayName\n    FROM votes b\n    JOIN posts p ON b.PostId = p.Id\n    JOIN users u ON b.UserId = u.Id\n    WHERE b.BountyAmount = 50 \n    AND p.Title LIKE '%variance%'\n)\nSELECT DisplayName FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误：表名理解错误**\n\n预测SQL中使用了简写表名 `votes`、`posts`、`users`，但实际应该使用完整表名 `votes`、`posts`、`users`（或在FROM子句中正确声明别名）。\n\n**具体问题：**\n- `FROM votes b` 应该是 `FROM votes AS b` 或者 `FROM votes`\n- 缺少表别名声明导致语法错误\n\n**改进建议：**\n```sql\nSELECT u.DisplayName\nFROM votes b\nJOIN posts p ON b.PostId = p.Id\nJOIN users u ON b.UserId = u.Id\nWHERE b.BountyAmount = 50 \nAND p.Title LIKE '%variance%'\n```\n\n**其他潜在问题：**\n- 需要确认表名是否真的为 `votes`、`posts`、`users`（而非 `vote`、`post` 等）\n- 建议明确指定所有表的别名以避免歧义"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT DISTINCT u.DisplayName\n    FROM users u\n    INNER JOIN votes v ON u.Id = v.UserId\n    INNER JOIN posts p ON v.PostId = p.Id\n    WHERE p.Title LIKE '%variance%' AND v.BountyAmount = 50\n)\nSELECT * FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误：表名理解错误**\n\n预测SQL中的`votes`表在codebase_community数据库中应为`posthistory`或`bounties`表，而不是`votes`。根据题目描述\"bounty amount\"应该关联到专门的bounty表或post history表，而非votes表。\n\n**具体问题：**\n- `votes`表不存在或不包含`BountyAmount`字段\n- 应该使用正确的bounty相关表来获取bounty金额信息\n\n**改进建议：**\n需要确认数据库中实际存储bounty信息的表名，可能是`bounties`、`posthistory`或其他相关表，并相应调整JOIN条件和字段引用。\n\n**其他潜在问题：**\n- 查询结果只返回了用户名，但题目要求同时返回标题（SELECT T3.DisplayName, T1.Title）\n- 可能缺少对`Title`字段的正确引用验证"
+      },
+      "s7": {
+        "pred_sql": "WITH posts_with_variance AS (\n    SELECT Id, Title\n    FROM posts\n    WHERE Title LIKE '%variance%'\n)\nSELECT \n    u.DisplayName\nFROM votes v\nINNER JOIN posts_with_variance p ON v.PostId = p.Id\nINNER JOIN users u ON v.UserId = u.Id\nWHERE v.BountyAmount = 50",
+        "reward": 0.9479166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`votes`表，但实际应该使用`posthistory`表来获取bounty信息\n\n2. **列名理解错误** - `votes`表中没有`BountyAmount`字段，bounty相关信息在`posthistory`表中\n\n3. **JOIN条件错误** - 错误地将`votes`表与`posts`表关联，而应该关联`posthistory`表\n\n**改进建议：**\n```sql\nSELECT u.DisplayName\nFROM posthistory ph\nINNER JOIN posts p ON ph.PostId = p.Id\nINNER JOIN users u ON ph.UserId = u.Id\nWHERE ph.BountyAmount = 50 AND p.Title LIKE '%variance%'\n```\n\n核心问题是混淆了数据来源表，应该使用`posthistory`表而非`votes`表来获取bounty相关数据。"
+      }
+    }
+  },
+  {
+    "qid": "593",
+    "question": "How many users from New York have a teacher and supporter badge?",
+    "db": "codebase_community",
+    "evidence": "\"Supporter\" and \"Teachers\" are both Name of badge; 'New York' is the Location; user refers to UserId",
+    "gold_sql": "SELECT COUNT(DISTINCT T1.Id) FROM badges AS T1 INNER JOIN users AS T2 ON T1.UserId = T2.Id WHERE T1.Name IN ('Supporter', 'Teacher') AND T2.Location = 'New York'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH ny_users_with_both_badges AS (\n    SELECT u.Id\n    FROM users u\n    INNER JOIN badges b1 ON u.Id = b1.UserId\n    INNER JOIN badges b2 ON u.Id = b2.UserId\n    WHERE u.Location = 'New York' \n    AND b1.Name = 'Teacher' \n    AND b2.Name = 'Supporter'\n)\nSELECT COUNT(*) AS total_users\nFROM ny_users_with_both_badges;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目问的是\"have a teacher and supporter badge\"（拥有教师和支援者徽章），但预测SQL要求用户同时拥有两个徽章，这与原意不符。\n\n2. **JOIN条件错误** - 使用了两次INNER JOIN连接到badge表，但没有考虑同一用户可能拥有多个相同类型的徽章。\n\n3. **WHERE条件错误** - 用两个不同的badge表实例来分别匹配'Teacher'和'Supporter'，但没有确保是同一个人拥有这两个徽章。\n\n**改进建议：**\n将预测SQL改为使用单次JOIN并用IN条件筛选，类似Gold SQL的逻辑，或者使用EXISTS子查询来检查用户是否同时拥有两种徽章。"
+      },
+      "s2": {
+        "pred_sql": "WITH cte2 AS (\n    SELECT u.Id\n    FROM users u\n    INNER JOIN badges b ON u.Id = b.UserId\n    WHERE u.Location = 'New York' AND b.Name IN ('Teacher', 'Supporter')\n    GROUP BY u.Id\n    HAVING COUNT(DISTINCT b.Name) = 2\n)\nSELECT COUNT(*) AS answer\nFROM cte2;",
+        "reward": 0.953125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL错误理解了题目要求。题目问的是\"有多少用户同时拥有teacher和supporter徽章\"，而预测SQL使用了`HAVING COUNT(DISTINCT b.Name) = 2`来确保用户同时拥有两个徽章，这在逻辑上是正确的，但实现方式过于复杂。\n\n2. **逻辑冗余** - 使用CTE和GROUP BY/HAVING的组合来解决简单的问题，增加了复杂度且容易出错。\n\n3. **聚合函数使用错误** - `HAVING COUNT(DISTINCT b.Name) = 2`假设用户最多只能有两个徽章，如果用户有更多徽章则会被排除。\n\n**改进建议：**\n直接使用Gold SQL的思路，通过两次JOIN或使用EXISTS子查询来判断用户是否同时拥有两个徽章，避免不必要的分组操作。"
+      },
+      "s7": {
+        "pred_sql": "WITH teachers_and_supporters AS (\n    SELECT \n        u.Id AS user_id\n    FROM users u\n    JOIN badges b ON u.Id = b.UserId\n    WHERE u.Location = 'New York'\n    AND b.Name IN ('Teacher', 'Supporter')\n    GROUP BY u.Id\n    HAVING COUNT(DISTINCT b.Name) = 2\n)\nSELECT COUNT(*) AS num_users FROM teachers_and_supporters;",
+        "reward": 0.6666666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用`HAVING COUNT(DISTINCT b.Name) = 2`来确保用户同时拥有两个徽章，但这种方法逻辑不正确。如果用户有多个相同名称的徽章，COUNT会重复计算。\n\n2. **自然语言理解偏差**：题目要求的是\"同时拥有teacher和supporter徽章\"的用户数量，而预测SQL通过`HAVING COUNT(DISTINCT b.Name) = 2`来实现，这在逻辑上是错误的。\n\n**改进建议：**\n将`HAVING COUNT(DISTINCT b.Name) = 2`改为`HAVING COUNT(DISTINCT b.Name) >= 2`或使用`GROUP BY u.Id`后用`HAVING COUNT(*) = 2`来确保用户同时拥有两个不同徽章。\n\n**核心问题：** 预测SQL试图通过计数来验证用户是否同时拥有两个徽章，但没有正确处理徽章名称的唯一性约束。"
+      }
+    }
+  },
+  {
+    "qid": "600",
+    "question": "List out all post that are related to post ID 61217 and what is the popularity of this post?",
+    "db": "codebase_community",
+    "evidence": "post related refers to RelatedPostId; popularity refers to ViewCount",
+    "gold_sql": "SELECT T1.ViewCount FROM posts AS T1 INNER JOIN postLinks AS T2 ON T1.Id = T2.PostId WHERE T2.PostId = 61217",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_related_posts AS (\n    SELECT pl.PostId\n    FROM postLinks pl\n    WHERE pl.RelatedPostId = 61217\n)\nSELECT \n    r.PostId AS RelatedPostId,\n    p.ViewCount AS RelatedPostPopularity\nFROM cte_related_posts r\nJOIN posts p ON r.PostId = p.Id",
+        "reward": 0.9375,
+        "llm_analysis": "**主要错误分析：**\n\n1. **表名理解错误**：预测SQL中使用了`postLinks`表，但Gold SQL显示实际表名为`posts`和`postLinks`，且JOIN逻辑应为`T1.Id = T2.PostId`而非`r.PostId = p.Id`\n\n2. **列名理解错误**：预测SQL中的`RelatedPostId`在Gold SQL中是`PostId`字段，且需要返回的是`ViewCount`而不是`PostId`\n\n3. **JOIN条件错误**：预测SQL的JOIN条件与Gold SQL不一致，Gold SQL是通过`T1.Id = T2.PostId`关联，而预测SQL试图用`r.PostId = p.Id`反向关联\n\n4. **WHERE条件错误**：预测SQL使用`pl.RelatedPostId = 61217`，但Gold SQL使用`T2.PostId = 61217`，逻辑相反\n\n**改进建议：**\n- 理解\"related to post ID 61217\"是指该ID作为`PostId`出现在`postLinks`表中\n- 正确识别`ViewCount`是`posts`表的字段\n- 按照Gold SQL的JOIN逻辑重构查询"
+      },
+      "s2": {
+        "pred_sql": "WITH related_posts AS (\n    SELECT \n        pl.RelatedPostId AS postId,\n        p.Title,\n        p.ViewCount AS RelatedPostViewCount\n    FROM postLinks pl\n    JOIN posts p ON pl.RelatedPostId = p.Id\n    WHERE pl.PostId = 61217\n),\noriginal_post_popularity AS (\n    SELECT ViewCount AS OriginalPostViewCount\n    FROM posts\n    WHERE Id = 61217\n)\nSELECT \n    rp.postId,\n    rp.Title,\n    rp.RelatedPostViewCount,\n    opp.OriginalPostViewCount\nFROM related_posts rp\nCROSS JOIN original_post_popularity opp",
+        "reward": 0.8385416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出所有相关帖子及其流行度\"，但预测SQL返回了所有相关帖子的详细信息，而Gold SQL只返回流行度(ViewCount)\n\n2. **表名理解错误** - Gold SQL中使用的是`posts`表，但预测SQL中的`postLinks`表应该对应的是`PostLinks`表（大小写敏感）\n\n3. **逻辑不一致** - 预测SQL试图获取原始帖子的流行度并关联到每个相关帖子，但题目只需要原始帖子的流行度\n\n**核心问题：**\n预测SQL过度复杂化，添加了不必要的JOIN和CROSS JOIN，且没有正确理解题目要求的输出格式。\n\n**建议修改：**\n直接使用Gold SQL的逻辑，但注意表名大小写匹配即可。"
+      },
+      "s7": {
+        "pred_sql": "WITH related_posts AS (\n    SELECT \n        pl.PostId,\n        pl.RelatedPostId,\n        pl.LinkTypeId\n    FROM postLinks pl\n    WHERE pl.RelatedPostId = 61217\n),\npost_61217_info AS (\n    SELECT \n        p.Id,\n        p.ViewCount\n    FROM posts p\n    WHERE p.Id = 61217\n)\nSELECT \n    rp.PostId,\n    p61217.ViewCount\nFROM related_posts rp\nCROSS JOIN post_61217_info p61217\nORDER BY rp.PostId;",
+        "reward": 0.8697916666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出所有与ID 61217相关的帖子及其流行度\"，但预测SQL返回了每个相关帖子的ID和原帖子的流行度，而不是相关帖子各自的流行度。\n\n2. **逻辑错误** - 预测SQL中`CROSS JOIN`导致结果集膨胀，实际上应该用`JOIN`关联相关帖子的信息。\n\n**具体问题：**\n- 应该返回相关帖子的ViewCount，而非原帖子的ViewCount\n- `CROSS JOIN`应改为`INNER JOIN`或直接在SELECT中获取相关帖子的ViewCount\n\n**改进建议：**\n```sql\nSELECT \n    rp.PostId,\n    p.ViewCount  -- 相关帖子的流行度\nFROM postLinks rp\nINNER JOIN posts p ON rp.PostId = p.Id\nWHERE rp.RelatedPostId = 61217\nORDER BY rp.PostId;\n```"
+      }
+    }
+  },
+  {
+    "qid": "625",
+    "question": "How many users were from New York?",
+    "db": "codebase_community",
+    "evidence": "New York refers to Location;",
+    "gold_sql": "SELECT COUNT(Id) FROM users WHERE Location = 'New York'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "SELECT COUNT(*) AS user_count\nFROM users\nWHERE Location IS NOT NULL \nAND (Location LIKE '%New York%' OR Location LIKE '%NY%')",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL将\"New York\"理解为模糊匹配，而题目明确要求精确匹配\n\n2. **证据信息利用不足** - 没有充分利用\"New York refers to Location\"这一关键证据，而是采用了过于宽泛的LIKE条件\n\n3. **WHERE条件错误** - 使用了不必要的`Location IS NOT NULL`和复杂的LIKE模式匹配，增加了错误风险\n\n**改进建议：**\n- 直接使用精确匹配 `Location = 'New York'`\n- 删除不必要的NULL检查和模糊匹配条件\n- 保持与Gold SQL一致的简单逻辑\n\n**核心问题：** 过度复杂化了简单的精确匹配需求，偏离了题目的实际要求。"
+      },
+      "s2": {
+        "pred_sql": "SELECT COUNT(*) AS answer\nFROM users\nWHERE Location LIKE '%New York%';",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n4. **WHERE条件错误** - 使用了`LIKE '%New York%'`而不是精确匹配`='New York'`\n\n**具体分析：**\n- 预测SQL使用了模糊匹配`LIKE '%New York%'`，这会匹配包含\"New York\"的所有记录（如\"New York City\"、\"New York State\"等），而题目要求的是精确匹配\"New York\"\n- 证据明确指出\"New York refers to Location\"，但预测SQL没有正确应用这个信息\n\n**改进建议：**\n将`WHERE Location LIKE '%New York%'`改为`WHERE Location = 'New York'`即可正确解决问题。"
+      },
+      "s7": {
+        "pred_sql": "WITH ny_users AS (\n    SELECT \n        COUNT(*) as ny_user_count\n    FROM users\n    WHERE `Location` LIKE '%New York%' OR `Location` LIKE '%NY%'\n)\nSELECT * FROM ny_users;",
+        "reward": 0.7916666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误** - 使用了模糊匹配(`LIKE '%New York%'`)而不是精确匹配(`=`)，会导致统计包含\"New York\"但不完全等于\"New York\"的记录\n\n2. **自然语言理解偏差** - 题目明确说\"New York refers to Location\"，但预测SQL没有严格按照这个定义执行\n\n3. **证据信息利用不足** - 没有充分利用\"New York refers to Location\"这一关键证据，而是采用了过于宽泛的匹配逻辑\n\n**改进建议：**\n将WHERE条件改为精确匹配：`WHERE Location = 'New York'`，保持与Gold SQL一致。"
+      }
+    }
+  },
+  {
+    "qid": "631",
+    "question": "How many posts were created by Daniel Vassallo?",
+    "db": "codebase_community",
+    "evidence": "DisplayName = 'Daniel Vassallo';",
+    "gold_sql": "SELECT COUNT(T1.Id) FROM users AS T1 INNER JOIN postHistory AS T2 ON T1.Id = T2.UserId WHERE T1.DisplayName = 'Daniel Vassallo'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH user_id AS (\n    SELECT Id\n    FROM users\n    WHERE DisplayName = 'Daniel Vassallo'\n)\nSELECT COUNT(*) AS total_posts\nFROM posts\nWHERE OwnerUserId = (SELECT Id FROM user_id);",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`posts`表，但实际应该使用`postHistory`表来统计帖子创建记录\n\n2. **列名理解错误** - 使用了`OwnerUserId`，但应该是`UserId`来关联用户和帖子历史记录\n\n3. **逻辑错误** - 预测SQL试图通过子查询获取用户ID，但没有正确理解题目要求（统计创建的帖子数量）\n\n**改进建议：**\n将表名从`posts`改为`postHistory`，列名从`OwnerUserId`改为`UserId`，并保持与Gold SQL相同的逻辑结构。"
+      },
+      "s2": {
+        "pred_sql": "WITH user_id AS (\n    SELECT Id\n    FROM users\n    WHERE DisplayName = 'Daniel Vassallo'\n)\nSELECT COUNT(*) AS post_count\nFROM posts\nWHERE OwnerUserId = (SELECT Id FROM user_id);",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`posts`表，但实际应该使用`postHistory`表来统计帖子创建记录\n\n2. **列名理解错误** - 使用了`OwnerUserId`，但正确应该是`UserId`（在postHistory表中）\n\n3. **JOIN条件错误** - 预测SQL完全放弃了JOIN逻辑，而Gold SQL正确使用了INNER JOIN\n\n4. **WHERE条件错误** - 条件判断逻辑错误，应该基于用户ID关联到postHistory表\n\n**改进建议：**\n- 应该使用`postHistory`表而不是`posts`表\n- 应该使用`UserId`而不是`OwnerUserId`\n- 保持正确的JOIN逻辑或使用子查询获取用户ID后关联到postHistory表"
+      },
+      "s7": {
+        "pred_sql": "WITH user_info AS (\n    SELECT Id, DisplayName\n    FROM users\n    WHERE DisplayName = 'Daniel Vassallo'\n)\nSELECT COUNT(*) AS total_posts\nFROM posts p\nJOIN user_info u ON p.OwnerUserId = u.Id;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`posts`表，但实际应该使用`postHistory`表来统计帖子创建数量\n\n2. **JOIN条件错误** - 使用了`p.OwnerUserId = u.Id`，但根据Gold SQL应该是`T2.UserId = T1.Id`的关联关系\n\n3. **字段映射错误** - `postHistory`表中记录的是用户创建历史，不是直接的帖子表\n\n**改进建议：**\n```sql\nWITH user_info AS (\n    SELECT Id, DisplayName\n    FROM users\n    WHERE DisplayName = 'Daniel Vassallo'\n)\nSELECT COUNT(*) AS total_posts\nFROM postHistory ph\nJOIN user_info u ON ph.UserId = u.Id;\n```"
+      }
+    }
+  },
+  {
+    "qid": "653",
+    "question": "What is the owner's display name of the most popular post?",
+    "db": "codebase_community",
+    "evidence": "Higher view count means the post has higher popularity; the most popular post refers to MAX(ViewCount);",
+    "gold_sql": "SELECT DisplayName FROM users WHERE Id = ( SELECT OwnerUserId FROM posts ORDER BY ViewCount DESC LIMIT 1 )",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH most_popular_post_owner AS (\n    SELECT OwnerDisplayName\n    FROM posts\n    ORDER BY ViewCount DESC\n    LIMIT 1\n)\nSELECT * FROM most_popular_post_owner;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：预测SQL中使用了`OwnerDisplayName`，但实际表中存储的是`OwnerUserId`，需要通过JOIN关联获取用户显示名称\n\n2. **自然语言理解偏差**：题目要求的是\"owner's display name\"（所有者显示名称），而预测SQL直接从posts表取值，没有进行用户表关联\n\n**具体问题：**\n- posts表中只有`OwnerUserId`字段，没有`OwnerDisplayName`\n- 需要通过`OwnerUserId`关联users表的`Id`字段获取`DisplayName`\n\n**改进建议：**\n将预测SQL改为：\n```sql\nWITH most_popular_post_owner AS (\n    SELECT p.OwnerUserId\n    FROM posts p\n    ORDER BY p.ViewCount DESC\n    LIMIT 1\n)\nSELECT u.DisplayName \nFROM users u \nJOIN most_popular_post_owner m ON u.Id = m.OwnerUserId;\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH most_popular_post AS (\n    SELECT OwnerDisplayName\n    FROM posts\n    ORDER BY ViewCount DESC\n    LIMIT 1\n)\nSELECT * FROM most_popular_post;",
+        "reward": 0.9427083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：预测SQL中使用了`OwnerDisplayName`，但实际表中存储的是`OwnerUserId`，需要通过JOIN关联获取显示名称\n\n2. **自然语言理解偏差**：题目要求的是\"owner's display name\"，而预测SQL直接从posts表取值，没有进行用户信息关联\n\n**具体问题：**\n- posts表中只有`OwnerUserId`字段，没有`OwnerDisplayName`字段\n- 缺少与users表的JOIN操作来获取显示名称\n- 查询逻辑不完整，未实现\"通过用户ID获取用户名\"的转换过程\n\n**改进建议：**\n使用Gold SQL的正确逻辑，先通过posts表找到最高浏览量帖子的OwnerUserId，再通过users表关联获取DisplayName"
+      },
+      "s7": {
+        "pred_sql": "WITH top_post AS (\n    SELECT Id, OwnerUserId, ViewCount, OwnerDisplayName\n    FROM posts\n    ORDER BY ViewCount DESC\n    LIMIT 1\n)\nSELECT OwnerDisplayName\nFROM top_post;",
+        "reward": 1.0,
+        "llm_analysis": "**主要问题：列名理解错误**\n\n预测SQL中使用了`OwnerDisplayName`列，但根据题目描述和Gold SQL，正确的做法是通过`OwnerUserId`关联到users表获取`DisplayName`。在posts表中并不存在`OwnerDisplayName`字段。\n\n**具体分析：**\n- Gold SQL正确地使用了`OwnerUserId`作为关联键，然后通过子查询获取用户ID再查询用户显示名称\n- 预测SQL假设posts表中有`OwnerDisplayName`列，但实际上该列不存在\n- 这是典型的\"自然语言理解偏差\"，将题目中的\"owner's display name\"误认为是posts表中的字段\n\n**改进建议：**\n删除预测SQL中的`OwnerDisplayName`列，改为使用`OwnerUserId`关联users表获取`DisplayName`，与Gold SQL保持一致。"
+      }
+    }
+  },
+  {
+    "qid": "656",
+    "question": "Describe the display name of the parent ID for child post with the highest score.",
+    "db": "codebase_community",
+    "evidence": "If the parent id is not null, the post is the child post; the highest score refers to MAX(Score);",
+    "gold_sql": "SELECT DisplayName FROM users WHERE Id = ( SELECT OwnerUserId FROM posts WHERE ParentId IS NOT NULL ORDER BY Score DESC LIMIT 1 )",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "SELECT p.OwnerDisplayName\nFROM posts p\nWHERE p.Id = (\n    SELECT c.ParentId \n    FROM posts c \n    WHERE c.ParentId IS NOT NULL \n    ORDER BY c.Score DESC \n    LIMIT 1\n)",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`posts`表来获取`OwnerDisplayName`，但`OwnerDisplayName`实际上存在于`users`表中\n\n2. **列名理解错误** - `posts`表中没有`OwnerDisplayName`列，应该从`users`表中获取\n\n3. **逻辑关系错误** - 预测SQL试图通过`ParentId`反向查找，但题目要求的是找到最高分子帖子的作者姓名\n\n**具体问题：**\n- 错误地假设`posts`表包含用户显示名称\n- 查询逻辑颠倒：应该先找最高分子帖子，再关联到用户表获取显示名称\n- 没有正确理解\"parent ID is not null\"表示子帖子的含义\n\n**改进建议：**\n使用Gold SQL的逻辑结构，先在posts表中找到最高分的子帖子，然后通过OwnerUserId关联到users表获取DisplayName。"
+      },
+      "s2": {
+        "pred_sql": "WITH highest_scoring_child AS (\n    SELECT ParentId\n    FROM posts\n    WHERE ParentId IS NOT NULL\n    ORDER BY Score DESC\n    LIMIT 1\n)\nSELECT p.OwnerDisplayName\nFROM posts p\nINNER JOIN highest_scoring_child hsc ON p.Id = hsc.ParentId;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：预测SQL中使用了`p.OwnerDisplayName`，但实际表中没有这个字段，应该是`DisplayName`\n\n2. **JOIN条件错误**：使用`p.Id = hsc.ParentId`进行连接是错误的，应该连接的是`posts`表的`OwnerUserId`与`users`表的`Id`\n\n3. **逻辑不一致**：预测SQL试图通过子查询获取ParentId，然后在posts表中查找DisplayName，但posts表中没有DisplayName字段，需要关联users表\n\n**改进建议：**\n```sql\nWITH highest_scoring_child AS (\n    SELECT OwnerUserId\n    FROM posts\n    WHERE ParentId IS NOT NULL\n    ORDER BY Score DESC\n    LIMIT 1\n)\nSELECT u.DisplayName\nFROM users u\nINNER JOIN highest_scoring_child hsc ON u.Id = hsc.OwnerUserId;\n```"
+      },
+      "s7": {
+        "pred_sql": "WITH child_posts AS (\n    SELECT \n        Id,\n        ParentId,\n        Score\n    FROM posts\n    WHERE ParentId IS NOT NULL\n)\nSELECT \n    p.OwnerDisplayName\nFROM child_posts cp\nJOIN posts p ON cp.ParentId = p.Id\nORDER BY cp.Score DESC\nLIMIT 1;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：预测SQL中使用了`p.OwnerDisplayName`，但实际表中应该是`DisplayName`字段\n\n2. **JOIN条件错误**：JOIN逻辑混乱，应该用`cp.Id = p.OwnerUserId`而不是`cp.ParentId = p.Id`\n\n3. **自然语言理解偏差**：题目要求的是\"父ID的显示名称\"，即父帖子作者的显示名称，而非子帖子的显示名称\n\n**改进方案：**\n```sql\nWITH child_posts AS (\n    SELECT \n        Id,\n        ParentId,\n        Score,\n        OwnerUserId\n    FROM posts\n    WHERE ParentId IS NOT NULL\n)\nSELECT \n    u.DisplayName\nFROM child_posts cp\nJOIN users u ON cp.OwnerUserId = u.Id\nORDER BY cp.Score DESC\nLIMIT 1;\n```"
+      }
+    }
+  },
+  {
+    "qid": "720",
+    "question": "Please list the full names of all the superheroes with over 15 super powers.",
+    "db": "superhero",
+    "evidence": "15 super powers refers to COUNT(full_name) > 15",
+    "gold_sql": "SELECT DISTINCT T1.full_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id GROUP BY T1.full_name HAVING COUNT(T2.power_id) > 15",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_heroes_with_many_powers AS (\n    SELECT s.full_name\n    FROM superhero s\n    JOIN hero_power hp ON s.id = hp.hero_id\n    GROUP BY s.id, s.full_name\n    HAVING COUNT(hp.power_id) > 15\n    AND s.full_name IS NOT NULL\n    AND s.full_name != '-'\n)\nSELECT full_name FROM cte_heroes_with_many_powers;",
+        "reward": 0.9739583333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL中使用了`COUNT(hp.power_id) > 15`，但题目要求是\"超过15个超能力\"，应该用`COUNT(*)`或`COUNT(hp.power_id)`，但关键问题是GROUP BY的字段选择。\n\n2. **GROUP BY字段不完整**：预测SQL使用了`GROUP BY s.id, s.full_name`，但实际应该只按`s.full_name`分组，因为需要统计每个英雄的超能力数量。\n\n3. **WHERE条件多余**：添加了不必要的`AND s.full_name IS NOT NULL AND s.full_name != '-'`条件。\n\n**改进建议：**\n```sql\nWITH cte_heroes_with_many_powers AS (\n    SELECT s.full_name\n    FROM superhero s\n    JOIN hero_power hp ON s.id = hp.hero_id\n    GROUP BY s.full_name  -- 只按姓名分组\n    HAVING COUNT(hp.power_id) > 15  -- 统计超能力数量\n)\nSELECT full_name FROM cte_heroes_with_many_powers;\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH cte5 AS (\n    SELECT s.full_name\n    FROM superhero s\n    LEFT JOIN hero_power hp ON s.id = hp.hero_id\n    GROUP BY s.id, s.full_name\n    HAVING COUNT(hp.power_id) > 15\n)\nSELECT * FROM cte5;",
+        "reward": 0.9895833333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`COUNT(hp.power_id)`而不是`COUNT(*)`或`COUNT(T2.power_id)`，在LEFT JOIN情况下可能导致计数不准确\n\n2. **GROUP BY字段不完整**：`GROUP BY s.id, s.full_name`中包含了`s.id`，但题目要求的是按姓名分组，应该只用`s.full_name`\n\n3. **HAVING条件逻辑错误**：虽然条件写法正确，但GROUP BY的字段选择影响了最终结果的准确性\n\n**改进建议：**\n将GROUP BY改为仅包含`s.full_name`，并确保COUNT函数正确统计每个英雄的超能力数量。\n\n```sql\nWITH cte5 AS (\n    SELECT s.full_name\n    FROM superhero s\n    LEFT JOIN hero_power hp ON s.id = hp.hero_id\n    GROUP BY s.full_name  -- 只按姓名分组\n    HAVING COUNT(hp.power_id) > 15  -- 正确统计超能力数量\n)\nSELECT * FROM cte5;\n```"
+      },
+      "s7": {
+        "pred_sql": "WITH superheroes_with_many_powers AS (\n    SELECT \n        h.full_name\n    FROM superhero h\n    LEFT JOIN hero_power hp ON h.id = hp.hero_id\n    GROUP BY h.id, h.full_name\n    HAVING COUNT(hp.power_id) > 15\n    AND h.full_name != '-'\n    ORDER BY h.full_name\n)\nSELECT * FROM superheroes_with_many_powers;",
+        "reward": 0.8802083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`COUNT(hp.power_id)`而不是`COUNT(*)`或`COUNT(hp.power_id)`，但更重要的是GROUP BY中包含了h.id，这会导致每个英雄只返回一行，而题目要求的是统计所有超能力数量。\n\n2. **自然语言理解偏差**：题目说\"15 super powers refers to COUNT(full_name) > 15\"，但实际应该是`COUNT(power_id) > 15`，预测SQL误解了这个逻辑关系。\n\n3. **WHERE条件错误**：添加了`h.full_name != '-'`的过滤条件，这在原题中没有提及，属于不必要的限制。\n\n**改进建议：**\n- 删除不必要的`h.full_name != '-'`条件\n- 确保GROUP BY只包含`h.full_name`（如果需要去重）\n- 保持`COUNT(hp.power_id) > 15`的正确逻辑\n\n**核心问题**：对\"15 super powers\"的理解有误，应该统计power_id的数量而非full_name的数量。"
+      }
+    }
+  },
+  {
+    "qid": "726",
+    "question": "Rank heroes published by Marvel Comics by their height in descending order.",
+    "db": "superhero",
+    "evidence": "name refers to superhero_name; the tallest hero refers to MAX(height_cm); published by Marvel Comics refers to publisher_name = 'Marvel Comics'",
+    "gold_sql": "SELECT superhero_name, height_cm, RANK() OVER (ORDER BY height_cm DESC) AS HeightRank FROM superhero INNER JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'Marvel Comics'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH marvel_heroes AS (\n    SELECT s.id, s.superhero_name, s.height_cm\n    FROM superhero s\n    JOIN publisher p ON s.publisher_id = p.id\n    WHERE p.publisher_name = 'Marvel Comics'\n)\nSELECT superhero_name\nFROM marvel_heroes\nORDER BY height_cm DESC;",
+        "reward": 0.921875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"Rank heroes...by their height\"，需要显示排名，但预测SQL只选择了姓名，未包含排名列\n\n2. **证据信息利用不足** - 题目明确要求\"Rank()\"函数，但预测SQL完全忽略了排名逻辑\n\n3. **功能实现不完整** - 缺少排名计算，仅实现了筛选和排序，没有满足题目核心要求\n\n**改进建议：**\n在预测SQL中添加`RANK() OVER (ORDER BY height_cm DESC)`排名计算，并将排名作为结果列返回，同时保留原有的WITH子句结构。"
+      },
+      "s2": {
+        "pred_sql": "WITH cte1 AS (\n    SELECT s.superhero_name, s.height_cm, p.publisher_name\n    FROM superhero s\n    INNER JOIN publisher p ON s.publisher_id = p.id\n    WHERE p.publisher_name = 'Marvel Comics'\n)\nSELECT \n    superhero_name\nFROM cte1\nORDER BY height_cm DESC;",
+        "reward": 0.8541666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"按高度排名\"，但预测SQL只做了排序，没有使用RANK()函数\n\n2. **证据信息利用不足** - 没有使用题目明确给出的\"RANK() OVER (ORDER BY height_cm DESC)\"要求\n\n3. **功能实现错误** - 缺少排名逻辑，仅实现了简单的ORDER BY排序\n\n**改进建议：**\n在预测SQL中添加RANK()函数，并确保返回所有需要的列（superhero_name, height_cm, HeightRank），而不是仅仅返回superhero_name。"
+      },
+      "s7": {
+        "pred_sql": "WITH marvel_heroes AS (\n    SELECT \n        s.id,\n        s.superhero_name,\n        s.height_cm,\n        p.publisher_name\n    FROM superhero s\n    JOIN publisher p ON s.publisher_id = p.id\n    WHERE p.publisher_name = 'Marvel Comics'\n    AND s.height_cm IS NOT NULL\n    ORDER BY s.height_cm DESC\n),\nranked_marvel_heroes AS (\n    SELECT \n        id,\n        superhero_name,\n        height_cm,\n        ROW_NUMBER() OVER (ORDER BY height_cm DESC) AS rank\n    FROM marvel_heroes\n)\nSELECT \n    superhero_name,\n    height_cm,\n    rank\nFROM ranked_marvel_heroes;",
+        "reward": 0.9166666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求的是\"Rank\"（排名），但预测SQL使用了`ROW_NUMBER()`，这会为相同高度的英雄分配不同排名，而题目应该使用`RANK()`或`DENSE_RANK()`。\n\n2. **证据信息利用不足** - 题目明确提到\"MAX(height_cm)\"用于确定最高英雄，但预测SQL没有体现这一逻辑，而是通过排序来实现排名。\n\n3. **列名理解错误** - 预测SQL中使用了`id`字段，但题目只涉及`superhero_name`、`height_cm`等字段，`id`在最终输出中无意义。\n\n**改进建议：**\n将`ROW_NUMBER()`改为`RANK()`，并移除不必要的`id`字段，保持与Gold SQL一致的逻辑结构。"
+      }
+    }
+  },
+  {
+    "qid": "772",
+    "question": "List the eyes, hair and skin colour of all female superheroes published by Dark Horse Comics.",
+    "db": "superhero",
+    "evidence": "eyes refers to eye_colour_id; hair refers to hair_colour_id; skin colour refers to skin_colour_id; female superheroes refers to gender = 'Female'; published by Dark Horse Comics refers to publisher_name = 'Dark Horse Comics';",
+    "gold_sql": "SELECT T1.eye_colour_id, T1.hair_colour_id, T1.skin_colour_id FROM superhero AS T1 INNER JOIN publisher AS T2 ON T2.id = T1.publisher_id INNER JOIN gender AS T3 ON T3.id = T1.gender_id WHERE T2.publisher_name = 'Dark Horse Comics' AND T3.gender = 'Female'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_final_result AS (\n    SELECT \n        c1.colour AS eyes,\n        c2.colour AS hair,\n        c3.colour AS skin\n    FROM superhero s\n    JOIN colour c1 ON s.eye_colour_id = c1.id\n    JOIN colour c2 ON s.hair_colour_id = c2.id\n    JOIN colour c3 ON s.skin_colour_id = c3.id\n    JOIN gender g ON s.gender_id = g.id\n    JOIN publisher p ON s.publisher_id = p.id\n    WHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics'\n)\nSELECT eyes, hair, skin FROM cte_final_result;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中假设存在`colour`表来存储颜色信息，但根据Gold SQL可以看出应该使用`eye_colour`、`hair_colour`、`skin_colour`等具体颜色表，而不是一个通用的`colour`表。\n\n2. **列名理解错误** - 预测SQL中的`c1.colour`、`c2.colour`、`c3.colour`在实际数据库结构中并不存在，应该是`eye_colour`、`hair_colour`、`skin_colour`表中的具体字段。\n\n**改进建议：**\n将预测SQL中的`colour`表替换为正确的颜色表（`eye_colour`、`hair_colour`、`skin_colour`），并使用正确的字段名。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_result AS (\n    SELECT c1.colour AS eyes, c2.colour AS hair, c3.colour AS skin\n    FROM superhero s\n    JOIN gender g ON s.gender_id = g.id\n    JOIN publisher p ON s.publisher_id = p.id\n    JOIN colour c1 ON s.eye_colour_id = c1.id\n    JOIN colour c2 ON s.hair_colour_id = c2.id\n    JOIN colour c3 ON s.skin_colour_id = c3.id\n    WHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics'\n)\nSELECT eyes, hair, skin FROM final_result;",
+        "reward": 0.7083333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中假设存在`colour`表来存储颜色名称，但Gold SQL显示应该直接使用`eye_colour_id`, `hair_colour_id`, `skin_colour_id`作为ID字段，而不是通过JOIN `colour`表获取颜色名称。\n\n2. **列名理解错误** - 预测SQL中的`c1.colour`、`c2.colour`、`c3.colour`在Gold SQL中并不存在，应该是直接返回ID值。\n\n**具体问题：**\n- Gold SQL要求返回的是颜色ID（eye_colour_id, hair_colour_id, skin_colour_id），而预测SQL试图通过JOIN colour表获取颜色名称\n- 预测SQL多出了不必要的JOIN操作和字段引用\n\n**改进建议：**\n直接按照Gold SQL的逻辑，返回原始的三个ID字段即可，无需JOIN colour表。"
+      },
+      "s7": {
+        "pred_sql": "WITH final_result AS (\n    SELECT \n        c1.colour AS eyes,\n        c2.colour AS hair,\n        c3.colour AS skin_colour\n    FROM superhero s\n    JOIN gender g ON s.gender_id = g.id\n    JOIN publisher p ON s.publisher_id = p.id\n    JOIN colour c1 ON s.eye_colour_id = c1.id\n    JOIN colour c2 ON s.hair_colour_id = c2.id\n    JOIN colour c3 ON s.skin_colour_id = c3.id\n    WHERE g.gender = 'Female' \n    AND p.publisher_name = 'Dark Horse Comics'\n)\nSELECT * FROM final_result;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中假设存在`colour`表来存储颜色值，但Gold SQL显示实际使用的是`eye_colour`、`hair_colour`、`skin_colour`等具体颜色表\n\n2. **列名理解错误** - 预测SQL使用了`c1.colour`、`c2.colour`等列名，但根据证据描述，应该直接返回`eye_colour_id`、`hair_colour_id`、`skin_colour_id`这些ID值\n\n**核心问题：**\n预测SQL错误地假设需要通过JOIN颜色表获取颜色名称，而实际上题目要求的就是颜色ID值本身。\n\n**改进建议：**\n删除所有与`colour`表相关的JOIN，直接使用Gold SQL中的字段引用方式，保持返回原始ID值。"
+      }
+    }
+  },
+  {
+    "qid": "812",
+    "question": "List down at least five full names of superheroes with blue eyes.",
+    "db": "superhero",
+    "evidence": "blue eyes refers to colour.colour = 'Blue' WHERE eye_colour_id = colour.id; Name of superheroes refers to superhero_name;",
+    "gold_sql": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.eye_colour_id = T2.id WHERE T2.colour = 'Blue' LIMIT 5",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_blue_eyes AS (\n    SELECT id\n    FROM colour\n    WHERE colour = 'Blue'\n)\nSELECT s.full_name\nFROM superhero s\nINNER JOIN cte_blue_eyes c ON s.eye_colour_id = c.id\nORDER BY s.full_name\nLIMIT 5;",
+        "reward": 0.9947916666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误** - 预测SQL使用了`full_name`列，但实际数据库表中是`superhero_name`\n\n2. **表名理解错误** - 预测SQL中的`superhero`表名与Gold SQL一致，但`colour`表名也应保持一致\n\n3. **JOIN条件错误** - 使用CTE后仍需确保JOIN条件正确，虽然逻辑上可行但不如直接JOIN清晰\n\n4. **排序逻辑错误** - 预测SQL添加了`ORDER BY s.full_name`，但原问题是\"列出至少五个全名\"，不需要排序\n\n5. **自然语言理解偏差** - 将\"full names\"理解为需要额外处理，实际上就是直接选择`superhero_name`\n\n**改进建议：**\n- 直接使用`superhero_name`而非`full_name`\n- 去除不必要的ORDER BY子句\n- 保持与Gold SQL相同的结构和逻辑"
+      },
+      "s2": {
+        "pred_sql": "WITH blue_eyed_heroes AS (\n    SELECT s.full_name\n    FROM superhero s\n    WHERE s.eye_colour_id = 7\n)\nSELECT full_name\nFROM blue_eyed_heroes\nLIMIT 5;",
+        "reward": 1.0,
+        "llm_analysis": "**预测SQL错误分析：**\n\n1. **表名理解错误** - 使用了`superhero`表，但查询中引用的是`full_name`列，而实际表结构中应为`superhero_name`\n\n2. **列名理解错误** - `full_name`列在superhero表中不存在，应该使用`superhero_name`\n\n3. **JOIN条件错误** - 直接使用硬编码的`eye_colour_id = 7`，没有通过JOIN关联colour表获取正确的颜色ID\n\n4. **WHERE条件错误** - 硬编码颜色ID(7)不具有通用性，无法正确识别蓝色眼睛\n\n5. **自然语言理解偏差** - 将\"blue eyes\"理解为固定ID值，而非通过颜色表关联查询\n\n**改进建议：**\n- 使用JOIN连接colour表而不是硬编码ID\n- 使用正确的列名`superhero_name`\n- 保持与Gold SQL相同的逻辑结构"
+      },
+      "s7": {
+        "pred_sql": "WITH colour_lookup AS (\n    SELECT id, colour\n    FROM colour\n    WHERE colour = 'Blue'\n)\nSELECT s.full_name\nFROM superhero s\nJOIN colour_lookup cl ON s.eye_colour_id = cl.id\nWHERE s.full_name IS NOT NULL \nAND s.full_name != '-'\nORDER BY s.full_name\nLIMIT 5;",
+        "reward": 0.90625,
+        "llm_analysis": "**主要错误分析：**\n\n1. **表名理解错误** - 预测SQL中使用了`superhero s`，但实际表名为`superhero`，且缺少`full_name`字段（应为`superhero_name`）\n\n2. **列名理解错误** - 使用了`full_name`列，但数据库中实际列名为`superhero_name`\n\n3. **JOIN条件错误** - 预测SQL中的JOIN逻辑与Gold SQL不一致，且缺少对蓝色眼睛的过滤\n\n4. **WHERE条件错误** - 多余的`WHERE s.full_name IS NOT NULL AND s.full_name != '-'`条件，与原问题无关\n\n5. **自然语言理解偏差** - 将\"full names\"理解为`full_name`而非`superhero_name`\n\n**改进建议：**\n- 使用正确的表名和列名：`superhero_name`代替`full_name`\n- 简化WHERE条件，只保留必要的过滤\n- 保持与Gold SQL一致的JOIN逻辑\n- 删除不必要的条件过滤"
+      }
+    }
+  },
+  {
+    "qid": "860",
+    "question": "For the driver who had the Q2 time as 0:01:40 in the qualifying race No. 355, what is his nationality?",
+    "db": "formula_1",
+    "evidence": "race number refers to raceId;",
+    "gold_sql": "SELECT DISTINCT T2.nationality FROM qualifying AS T1 INNER JOIN drivers AS T2 ON T2.driverId = T1.driverId WHERE T1.raceId = 355 AND T1.q2 LIKE '1:40%'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_closest_driver AS (\n    SELECT q.driverId\n    FROM qualifying q\n    WHERE q.raceId = 355\n    ORDER BY ABS(\n        CAST(SUBSTR(q.q2, 1, INSTR(q.q2, ':') - 1) AS REAL) * 60 + \n        CAST(SUBSTR(q.q2, INSTR(q.q2, ':') + 1, INSTR(q.q2, '.') - INSTR(q.q2, ':') - 1) AS REAL) +\n        CAST(SUBSTR(q.q2, INSTR(q.q2, '.') + 1) AS REAL) / 1000 - 100\n    )\n    LIMIT 1\n)\nSELECT d.nationality\nFROM drivers d\nINNER JOIN cte_closest_driver cd ON d.driverId = cd.driverId;",
+        "reward": 0.07291666666666667,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目明确要求\"Q2 time as 0:01:40\"，但预测SQL使用了模糊匹配`LIKE '1:40%'`，这会匹配所有以\"1:40\"开头的时间，包括\"1:40:00\"、\"1:40:12\"等，不符合精确查找要求。\n\n2. **时间格式处理错误** - 预测SQL试图通过复杂的字符串解析来计算时间差，但题目中时间格式是标准的\"MM:SS.mmm\"格式，应该直接使用精确匹配而非计算差异。\n\n3. **逻辑复杂化** - 使用CTE和复杂的时间计算完全没有必要，题目只需要精确匹配特定时间值。\n\n**改进建议：**\n将WHERE条件改为精确匹配`T1.q2 = '1:40.000'`或`T1.q2 = '0:01:40'`（根据实际数据格式），去掉复杂的CTE和时间计算逻辑，直接使用Gold SQL的思路即可。"
+      },
+      "s2": {
+        "pred_sql": "WITH driver_nationality AS (\n    SELECT d.nationality\n    FROM qualifying q\n    JOIN drivers d ON q.driverId = d.driverId\n    WHERE q.raceId = 355\n    AND q.q2 = '1:40.060'\n)\nSELECT nationality FROM driver_nationality;",
+        "reward": 0.10416666666666667,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误** - 预测SQL使用了精确匹配 `q.q2 = '1:40.060'`，而题目要求的是模糊匹配 `q2 LIKE '1:40%'`，导致无法找到符合条件的记录。\n\n2. **证据信息利用不足** - 题目明确提到Q2时间为\"0:01:40\"，但预测SQL却使用了\"1:40.060\"这个具体值，没有正确理解时间格式。\n\n**改进建议：**\n将WHERE条件改为 `q.q2 LIKE '1:40%'` 即可解决问题。"
+      },
+      "s7": {
+        "pred_sql": "WITH qualifying_record AS (\n    SELECT \n        q.driverId\n    FROM qualifying q\n    WHERE q.raceId = 355 \n    AND q.q2 = '1:40.060'\n)\nSELECT \n    d.nationality\nFROM drivers d\nINNER JOIN qualifying_record qr ON d.driverId = qr.driverId;",
+        "reward": 0.03125,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误** - 题目中Q2时间是\"0:01:40\"，但预测SQL使用了\"1:40.060\"作为精确匹配条件，时间格式不一致\n\n2. **WHERE条件错误** - 使用了精确等于\"=\"而不是模糊匹配\"LIKE\"，导致无法匹配到实际数据\n\n3. **自然语言理解偏差** - 题目中的\"0:01:40\"应理解为时间格式，但预测SQL将其当作具体数值处理\n\n**改进建议：**\n将WHERE条件改为 `q.q2 LIKE '1:40%'` 或者根据实际数据格式调整匹配条件，保持与Gold SQL一致的模糊匹配方式。"
+      }
+    }
+  },
+  {
+    "qid": "896",
+    "question": "Calculate the percentage whereby Hamilton was not at the 1st track of the the f1 circuit since 2010.",
+    "db": "formula_1",
+    "evidence": "percentage = DIVIDE(COUNT(raceId) where surname = 'Hamilton' and position>1), (COUNT(raceId) where surname = 'Hamilton'); since 2010 refers to year >= 2010",
+    "gold_sql": "SELECT CAST(COUNT(CASE WHEN T2.position <> 1 THEN T2.position END) AS REAL) * 100 / COUNT(T2.driverStandingsId) FROM races AS T1 INNER JOIN driverStandings AS T2 ON T2.raceId = T1.raceId INNER JOIN drivers AS T3 ON T3.driverId = T2.driverId WHERE T3.surname = 'Hamilton' AND T1.year >= 2010",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH hamilton_races AS (\n    SELECT r.raceId, r.year, res.position\n    FROM results res\n    JOIN races r ON res.raceId = r.raceId\n    WHERE res.driverId = 1 AND r.year >= 2010\n)\nSELECT \n    CAST(COUNT(CASE WHEN position > 1 THEN 1 END) AS FLOAT) * 100 / COUNT(*) AS percentage\nFROM hamilton_races;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 使用了`results`表，但实际应该使用`driverStandings`表来获取位置信息\n\n2. **列名理解错误** - `results`表中没有`position`字段，应该使用`driverStandings`表中的相应字段\n\n3. **JOIN条件错误** - 没有正确关联驱动器ID，使用了硬编码的`driverId = 1`\n\n4. **自然语言理解偏差** - 证据中明确提到\"since 2010 refers to year >= 2010\"，但预测SQL中使用了`r.year >= 2010`，这实际上是正确的，但整体逻辑错误\n\n**改进建议：**\n- 使用正确的表结构（driverStandings）\n- 正确关联drivers表获取Hamilton的driverId\n- 使用正确的字段名（position字段在driverStandings中）\n- 确保聚合函数计算逻辑正确\n\n**核心问题：** 预测SQL完全偏离了原始问题的表结构和数据模型，选择了错误的数据源表。"
+      },
+      "s2": {
+        "pred_sql": "WITH hamilton_races AS (\n    SELECT r.raceId, r.year, res.position\n    FROM results res\n    INNER JOIN races r ON res.raceId = r.raceId\n    INNER JOIN drivers d ON res.driverId = d.driverId\n    WHERE d.surname = 'Hamilton' AND r.year >= 2010\n)\nSELECT \n    CAST(COUNT(CASE WHEN position > 1 THEN 1 END) AS FLOAT) * 100 / COUNT(*) AS percentage\nFROM hamilton_races;",
+        "reward": 0.984375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL使用了`results`表，但Gold SQL使用的是`driverStandings`表。题目要求计算的是车手积分排名，应该用`driverStandings`表而非`results`表。\n\n2. **列名理解错误** - `results`表中没有`position`字段，应该是`driverStandings`表中的`position`字段。\n\n3. **聚合函数使用错误** - 预测SQL在计算百分比时使用了`COUNT(*)`作为分母，但应该使用`COUNT(position)`来排除空值。\n\n**改进建议：**\n- 使用正确的表结构（driverStandings）\n- 确保JOIN逻辑正确\n- 使用适当的聚合函数处理空值情况"
+      },
+      "s7": {
+        "pred_sql": "WITH hamilton_stats AS (\n    SELECT \n        COUNT(*) AS total_races,\n        COUNT(CASE WHEN res.position > 1 THEN 1 END) AS races_not_first_place\n    FROM races r\n    JOIN results res ON r.raceId = res.raceId\n    JOIN drivers d ON res.driverId = d.driverId\n    WHERE d.surname = 'Hamilton' AND r.year >= 2010\n)\nSELECT \n    CAST(hs.races_not_first_place AS FLOAT) * 100 / CAST(hs.total_races AS FLOAT) AS percentage_not_first\nFROM hamilton_stats hs;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 使用了`results`表，但实际应该使用`driverStandings`表来获取位置信息\n2. **列名理解错误** - `results`表中没有`position`字段，应该使用`driverStandings`表中的相应字段\n3. **聚合函数使用错误** - `COUNT(*)`统计的是总记录数，但需要区分是否为Hamilton的记录\n\n**具体问题：**\n- 预测SQL假设`results`表包含`position`字段，但实际上F1数据库结构中`driverStandings`表才包含车手排名信息\n- `results`表主要用于存储比赛结果，而`driverStandings`表才包含具体的排名位置\n\n**改进建议：**\n将JOIN从`results`改为`driverStandings`，并使用正确的字段名（如`position`在`driverStandings`表中）。\n\n**核心问题：** 混淆了F1数据库中不同表的用途和字段结构。"
+      }
+    }
+  },
+  {
+    "qid": "937",
+    "question": "What's the finish time for the driver who ranked second in 2008's AustChineseralian Grand Prix?",
+    "db": "formula_1",
+    "evidence": "finish time refers to time; Chinese Grand Prix refers to races.name = 'Chinese Grand Prix';",
+    "gold_sql": "SELECT T1.time FROM results AS T1 INNER JOIN races AS T2 on T1.raceId = T2.raceId WHERE T1.rank = 2 AND T2.name = 'Chinese Grand Prix' AND T2.year = 2008",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH race_info AS (\n    SELECT r.raceId, r.name, r.year\n    FROM races r\n    WHERE r.year = 2008 AND r.name LIKE '%Chinese Grand Prix%'\n)\nSELECT r.time\nFROM results r\nINNER JOIN race_info ri ON r.raceId = ri.raceId\nWHERE r.position = 2",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：将`rank`写成`position`，应为`r.rank = 2`\n\n2. **自然语言理解偏差**：题目明确说\"finish time refers to time\"，但预测SQL没有正确处理时间字段的获取逻辑\n\n3. **表名理解错误**：在WITH子句中使用了`race_info`别名，但在主查询中仍使用原始表名`results`，虽然语法上可行，但逻辑不够清晰\n\n**改进建议：**\n- 将`r.position = 2`改为`r.rank = 2`\n- 确保时间字段正确引用（题目已明确time即为finish time）\n- 统一表别名使用，提高可读性\n\n**核心问题**：`position`应为`rank`，这是最直接的错误。"
+      },
+      "s2": {
+        "pred_sql": "WITH race_info AS (\n    SELECT raceId, name, year\n    FROM races\n    WHERE name = 'Chinese Grand Prix' AND year = 2008\n)\nSELECT r.time\nFROM results r\nINNER JOIN race_info ri ON r.raceId = ri.raceId\nWHERE r.position = 2;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误** - 预测SQL中使用了`r.position = 2`，但实际表中应该是`r.rank = 2`\n\n2. **自然语言理解偏差** - 题目问的是\"finish time\"（完成时间），但预测SQL没有明确处理时间字段的获取\n\n**具体分析：**\n- Gold SQL使用`T1.rank = 2`正确匹配了第二名\n- 预测SQL错误地使用了`r.position = 2`，这在formula_1数据库中是不存在的列名\n- 两个SQL都正确处理了JOIN条件和WHERE过滤\n\n**改进建议：**\n将`r.position = 2`改为`r.rank = 2`即可修正错误。"
+      },
+      "s7": {
+        "pred_sql": "WITH race_info AS (\n    SELECT \n        r.raceId,\n        r.name,\n        r.year\n    FROM races r\n    WHERE r.year = 2008 \n    AND r.name LIKE '%Chinese Grand Prix%'\n)\nSELECT \n    r.time\nFROM results r\nJOIN race_info ri ON r.raceId = ri.raceId\nWHERE r.position = 2;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：将`rank`写成`position`，应使用`rank`列来筛选第二名\n\n2. **自然语言理解偏差**：题目明确说\"finish time refers to time\"，但预测SQL没有正确处理时间字段的获取\n\n3. **表名理解错误**：预测SQL中JOIN时使用了`results r`，但应该使用`r`作为别名而不是重复表名\n\n**改进建议：**\n- 将`r.position = 2`改为`r.rank = 2`\n- 确保正确引用时间字段（虽然题目要求的是time字段，但需要确认具体字段名）\n- 简化JOIN逻辑，避免不必要的CTE\n\n**核心问题**：主要在于将`rank`误写为`position`，这是最直接的语法错误。"
+      }
+    }
+  },
+  {
+    "qid": "944",
+    "question": "How much faster in percentage is the champion than the driver who finished the race last in the 2008 Australian Grand Prix?",
+    "db": "formula_1",
+    "evidence": "how much faster in percentage = divide(subtract(incremental time, champion time), last_driver time) * 100; last driver finished time = incremental time + champion time; only champion's finished time is represented by 'HH:MM:SS.mmm'; finished the game refers to time is not null",
+    "gold_sql": "WITH time_in_seconds AS ( SELECT T1.positionOrder, CASE WHEN T1.positionOrder = 1 THEN (CAST(SUBSTR(T1.time, 1, 1) AS REAL) * 3600) + (CAST(SUBSTR(T1.time, 3, 2) AS REAL) * 60) + CAST(SUBSTR(T1.time, 6) AS REAL) ELSE CAST(SUBSTR(T1.time, 2) AS REAL) END AS time_seconds FROM results AS T1 INNER JOIN races AS T2 ON T1.raceId = T2.raceId WHERE T2.name = 'Australian Grand Prix' AND T1.time IS NOT NULL AND T2.year = 2008 ), champion_time AS ( SELECT time_seconds FROM time_in_seconds WHERE positionOrder = 1), last_driver_incremental AS ( SELECT time_seconds FROM time_in_seconds WHERE positionOrder = (SELECT MAX(positionOrder) FROM time_in_seconds) ) SELECT (CAST((SELECT time_seconds FROM last_driver_incremental) AS REAL) * 100) / (SELECT time_seconds + (SELECT time_seconds FROM last_driver_incremental) FROM champion_time)",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH race_info AS (\n    SELECT raceId, name\n    FROM races\n    WHERE year = 2008 AND name = 'Australian Grand Prix'\n),\nrace_results AS (\n    SELECT r.driverId, r.position, r.time, r.fastestLapSpeed\n    FROM results r\n    JOIN race_info ri ON r.raceId = ri.raceId\n    WHERE r.time IS NOT NULL\n    ORDER BY r.position ASC\n),\nchampion_and_last AS (\n    SELECT \n        MAX(CASE WHEN position = 1 THEN time END) as champion_time,\n        MAX(CASE WHEN position = (SELECT MAX(position) FROM race_results) THEN time END) as last_time\n    FROM race_results\n)\nSELECT \n    CAST(\n        ((CAST(SUBSTR(last_time, 2) AS REAL) - CAST(SUBSTR(champion_time, 2) AS REAL)) / \n         CAST(SUBSTR(champion_time, 2) AS REAL)) * 100 AS REAL\n    ) AS percentage_faster\nFROM champion_and_last;",
+        "reward": 0.359375,
+        "llm_analysis": "**主要错误分析：**\n\n1. **自然语言理解偏差**：题目要求计算\"冠军比最后一名快多少百分比\"，但预测SQL计算的是\"最后一名比冠军慢多少百分比\"，方向相反。\n\n2. **时间格式处理错误**：预测SQL假设时间格式为\"HH:MM:SS.mmm\"，但实际数据中冠军时间是完整格式，其他是增量时间，需要区分处理。\n\n3. **聚合函数使用错误**：使用MAX(CASE WHEN position = 1 THEN time END)无法正确获取冠军时间，因为time字段是字符串类型。\n\n4. **证据信息利用不足**：Gold SQL正确识别了冠军时间是完整时间，其他是增量时间，而预测SQL没有区分这两种情况。\n\n**改进建议：**\n- 修正计算公式：应为((last_time - champion_time) / champion_time) * 100\n- 正确解析时间格式：区分完整时间和增量时间\n- 使用正确的字符串截取逻辑来提取时间数值"
+      },
+      "s2": {
+        "pred_sql": "WITH race_info AS (\n    SELECT raceId, name, year\n    FROM races\n    WHERE year = 2008 AND name LIKE '%Australian%'\n),\nchampion_last_times AS (\n    SELECT \n        MAX(CASE WHEN position = 1 THEN time END) AS champion_time,\n        MAX(CASE WHEN position = (SELECT MAX(position) FROM results WHERE raceId = 18 AND time IS NOT NULL) THEN time END) AS last_driver_time\n    FROM results\n    WHERE raceId = 18 AND time IS NOT NULL\n)\nSELECT \n    CAST(\n        (strftime('%s', substr(last_driver_time, 2)) - strftime('%s', substr(champion_time, 2))) * 100.0 / \n        strftime('%s', substr(champion_time, 2)) \n        AS REAL\n    ) AS percentage_faster\nFROM champion_last_times;",
+        "reward": 0.3177083333333333,
+        "llm_analysis": "### 预测SQL错误分析\n\n#### 1. **表名理解错误**\n- 错误：`results` 表中没有 `position` 字段，应为 `positionOrder`\n- 原因：代码中使用了 `position`，但实际表结构中是 `positionOrder`\n\n#### 2. **列名理解错误**\n- 错误：`time` 字段格式处理不正确\n- 原因：未考虑第一名时间以 `HH:MM:SS.mmm` 格式存在，而其他时间为相对增量（如 `+12.345`）\n\n#### 3. **JOIN条件错误**\n- 错误：缺少与 `races` 表连接获取 `raceId`\n- 原因：硬编码 `raceId = 18`，未通过 `races` 表动态获取\n\n#### 4. **WHERE条件错误**\n- 错误：`time IS NOT NULL` 条件位置不当\n- 原因：在子查询中未正确筛选有效时间记录\n\n#### 5. **聚合函数使用错误**\n- 错误：使用 `MAX(CASE WHEN ...)` 处理非聚合字段\n- 原因：未按行分组，导致逻辑混乱\n\n#### 6. **自然语言理解偏差**\n- 错误：误解“last driver”的含义为最后一名的绝对时间\n- 原因：应为最后一名相对于冠军的时间差，而非绝对时间\n\n#### 7. **证据信息利用不足**\n- 错误：未将时间转换为秒级计算\n- 原因：直接用 `strftime` 处理字符串时间，忽略格式差异\n\n---\n\n### 改进建议\n\n```sql\nWITH race_info AS (\n    SELECT raceId\n    FROM races\n    WHERE year = 2008 AND name = 'Australian Grand Prix'\n),\ntime_in_seconds AS (\n    SELECT \n        T1.positionOrder,\n        CASE \n            WHEN T1.positionOrder = 1 THEN \n                (CAST(SUBSTR(T1.time, 1, 1) AS REAL) * 3600) +\n                (CAST(SUBSTR(T1.time, 3, 2) AS REAL) * 60) +\n                CAST(SUBSTR(T"
+      },
+      "s7": {
+        "pred_sql": "WITH race_info AS (\n    SELECT raceId, name, year\n    FROM races\n    WHERE year = 2008 AND name LIKE '%Australian%'\n),\nrace_results AS (\n    SELECT \n        r.driverId,\n        d.forename,\n        d.surname,\n        r.position,\n        r.time,\n        r.milliseconds\n    FROM results r\n    JOIN drivers d ON r.driverId = d.driverId\n    WHERE r.raceId = (SELECT raceId FROM race_info)\n    AND r.time IS NOT NULL\n    ORDER BY r.position\n),\nchampion_and_last AS (\n    SELECT \n        MAX(CASE WHEN position = 1 THEN milliseconds END) AS champion_milliseconds,\n        MAX(CASE WHEN position = (SELECT MAX(position) FROM race_results) THEN milliseconds END) AS last_milliseconds\n    FROM race_results\n)\nSELECT \n    CAST(((last_milliseconds - champion_milliseconds) * 100.0 / champion_milliseconds) AS REAL) AS percentage_faster\nFROM champion_and_last;",
+        "reward": 0.2916666666666667,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差**：题目要求计算\"冠军比最后一名快多少百分比\"，即 `(最后时间-冠军时间)/冠军时间 × 100%`，但预测SQL计算的是 `(最后时间-冠军时间)/冠军时间 × 100%`，逻辑上是对的，但实现方式有误。\n\n2. **列名理解错误**：预测SQL中使用了 `milliseconds` 字段，但根据证据信息，实际应使用 `time` 字段（格式为 'HH:MM:SS.mmm'），且需要转换为秒数进行比较。\n\n3. **聚合函数使用错误**：在 `champion_and_last` CTE 中使用了 `MAX()` 函数来获取冠军和最后一名的时间，这在逻辑上是错误的，因为 `position=1` 和 `position=最大值` 的记录应该分别对应冠军和最后一名，不需要聚合。\n\n4. **WHERE条件错误**：`ORDER BY r.position` 在子查询中没有意义，且 `position = (SELECT MAX(position) FROM race_results)` 可能导致结果为空或不准确。\n\n**改进建议：**\n- 使用 `time` 字段并正确解析为秒数\n- 直接通过 `position=1` 和 `position=最大位置` 获取对应记录\n- 避免不必要的聚合操作\n- 确保最终计算公式正确反映 \"快多少百分比\" 的含义"
+      }
+    }
+  },
+  {
+    "qid": "972",
+    "question": "Which drivers who were born in 1971 and has the fastest lap time on the race? Give id and code of these drivers.",
+    "db": "formula_1",
+    "evidence": "born in 1971 refers to year(dob) = 1971; has the fastest lap time refers to fastestLapTime has values",
+    "gold_sql": "SELECT T2.driverId, T2.code FROM results AS T1 INNER JOIN drivers AS T2 on T1.driverId = T2.driverId WHERE STRFTIME('%Y', T2.dob) = '1971' AND T1.fastestLapTime IS NOT NULL",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_drivers_1971 AS (\n    SELECT d.driverId, d.code, d.forename, d.surname, d.dob\n    FROM drivers d\n    WHERE STRFTIME('%Y', d.dob) = '1971'\n),\ncte_fastest_time AS (\n    SELECT MIN(r.fastestLapTime) as min_time\n    FROM cte_drivers_1971 d\n    INNER JOIN results r ON d.driverId = r.driverId\n    WHERE r.fastestLapTime IS NOT NULL\n)\nSELECT d.driverId, d.code\nFROM cte_drivers_1971 d\nINNER JOIN results r ON d.driverId = r.driverId\nWHERE r.fastestLapTime = (SELECT min_time FROM cte_fastest_time)",
+        "reward": 0.796875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：CTE中使用`MIN(r.fastestLapTime)`计算最小时间，但没有考虑具体是哪条记录的最快时间，导致可能返回错误的最小值。\n\n2. **自然语言理解偏差**：题目要求的是\"在比赛中拥有最快圈速的车手\"，而预测SQL试图找出所有1971年出生且有最快圈速记录的车手，而不是找出在某场比赛中最快圈速的车手。\n\n3. **证据信息利用不足**：没有明确指定是哪场比赛（race），但Gold SQL假设了这是针对所有比赛的通用查询。\n\n**改进建议：**\n- 应该先确定具体的race_id或比赛，然后找出该场比赛中1971年出生车手的最快圈速\n- 或者修正为找出所有1971年出生车手中在任何比赛中创造过最快圈速的车手\n- 需要明确是\"单场比赛\"还是\"所有比赛\"的最快圈速\n\n**核心问题**：预测SQL逻辑上想找出所有1971年出生车手中的最快圈速记录，但实际应该找出在特定比赛中的最快圈速车手。"
+      },
+      "s2": {
+        "pred_sql": "WITH cte1 AS (\n    SELECT d.driverId, d.code, d.dob\n    FROM drivers d\n    WHERE strftime('%Y', d.dob) = '1971'\n)\nSELECT DISTINCT cte1.driverId, cte1.code\nFROM cte1\nINNER JOIN results r ON cte1.driverId = r.driverId\nWHERE r.fastestLapTime IS NOT NULL\nAND r.fastestLapTime = (\n    SELECT MIN(r2.fastestLapTime)\n    FROM results r2\n    WHERE r2.fastestLapTime IS NOT NULL\n    AND r2.raceId = r.raceId\n)",
+        "reward": 0.765625,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求是\"在比赛中最快圈速的车手\"，但预测SQL错误地理解为所有比赛中的全局最快圈速，应该是在每个比赛中的最快圈速。\n\n2. **聚合函数使用错误** - 子查询中使用了`MIN(r2.fastestLapTime)`但没有按raceId分组，导致返回的是所有记录中的最小值，而非每个比赛的最小值。\n\n3. **证据信息利用不足** - 没有正确利用\"has the fastest lap time on the race\"这一关键信息，应该找每个raceId对应的最快lap time。\n\n**改进建议：**\n将子查询改为：\n```sql\nSELECT MIN(r2.fastestLapTime)\nFROM results r2\nWHERE r2.fastestLapTime IS NOT NULL\nAND r2.raceId = r.raceId\n```\n\n或者使用窗口函数更清晰地解决每个比赛的最快圈速问题。"
+      },
+      "s7": {
+        "pred_sql": "WITH drivers_with_min_fastest_time AS (\n    SELECT DISTINCT\n        r.driverId,\n        d.code\n    FROM results r\n    JOIN drivers d ON r.driverId = d.driverId\n    WHERE strftime('%Y', d.dob) = '1971'\n    AND r.fastestLapTime = (\n        SELECT MIN(fastestLapTime)\n        FROM results r2\n        JOIN drivers d2 ON r2.driverId = d2.driverId\n        WHERE strftime('%Y', d2.dob) = '1971'\n        AND r2.fastestLapTime IS NOT NULL\n        AND r2.fastestLapTime != ''\n    )\n)\nSELECT driverId, code FROM drivers_with_min_fastest_time;",
+        "reward": 0.8489583333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求是\"最快圈速\"的司机，但预测SQL用了`MIN(fastestLapTime)`来找最小值，这在逻辑上是错误的。题目问的是\"has the fastest lap time on the race\"（在比赛中有最快圈速的车手），应该找的是在所有比赛中最快圈速的车手，而不是在某个特定比赛中的最快圈速。\n\n2. **证据信息利用不足** - 题目明确说\"has the fastest lap time refers to fastestLapTime has values\"，说明只需要非空值，而预测SQL还额外检查了`!= ''`，这是不必要的。\n\n3. **逻辑错误** - 预测SQL试图找出所有在1971年出生且具有最快圈速记录的司机，但没有考虑\"在比赛中\"这个限定条件，即需要在某场比赛中获得最快圈速。\n\n**改进建议：**\n- 简化为直接查找1971年出生且最快圈速不为空的司机\n- 去掉不必要的字符串比较\n- 保持与Gold SQL一致的逻辑\n\n```sql\nSELECT T2.driverId, T2.code \nFROM results AS T1 \nINNER JOIN drivers AS T2 ON T1.driverId = T2.driverId \nWHERE strftime('%Y', T2.dob) = '1971' \nAND T1.fastestLapTime IS NOT NULL\n```"
+      }
+    }
+  },
+  {
+    "qid": "996",
+    "question": "What is the annual average number of races held during the first 10 years of the 21st century?",
+    "db": "formula_1",
+    "evidence": "races in date between '2000-01-01' and '2010-12-31'",
+    "gold_sql": "SELECT CAST(SUM(CASE WHEN year BETWEEN 2000 AND 2010 THEN 1 ELSE 0 END) AS REAL) / 10 FROM races WHERE date BETWEEN '2000-01-01' AND '2010-12-31'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_races_2000_2010 AS (\n    SELECT r.year, COUNT(*) as races_count\n    FROM races r\n    WHERE r.date >= '2000-01-01' AND r.date <= '2010-12-31'\n    GROUP BY r.year\n    ORDER BY r.year\n)\nSELECT AVG(races_count) as annual_average_races\nFROM cte_races_2000_2010;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误** - 预测SQL使用了`>=`和`<=`，但证据显示应该用`BETWEEN`，可能导致边界值处理不一致\n\n2. **自然语言理解偏差** - 问题要求\"前10年\"的平均值，但预测SQL没有明确体现时间范围的精确性\n\n3. **证据信息利用不足** - 没有充分利用证据中\"date between '2000-01-01' and '2010-12-31'\"这个关键条件\n\n**改进建议：**\n将WHERE条件改为`BETWEEN '2000-01-01' AND '2010-12-31'`，并确保时间范围计算准确。\n\n**核心问题：** 条件表达式不匹配证据中的具体要求，导致时间范围界定不准确。"
+      },
+      "s2": {
+        "pred_sql": "WITH yearly_race_counts AS (\n    SELECT year, COUNT(*) AS race_count\n    FROM races\n    WHERE year BETWEEN 2000 AND 2010\n    GROUP BY year\n)\nSELECT AVG(race_count) AS average_races_per_year\nFROM yearly_race_counts;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误**：预测SQL使用了`year BETWEEN 2000 AND 2010`，但题目证据显示应该使用`date BETWEEN '2000-01-01' AND '2010-12-31'`\n\n2. **证据信息利用不足**：没有充分利用\"races in date between '2000-01-01' and '2010-12-31'\"这一关键证据\n\n**改进建议：**\n将WHERE条件改为`date BETWEEN '2000-01-01' AND '2010-12-31'`，或者在GROUP BY中使用date字段来正确筛选时间范围。\n\n**核心问题**：对时间筛选条件的理解有误，应该基于date列而非year列进行筛选。"
+      },
+      "s7": {
+        "pred_sql": "WITH race_data AS (\n    SELECT \n        r.year,\n        COUNT(*) AS races_count\n    FROM races r\n    WHERE r.date >= '2000-01-01' \n        AND r.date <= '2010-12-31'\n    GROUP BY r.year\n    ORDER BY r.year\n)\nSELECT AVG(races_count) AS avg_races_per_year\nFROM race_data;",
+        "reward": 0.6666666666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误**：预测SQL使用了`>=`和`<=`，但证据显示应该用`BETWEEN`，这可能导致边界日期处理不一致\n\n2. **自然语言理解偏差**：问题要求\"annual average number of races\"，即每年平均比赛数，但预测SQL先按年分组再计算平均值，逻辑正确但实现方式复杂\n\n3. **证据信息利用不足**：没有充分利用证据中\"races in date between '2000-01-01' and '2010-12-31'\"这个关键信息\n\n**改进建议：**\n将WHERE条件改为`BETWEEN '2000-01-01' AND '2010-12-31'`，或者简化为与Gold SQL相同的写法。"
+      }
+    }
+  },
+  {
+    "qid": "1063",
+    "question": "What is Aaron Doran's potential score?",
+    "db": "european_football_2",
+    "evidence": "potential score refers to potential;",
+    "gold_sql": "SELECT t2.potential FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.player_name = 'Aaron Doran'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT pa.potential\n    FROM Player_Attributes pa\n    JOIN Player p ON pa.player_api_id = p.player_api_id\n    WHERE p.player_name = 'Aaron Doran'\n    ORDER BY pa.date DESC\n    LIMIT 1\n)\nSELECT potential FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要问题：**\n\n1. **自然语言理解偏差** - 预测SQL添加了`ORDER BY pa.date DESC LIMIT 1`，但题目只要求\"potential score\"（潜在分数），没有要求最新的数据。\n\n2. **证据信息利用不足** - Gold SQL已经正确使用了`Player`和`Player_Attributes`表的关联关系，而预测SQL虽然逻辑上可行，但多此一举地加入了排序限制。\n\n**核心错误：**\n预测SQL在没有明确需求支持的情况下，对数据进行了额外的排序和限制操作，这可能导致：\n- 如果存在多个记录，返回的不是所有记录中的最大值或最新值\n- 增加不必要的复杂度和执行开销\n\n**建议：**\n删除`ORDER BY pa.date DESC LIMIT 1`，保持与Gold SQL一致的简单查询结构即可。"
+      },
+      "s2": {
+        "pred_sql": "WITH player_info AS (\n    SELECT id, player_api_id, player_name\n    FROM Player\n    WHERE player_name = 'Aaron Doran'\n)\nSELECT pa.potential\nFROM Player_Attributes pa\nJOIN player_info p ON pa.player_api_id = p.player_api_id\nORDER BY pa.date DESC\nLIMIT 1;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`Player_Attributes`表，但根据Gold SQL，实际应使用`player_attributes`（小写）\n\n2. **自然语言理解偏差** - 预测SQL添加了`ORDER BY pa.date DESC LIMIT 1`，这暗示需要最新的数据，但题目只要求\"potential score\"，没有指定时间要求\n\n**改进建议：**\n```sql\nWITH player_info AS (\n    SELECT id, player_api_id, player_name\n    FROM Player\n    WHERE player_name = 'Aaron Doran'\n)\nSELECT pa.potential\nFROM player_attributes pa  -- 改为小写\nJOIN player_info p ON pa.player_api_id = p.player_api_id\n```\n\n核心问题是表名大小写不匹配，导致查询无法执行。"
+      },
+      "s7": {
+        "pred_sql": "WITH player_info AS (\n    SELECT \n        player_api_id,\n        player_name\n    FROM Player\n    WHERE player_name = 'Aaron Doran'\n),\nlatest_potential AS (\n    SELECT \n        pa.potential\n    FROM Player_Attributes pa\n    JOIN player_info pi ON pa.player_api_id = pi.player_api_id\n    ORDER BY pa.date DESC\n    LIMIT 1\n)\nSELECT \n    lp.potential\nFROM latest_potential lp;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目问的是\"potential score\"，但预测SQL通过ORDER BY pa.date DESC取最新值，这在没有明确要求获取最新数据的情况下是多余的复杂化。\n\n2. **逻辑冗余** - 使用CTE和子查询来实现简单的JOIN操作，增加了不必要的复杂度。\n\n3. **潜在性能问题** - 在没有索引的情况下，ORDER BY + LIMIT的组合可能比简单JOIN效率更低。\n\n**改进建议：**\n直接使用Gold SQL的简单JOIN方式即可，无需复杂的CTE和排序逻辑。如果确实需要最新数据，应该在WHERE条件中添加日期筛选而不是用ORDER BY LIMIT。"
+      }
+    }
+  },
+  {
+    "qid": "1085",
+    "question": "Which of these players performs the best in crossing actions, Alexis, Ariel Borysiuk or Arouna Kone?",
+    "db": "european_football_2",
+    "evidence": "player who perform best in crossing actions refers to MAX(crossing);",
+    "gold_sql": "SELECT t1.player_name, t2.crossing FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone') ORDER BY t2.crossing DESC LIMIT 1",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH player_info AS (\n    SELECT p.player_api_id, p.player_name\n    FROM Player p\n    WHERE p.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n)\nSELECT p.player_name\nFROM player_info p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE pa.crossing IS NOT NULL\nORDER BY pa.crossing DESC\nLIMIT 1;",
+        "reward": 0.9583333333333334,
+        "llm_analysis": "**主要错误：表名理解错误**\n\n预测SQL中使用了`Player_Attributes`表，但根据证据信息，应该使用`Player`表中的`crossing`字段。实际上，`Player`表应该包含`crossing`属性，而不是在`Player_Attributes`表中。\n\n**具体问题：**\n- 错误地将`crossing`属性放在了`Player_Attributes`表中，而实际上应该在`Player`表中\n- `Player_Attributes`表通常存储球员的属性数据，但题目明确指出\"crossing\"是球员的基本属性\n\n**改进建议：**\n```sql\nSELECT player_name, crossing \nFROM Player \nWHERE player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone') \nORDER BY crossing DESC \nLIMIT 1;\n```\n\n**其他次要问题：**\n- 预测SQL中多层嵌套结构复杂化了逻辑\n- 多余的WHERE条件`pa.crossing IS NOT NULL`（如果数据质量保证的话）"
+      },
+      "s2": {
+        "pred_sql": "WITH player_names AS (\n    SELECT player_api_id, player_name\n    FROM Player\n    WHERE player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n)\nSELECT p.player_name\nFROM player_names p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE pa.crossing IS NOT NULL\nORDER BY pa.crossing DESC\nLIMIT 1",
+        "reward": 0.9947916666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`Player_Attributes`表，但实际应该使用`player_attributes`（小写），数据库中表名是`player_attributes`\n\n2. **列名理解错误**：预测SQL中使用了`crossing`列，但实际应该使用`crossing`列名正确，不过需要确认是否为`crossing`还是其他类似名称\n\n3. **结果字段缺失**：预测SQL只返回了`player_name`，而题目要求返回球员姓名和对应的crossing值，Gold SQL返回两列\n\n**改进建议：**\n- 将`Player_Attributes`改为`player_attributes`\n- 确认`crossing`列名是否正确\n- 修改SELECT语句返回`player_name`和`crossing`两个字段\n- 添加`pa.crossing`到SELECT子句中"
+      },
+      "s7": {
+        "pred_sql": "WITH top_crossing_player AS (\n    SELECT \n        p.player_name\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n    AND pa.crossing IS NOT NULL\n    ORDER BY pa.crossing DESC\n    LIMIT 1\n)\nSELECT player_name FROM top_crossing_player;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **证据信息利用不足** - 预测SQL只返回了球员姓名，而问题要求找出\"perform best\"（表现最好）的球员，应该返回最高crossing值\n\n2. **自然语言理解偏差** - 问题明确要求找出\"perform best in crossing actions\"的球员，即需要返回crossing值最大的球员及其对应值\n\n**具体问题：**\n- 预测SQL的CTE中没有选择crossing列，导致最终结果缺少关键的评分信息\n- 最终SELECT只返回player_name，无法确认是哪个球员表现最好\n\n**改进建议：**\n```sql\nWITH top_crossing_player AS (\n    SELECT \n        p.player_name,\n        pa.crossing\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.player_name IN ('Alexis', 'Ariel Borysiuk', 'Arouna Kone')\n    AND pa.crossing IS NOT NULL\n    ORDER BY pa.crossing DESC\n    LIMIT 1\n)\nSELECT player_name, crossing FROM top_crossing_player;\n```\n\n核心问题是：**没有返回crossing评分值，无法验证谁是表现最好的球员**。"
+      }
+    }
+  },
+  {
+    "qid": "1087",
+    "question": "Among the players whose height is over 180, how many of them have a volley score of over 70?",
+    "db": "european_football_2",
+    "evidence": "height > 180; volley score refers to volleys; volleys > 70;",
+    "gold_sql": "SELECT COUNT(DISTINCT t1.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.height > 180 AND t2.volleys > 70",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH players_over_180 AS (\n    SELECT p.id, p.player_api_id, p.height\n    FROM Player p\n    WHERE p.height > 180\n)\nSELECT COUNT(*) AS player_count\nFROM players_over_180 p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE pa.volleys > 70;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL使用了`COUNT(*)`而不是`COUNT(DISTINCT t1.id)`，导致可能重复计数\n\n2. **自然语言理解偏差**：Gold SQL中的`COUNT(DISTINCT t1.id)`是为了去重，但预测SQL没有体现这一需求\n\n**具体问题：**\n- Gold SQL要求统计不同球员ID的数量（避免同一球员多次记录被重复计算）\n- 预测SQL直接用`COUNT(*)`，如果一个球员有多条属性记录，会被重复计算\n\n**改进建议：**\n将预测SQL中的`COUNT(*)`改为`COUNT(DISTINCT p.id)`或在JOIN后使用`DISTINCT`来确保去重。\n\n**核心差异：** 两个SQL都正确理解了业务逻辑，但Gold SQL更精确地处理了数据去重问题。"
+      },
+      "s2": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM Player p\n    INNER JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.height > 180 AND pa.volleys > 70\n)\nSELECT answer FROM final_answer;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误** - 预测SQL使用了`COUNT(*)`统计所有符合条件的记录数，而题目要求的是\"多少个球员\"，应该使用`COUNT(DISTINCT t1.id)`来去重，避免同一个球员被多次计算。\n\n2. **自然语言理解偏差** - 题目问的是\"多少个球员\"，需要去重处理，但预测SQL没有考虑球员ID的唯一性。\n\n**改进建议：**\n将`COUNT(*)`改为`COUNT(DISTINCT t1.id)`，或者在WITH子句中保持与Gold SQL一致的去重逻辑。\n\n其他方面（表名、列名、JOIN条件、WHERE条件）均正确。"
+      },
+      "s7": {
+        "pred_sql": "WITH player_count AS (\n    SELECT \n        COUNT(*) AS player_count\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.height > 180 AND pa.volleys > 70\n)\nSELECT player_count FROM player_count;",
+        "reward": 0.890625,
+        "llm_analysis": "**主要错误：聚合函数使用错误**\n\n预测SQL的问题在于：\n1. 使用了`COUNT(*)`统计所有符合条件的记录数，而不是去重后的玩家数量\n2. 题目要求的是\"多少个球员\"，应该使用`COUNT(DISTINCT t1.id)`或`COUNT(DISTINCT p.player_api_id)`\n\n**改进建议：**\n将`COUNT(*)`改为`COUNT(DISTINCT p.player_api_id)`或`COUNT(DISTINCT t1.id)`，因为一个球员可能有多条属性记录，需要去重统计实际球员数量。\n\n其他方面（JOIN条件、WHERE条件、表名列名等）基本正确，主要是聚合函数选择不当导致结果错误。"
+      }
+    }
+  },
+  {
+    "qid": "1213",
+    "question": "Name the ID of the patient who is born on the April 1st, 1982. Is his/her alkaliphophatase (ALP) within normal range?",
+    "db": "thrombosis_prediction",
+    "evidence": "alkaliphophatase (ALP) within normal range refers to ALP < 300",
+    "gold_sql": "SELECT T1.ID , CASE WHEN T2.ALP < 300 THEN 'normal' ELSE 'abNormal' END FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.Birthday = '1982-04-01'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH patient_id AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y-%m-%d', Birthday) = '1982-04-01'\n)\nSELECT \n    p.ID,\n    CASE \n        WHEN MIN(l.ALP) < 300 THEN 'Yes'\n        ELSE 'No'\n    END AS is_alp_normal\nFROM patient_id p\nLEFT JOIN Laboratory l ON p.ID = l.ID\nGROUP BY p.ID;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`MIN(l.ALP)`而不是直接判断ALP值，导致逻辑错误\n\n2. **自然语言理解偏差**：题目问的是\"是否在正常范围内\"，应该返回单个结果，但用了GROUP BY和聚合函数\n\n3. **证据信息利用不足**：没有正确理解\"ALP < 300为正常\"的判断逻辑\n\n**改进建议：**\n```sql\nWITH patient_id AS (\n    SELECT ID\n    FROM Patient\n    WHERE STRFTIME('%Y-%m-%d', Birthday) = '1982-04-01'\n)\nSELECT \n    p.ID,\n    CASE \n        WHEN l.ALP < 300 THEN 'Yes'\n        ELSE 'No'\n    END AS is_alp_normal\nFROM patient_id p\nLEFT JOIN Laboratory l ON p.ID = l.ID\n```\n\n核心问题是将简单的一对一比较复杂化为聚合操作，且未考虑一个患者可能有多条实验室记录的情况。"
+      },
+      "s2": {
+        "pred_sql": "WITH patient_id AS (\n    SELECT ID\n    FROM Patient\n    WHERE Birthday = '1982-04-01'\n)\nSELECT \n    p.ID,\n    CASE WHEN l.ALP < 300 THEN 'Yes' ELSE 'No' END AS within_normal_range\nFROM patient_id p\nLEFT JOIN Laboratory l ON p.ID = l.ID\nLIMIT 1;",
+        "reward": 0.96875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 预测SQL将\"是否在正常范围内\"理解为\"是/否\"的二元判断，而题目要求的是判断结果（normal/abNormal）\n\n2. **列名理解错误** - 返回列名为`within_normal_range`，但实际应该返回ALP值或判断结果，且CASE语句逻辑与题目要求不符\n\n3. **数据类型处理不当** - 没有考虑可能没有实验室检查记录的情况\n\n**改进建议：**\n```sql\nWITH patient_id AS (\n    SELECT ID\n    FROM Patient\n    WHERE Birthday = '1982-04-01'\n)\nSELECT \n    p.ID,\n    CASE WHEN l.ALP < 300 THEN 'normal' ELSE 'abNormal' END AS alp_status\nFROM patient_id p\nLEFT JOIN Laboratory l ON p.ID = l.ID\nLIMIT 1;\n```\n\n核心问题是将\"判断是否正常\"的逻辑错误地用\"是/否\"表述，应保持与Gold SQL一致的\"normal/abNormal\"输出格式。"
+      },
+      "s7": {
+        "pred_sql": "WITH patient_id AS (\n    SELECT \n        ID\n    FROM Patient\n    WHERE Birthday = '1982-04-01'\n)\nSELECT \n    p.ID,\n    CASE WHEN MIN(l.ALP) < 300 THEN 'Yes' ELSE 'No' END AS is_normal_range\nFROM patient_id p\nJOIN Laboratory l ON p.ID = l.ID\nGROUP BY p.ID;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`MIN(l.ALP)`而不是直接比较`l.ALP`，导致逻辑错误\n2. **自然语言理解偏差**：题目要求判断单个患者的ALP是否正常，但预测SQL用聚合函数处理\n3. **证据信息利用不足**：未正确理解\"within normal range\"的含义（ALP < 300）\n\n**具体问题：**\n- 预测SQL对同一患者ID进行了分组并取最小值，但一个患者只有一个ALP值\n- `MIN(l.ALP)`在该场景下无意义，应该直接使用`l.ALP`\n- 返回结果字段命名不准确，应返回\"normal/abNormal\"而非\"Yes/No\"\n\n**改进建议：**\n将`MIN(l.ALP)`改为`l.ALP`，并调整CASE语句的返回值为\"normal/abNormal\"。"
+      }
+    }
+  },
+  {
+    "qid": "1217",
+    "question": "For all patient born in 1982, state if their albumin is within normal range.",
+    "db": "thrombosis_prediction",
+    "evidence": "Year(Birthday) = '1982'; albumin is within normal range refers to ALB between 3.5 and 5.5",
+    "gold_sql": "SELECT CASE WHEN T2.ALB >= 3.5 AND T2.ALB <= 5.5 THEN 'normal' ELSE 'abnormal' END FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE STRFTIME('%Y', T1.Birthday) = '1982'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_born_1982 AS (\n    SELECT p.ID, p.Birthday\n    FROM Patient p\n    WHERE STRFTIME('%Y', p.Birthday) = '1982'\n)\nSELECT \n    p.ID,\n    CASE \n        WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 'Within Normal Range'\n        ELSE 'Outside Normal Range'\n    END AS albumin_status\nFROM cte_born_1982 p\nLEFT JOIN Laboratory l ON p.ID = l.ID\nWHERE l.ALB IS NOT NULL",
+        "reward": 0.875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件错误**：`WHERE l.ALB IS NOT NULL` 会过滤掉没有实验室检查记录的患者，但题目要求对所有1982年出生的患者进行判断。\n\n2. **自然语言理解偏差**：题目要求\"for all patient born in 1982\"，应该包含所有该年出生的患者，无论是否有实验室数据。\n\n**具体问题：**\n- 使用了 `LEFT JOIN` 后又加 `WHERE l.ALB IS NOT NULL`，这实际上变成了内连接，排除了没有实验室数据的患者\n- 应该在 `CASE` 语句中处理 `NULL` 值情况\n\n**改进建议：**\n```sql\nSELECT \n    p.ID,\n    CASE \n        WHEN l.ALB IS NULL THEN 'No Lab Data'\n        WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 'Within Normal Range'\n        ELSE 'Outside Normal Range'\n    END AS albumin_status\nFROM cte_born_1982 p\nLEFT JOIN Laboratory l ON p.ID = l.ID\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH patient_1982 AS (\n    SELECT ID, Birthday\n    FROM Patient\n    WHERE strftime('%Y', Birthday) = '1982'\n)\nSELECT \n    CASE \n        WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 'Within Normal Range'\n        WHEN l.ALB < 3.5 THEN 'Low'\n        WHEN l.ALB > 5.5 THEN 'High'\n    END AS albumin_status\nFROM patient_1982 p\nINNER JOIN Laboratory l ON p.ID = l.ID\nWHERE l.ALB IS NOT NULL",
+        "reward": 0.9427083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"state if their albumin is within normal range\"（判断是否在正常范围内），但预测SQL返回了详细的分类结果（normal/abnormal），与题目要求不符。\n\n2. **证据信息利用不足** - 题目明确给出\"albumin is within normal range refers to ALB between 3.5 and 5.5\"，但预测SQL没有严格按照这个定义进行判断。\n\n**具体问题：**\n- 预测SQL使用了复杂的CASE WHEN逻辑，而题目只需要简单的正常/异常判断\n- 返回值应该是\"normal\"或\"abnormal\"，而不是\"Within Normal Range\"/\"Low\"/\"High\"\n\n**改进建议：**\n将CASE WHEN改为与Gold SQL一致的简单判断逻辑，只返回\"normal\"或\"abnormal\"。"
+      },
+      "s7": {
+        "pred_sql": "WITH patient_1982 AS (\n    SELECT \n        p.ID,\n        p.Birthday\n    FROM Patient p\n    WHERE strftime('%Y', p.Birthday) = '1982'\n)\nSELECT \n    p.ID,\n    p.Birthday,\n    CASE \n        WHEN MAX(CASE WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 1 ELSE 0 END) = 1 THEN 'Yes'\n        ELSE 'No'\n    END AS is_normal_range\nFROM patient_1982 p\nLEFT JOIN Laboratory l ON p.ID = l.ID\nGROUP BY p.ID, p.Birthday",
+        "reward": 0.9479166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用了`MAX(CASE WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 1 ELSE 0 END) = 1`来判断是否正常，但这样会将所有ALB值都考虑进去，而不是针对每个患者单独判断。\n\n2. **自然语言理解偏差**：题目要求\"state if their albumin is within normal range\"（判断是否在正常范围内），而预测SQL返回的是\"是否在正常范围内\"的布尔值，但逻辑上应该对每个患者的每条记录进行判断。\n\n3. **证据信息利用不足**：没有正确处理一个患者可能有多条实验室记录的情况。\n\n**改进建议：**\n```sql\nSELECT \n    p.ID,\n    p.Birthday,\n    CASE \n        WHEN l.ALB BETWEEN 3.5 AND 5.5 THEN 'Yes'\n        ELSE 'No'\n    END AS is_normal_range\nFROM patient_1982 p\nLEFT JOIN Laboratory l ON p.ID = l.ID\n```\n或者如果需要聚合多个记录，应该明确是取任意一条记录还是所有记录都必须正常。"
+      }
+    }
+  },
+  {
+    "qid": "1224",
+    "question": "What is the highest total bilirubin level recorded? List out the patient details with ID, sex and birthday with that index.",
+    "db": "thrombosis_prediction",
+    "evidence": "the highest total bilirubin refers to MAX(T-BIL)",
+    "gold_sql": "SELECT T2.`T-BIL`, T1.ID, T1.SEX, T1.Birthday FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID ORDER BY T2.`T-BIL` DESC LIMIT 1",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_max_tbil AS (\n    SELECT MAX(`T-BIL`) as max_level\n    FROM Laboratory\n)\nSELECT p.ID, p.SEX, p.Birthday\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.`T-BIL` = (SELECT max_level FROM cte_max_tbil)",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **证据信息利用不足** - 预测SQL没有返回最高T-BIL值本身，而题目要求\"列出最高总胆红素水平\"，需要同时显示该数值。\n\n2. **自然语言理解偏差** - 题目要求\"List out the patient details with ID, sex and birthday with that index\"，但预测SQL只返回了患者详情，缺少了T-BIL值的显示。\n\n**具体问题：**\n- 查询结果缺少T-BIL字段，无法显示\"最高总胆红素水平\"\n- 没有按照题目要求完整展示数据\n\n**改进建议：**\n在预测SQL中添加T-BIL字段的显示，或者使用Gold SQL的写法，将T-BIL值一并返回。\n\n```sql\n-- 改进版本\nSELECT T2.`T-BIL`, T1.ID, T1.SEX, T1.Birthday \nFROM Patient AS T1 \nINNER JOIN Laboratory AS T2 ON T1.ID = T2.ID \nORDER BY T2.`T-BIL` DESC \nLIMIT 1\n```"
+      },
+      "s2": {
+        "pred_sql": "WITH max_tbil_patient AS (\n    SELECT ID, `T-BIL`\n    FROM Laboratory\n    WHERE `T-BIL` IS NOT NULL\n    ORDER BY `T-BIL` DESC\n    LIMIT 1\n)\nSELECT p.ID, p.SEX, p.Birthday\nFROM Patient p\nINNER JOIN max_tbil_patient m ON p.ID = m.ID;",
+        "reward": 0.9583333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出患者详情\"，但预测SQL只返回了ID、SEX、Birthday，缺少了关键信息\"T-BIL值\"\n\n2. **证据信息利用不足** - Gold SQL中包含了T-BIL值显示，而预测SQL完全忽略了这个信息\n\n**具体问题：**\n- 预测SQL的SELECT语句没有包含T-BIL字段，与题目要求不符\n- 虽然逻辑结构正确，但最终输出不符合题目\"列出患者详情\"的要求\n\n**改进建议：**\n在SELECT子句中添加T-BIL字段：`SELECT m.`T-BIL`, p.ID, p.SEX, p.Birthday`"
+      },
+      "s7": {
+        "pred_sql": "WITH max_tbil_patient AS (\n    SELECT \n        l.ID,\n        l.`T-BIL`\n    FROM Laboratory l\n    WHERE l.`T-BIL` IS NOT NULL\n    ORDER BY l.`T-BIL` DESC\n    LIMIT 1\n)\nSELECT \n    p.ID,\n    p.SEX,\n    p.Birthday\nFROM Patient p\nINNER JOIN max_tbil_patient mtp ON p.ID = mtp.ID;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL使用了`MAX(T-BIL)`但实际查询中并未使用聚合函数，而是通过`ORDER BY ... LIMIT 1`来获取最高值。\n\n2. **逻辑不一致**：Gold SQL直接通过排序获取最高值，而预测SQL试图用子查询先找出最高值再关联，但没有正确处理\"最高\"的含义。\n\n3. **自然语言理解偏差**：虽然都意图获取最高T-BIL值，但实现方式不同，预测SQL的复杂化导致逻辑混乱。\n\n**核心问题**：预测SQL在处理\"最高\"这一概念时，采用了不必要的复杂子查询结构，而Gold SQL更直接有效。\n\n**建议**：保持Gold SQL的简洁性，或如果要用CTE，应确保逻辑正确且必要。"
+      }
+    }
+  },
+  {
+    "qid": "1247",
+    "question": "Among the male patients who have a normal level of white blood cells, how many of them have an abnormal fibrinogen level?",
+    "db": "thrombosis_prediction",
+    "evidence": "male patients refers to Sex = 'M'; normal level of white blood cells refers to WBC > 3.5 and WBC <9.0; abnormal fibrinogen level refers to FG < = 150 or FG > = 450; Don't compute repetitive ones.",
+    "gold_sql": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.FG <= 150 OR T2.FG >= 450 AND T2.WBC > 3.5 AND T2.WBC < 9.0 AND T1.SEX = 'M'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH male_patients AS (\n    SELECT p.ID, p.SEX, l.WBC, l.FG\n    FROM Patient p\n    JOIN Laboratory l ON p.ID = l.ID\n    WHERE p.SEX = 'M'\n),\nnormal_wbc_patients AS (\n    SELECT ID, SEX, WBC, FG\n    FROM male_patients\n    WHERE WBC > 3.5 AND WBC < 9.0\n),\nabnormal_fibrinogen_patients AS (\n    SELECT ID, SEX, WBC, FG\n    FROM normal_wbc_patients\n    WHERE FG <= 150 OR FG >= 450\n)\nSELECT COUNT(*) AS abnormal_fibrinogen_count\nFROM abnormal_fibrinogen_patients;",
+        "reward": 0.96875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **WHERE条件优先级错误**：预测SQL中WHERE条件的逻辑运算符优先级不正确，应该使用括号明确分组\n2. **COUNT函数使用不当**：使用COUNT(*)而非COUNT(DISTINCT ID)，未遵循\"不要计算重复项\"的要求\n3. **逻辑顺序混乱**：先筛选正常WBC再筛选异常Fibrinogen，逻辑上不够清晰\n\n**具体问题：**\n- 预测SQL中的WHERE条件 `FG <= 150 OR FG >= 450 AND T2.WBC > 3.5 AND T2.WBC < 9.0` 实际执行时会因为运算符优先级导致逻辑错误\n- 应该是 `(FG <= 150 OR FG >= 450) AND (WBC > 3.5 AND WBC < 9.0)` 的形式\n\n**建议修改：**\n将WHERE条件改为正确的逻辑分组，并使用COUNT(DISTINCT ID)来确保去重。"
+      },
+      "s2": {
+        "pred_sql": "WITH male_patients_with_normal_wbc AS (\n    SELECT p.ID, p.SEX, l.WBC, l.FG\n    FROM Patient p\n    INNER JOIN Laboratory l ON p.ID = l.ID\n    WHERE p.SEX = 'M' AND l.WBC > 3.5 AND l.WBC < 9.0\n)\nSELECT COUNT(*) AS answer\nFROM male_patients_with_normal_wbc\nWHERE FG <= 150 OR FG >= 450;",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n**4. WHERE条件错误** - 预测SQL在WHERE子句中没有正确处理逻辑优先级，导致条件判断错误。\n\n**具体问题：**\n- 预测SQL的WHERE条件 `FG <= 150 OR FG >= 450` 没有包含\"正常白细胞计数\"的过滤条件\n- 正确的逻辑应该是：先筛选出白细胞正常的患者，再从中找出纤维蛋白原异常的患者\n\n**改进建议：**\n将WHERE条件改为：\n```sql\nWHERE (FG <= 150 OR FG >= 450) AND WBC > 3.5 AND WBC < 9.0 AND SEX = 'M'\n```\n\n或者在CTE中就完成所有筛选条件，然后在最终查询中只保留纤维蛋白原异常的判断。"
+      },
+      "s7": {
+        "pred_sql": "SELECT COUNT(*) AS abnormal_fibrinogen_count\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE p.SEX = 'M'\n    AND l.WBC > 3.5 \n    AND l.WBC < 9.0\n    AND (l.FG <= 150 OR l.FG >= 450)",
+        "reward": 0.96875,
+        "llm_analysis": "**主要错误原因：**\n\n**4. WHERE条件错误** - 逻辑运算符优先级问题\n- 预测SQL中WHERE条件的逻辑顺序不正确\n- `AND`运算符优先级高于`OR`，导致条件判断错误\n- 正确应为：`(l.FG <= 150 OR l.FG >= 450) AND l.WBC > 3.5 AND l.WBC < 9.0 AND p.SEX = 'M'`\n\n**7. 证据信息利用不足**\n- 未使用`DISTINCT`去重，可能导致重复计算\n- Gold SQL使用了`COUNT(DISTINCT T1.ID)`确保唯一性\n\n**改进建议：**\n```sql\nSELECT COUNT(DISTINCT p.ID) \nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE p.SEX = 'M'\n    AND l.WBC > 3.5 \n    AND l.WBC < 9.0\n    AND (l.FG <= 150 OR l.FG >= 450)\n```"
+      }
+    }
+  },
+  {
+    "qid": "1366",
+    "question": "List all the members who attended the event \"October Meeting\".",
+    "db": "student_club",
+    "evidence": "'October Meeting' is an event name;",
+    "gold_sql": "SELECT DISTINCT T3.member_id FROM event AS T1 INNER JOIN attendance AS T2 ON T1.event_id = T2.link_to_event INNER JOIN member AS T3 ON T2.link_to_member = T3.member_id WHERE T1.event_name = 'October Meeting'",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH event_info AS (\n    SELECT event_id, event_name\n    FROM event\n    WHERE event_name = 'October Meeting'\n)\nSELECT m.first_name, m.last_name\nFROM event_info e\nJOIN attendance a ON e.event_id = a.link_to_event\nJOIN member m ON a.link_to_member = m.member_id",
+        "reward": 0.8385416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **列名理解错误**：预测SQL中使用了`m.first_name, m.last_name`，但原始Gold SQL只返回`member_id`，说明数据库中member表可能没有first_name和last_name字段，或者字段名不同。\n\n2. **自然语言理解偏差**：题目要求\"列出所有成员\"，Gold SQL返回的是member_id，而预测SQL试图返回姓名，这与原意不符。\n\n**改进建议：**\n- 确认member表实际字段名（可能是member_name或其他）\n- 或者按Gold SQL逻辑修改为：`SELECT DISTINCT T3.member_id`（如果只需要ID）\n- 或者确认数据库结构后正确使用姓名字段\n\n**核心问题**：对数据库表结构理解不准确，导致字段选择错误。"
+      },
+      "s2": {
+        "pred_sql": "WITH event_info AS (\n    SELECT event_id, event_name\n    FROM event\n    WHERE event_name = 'October Meeting'\n)\nSELECT m.first_name, m.last_name\nFROM attendance a\nINNER JOIN member m ON a.link_to_member = m.member_id\nINNER JOIN event_info e ON a.link_to_event = e.event_id",
+        "reward": 0.8854166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误**：预测SQL中使用了`attendance`表，但Gold SQL显示实际应为`event`表包含事件信息，而`attendance`表用于记录出席情况。\n\n2. **列名理解错误**：预测SQL假设`member`表有`first_name`和`last_name`字段，但Gold SQL只返回`member_id`，说明需要确认具体字段名。\n\n3. **JOIN条件错误**：预测SQL中的JOIN逻辑与Gold SQL不一致，应该先通过`event`表筛选出\"October Meeting\"，再关联`attendance`表获取参会成员。\n\n**核心问题**：预测SQL没有正确理解数据库结构，将`event`表和`attendance`表的功能混淆了。\n\n**改进建议**：严格按照Gold SQL的结构来构建查询，确保JOIN顺序和表关系正确。"
+      },
+      "s7": {
+        "pred_sql": "WITH event_info AS (\n    SELECT event_id, event_name\n    FROM event\n    WHERE event_name = 'October Meeting'\n)\nSELECT m.first_name, m.last_name\nFROM attendance a\nJOIN member m ON a.link_to_member = m.member_id\nWHERE a.link_to_event = (SELECT event_id FROM event_info)",
+        "reward": 1.0,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`attendance`表，但Gold SQL显示实际应为`event`表包含事件信息，而`attendance`表用于记录出席情况。\n\n2. **列名理解错误** - Gold SQL显示需要`member_id`字段，但预测SQL中使用了`first_name`和`last_name`，这在逻辑上不匹配（应该先获取member_id再关联获取姓名）。\n\n3. **WHERE条件错误** - 预测SQL中的子查询`(SELECT event_id FROM event_info)`虽然逻辑正确，但与主查询的连接方式存在问题。\n\n**改进建议：**\n- 应该使用Gold SQL的结构，先通过event表获取event_id，然后通过attendance表关联到member表\n- 如果要返回姓名信息，应该在最终SELECT中包含member表的姓名字段\n- 确保JOIN条件和WHERE条件与实际表结构一致"
+      }
+    }
+  },
+  {
+    "qid": "1453",
+    "question": "List the name of events with less than average parking cost.",
+    "db": "student_club",
+    "evidence": "name of events refers to event_name; less than average parking cost refers to cost < DIVIDE(SUM(cost), COUNT(event_id)) where category = 'Parking'",
+    "gold_sql": "SELECT T1.event_name FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2.link_to_event INNER JOIN expense AS T3 ON T2.budget_id = T3.link_to_budget WHERE T2.category = 'Parking' AND T3.cost < (SELECT AVG(cost) FROM expense)",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "根据提供的Gold SQL和问题描述，预测SQL的错误原因如下：\n\n**主要问题：**\n\n1. **聚合函数使用错误** - 预测SQL中使用了`DIVIDE(SUM(cost), COUNT(event_id))`，这是错误的。应该使用子查询获取平均值，而不是在主查询中进行分组计算。\n\n2. **自然语言理解偏差** - 将\"less than average parking cost\"理解为需要计算每个事件的平均停车费用，而非与整体平均费用比较。\n\n3. **证据信息利用不足** - 没有正确利用证据中\"category = 'Parking'\"这个关键条件来筛选停车费用。\n\n**改进建议：**\n- 使用子查询`(SELECT AVG(cost) FROM expense)`获取整体平均值\n- 确保WHERE条件包含`category = 'Parking'`\n- 删除不必要的分组和聚合操作\n- 正确理解\"average parking cost\"是指所有停车费用的平均值，不是按事件分组的平均值"
+      },
+      "s2": {
+        "pred_sql": "",
+        "reward": 0.0,
+        "llm_analysis": "根据提供的Gold SQL和问题描述，预测SQL可能存在以下错误：\n\n**主要问题：**\n\n1. **聚合函数使用错误** - 预测SQL中使用了`DIVIDE(SUM(cost), COUNT(event_id))`，这是错误的。应该使用子查询获取平均值，而不是在主查询中进行分组计算。\n\n2. **自然语言理解偏差** - \"less than average parking cost\"应理解为每个事件的停车费用与所有停车费用的平均值比较，而非按事件分组计算平均值。\n\n3. **证据信息利用不足** - 没有正确利用\"category = 'Parking'\"这个关键条件来筛选停车费用。\n\n**改进建议：**\n- 使用子查询`(SELECT AVG(cost) FROM expense)`获取整体平均值\n- 确保WHERE条件包含`category = 'Parking'`\n- 不要对数据进行不必要的分组聚合操作"
+      },
+      "s7": {
+        "pred_sql": "WITH parking_expenses AS (\n    SELECT \n        b.link_to_event,\n        b.spent AS parking_cost\n    FROM budget b\n    WHERE b.category = 'Parking'\n),\navg_parking_cost AS (\n    SELECT AVG(parking_cost) AS avg_cost\n    FROM parking_expenses\n)\nSELECT \n    e.event_name\nFROM event e\nJOIN parking_expenses pe ON e.event_id = pe.link_to_event\nWHERE pe.parking_cost < (SELECT avg_cost FROM avg_parking_cost)",
+        "reward": 0.5,
+        "llm_analysis": "**主要错误原因：**\n\n1. **表名理解错误** - 预测SQL中使用了`budget`表的`spent`列，但根据Gold SQL应使用`expense`表的`cost`列\n\n2. **列名理解错误** - `budget.spent`应为`expense.cost`，且需要关联到正确的表结构\n\n3. **JOIN逻辑错误** - 预测SQL的JOIN路径不正确，应该直接从event连接到expense，而不是通过budget中间表\n\n**具体问题：**\n- 预测SQL假设`budget.spent`存储停车费用，但实际上停车费用在`expense`表中\n- JOIN关系复杂化，实际只需要event→expense的直接连接\n- 子查询中的avg计算逻辑正确，但基础数据来源错误\n\n**建议修改：**\n将`parking_expenses`子查询改为直接从`expense`表获取成本数据，确保连接到正确的表结构。"
+      }
+    }
+  },
+  {
+    "qid": "1454",
+    "question": "What is the percentage of the cost for the meeting events?",
+    "db": "student_club",
+    "evidence": "meeting events refers to type = 'Meeting'; percentage = DIVIDE( SUM(cost), COUNT(event_id)) * 100",
+    "gold_sql": "SELECT SUM(CASE WHEN T1.type = 'Meeting' THEN T3.cost ELSE 0 END) * 100 / SUM(T3.cost) FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2.link_to_event INNER JOIN expense AS T3 ON T2.budget_id = T3.link_to_budget",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH meeting_events_expenses AS (\n    SELECT \n        e.event_id,\n        COALESCE(SUM(exp.cost), 0) as total_cost\n    FROM event e\n    LEFT JOIN budget b ON e.event_id = b.link_to_event\n    LEFT JOIN expense exp ON b.budget_id = exp.link_to_budget\n    WHERE e.type = 'Meeting'\n    GROUP BY e.event_id\n),\nmeeting_summary AS (\n    SELECT \n        SUM(total_cost) as total_meeting_cost,\n        COUNT(event_id) as meeting_event_count\n    FROM meeting_events_expenses\n)\nSELECT \n    (total_meeting_cost / meeting_event_count) * 100 as percentage\nFROM meeting_summary;",
+        "reward": 0.921875,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求计算\"会议事件的成本占比百分比\"，但预测SQL计算的是\"平均成本百分比\"（总成本/事件数量）\n\n2. **聚合函数使用错误** - 预测SQL使用了`(SUM(total_cost) / COUNT(event_id)) * 100`，这实际上是计算平均成本占总成本的百分比，而非题目要求的成本占比\n\n3. **证据信息利用不足** - 题目明确给出\"percentage = DIVIDE(SUM(cost), COUNT(event_id)) * 100\"，但预测SQL没有正确理解这个公式含义\n\n**改进建议：**\n将预测SQL中的计算改为`SUM(total_cost) * 100 / (SELECT SUM(cost) FROM expense)`或使用Gold SQL的逻辑来正确计算成本占比。"
+      },
+      "s2": {
+        "pred_sql": "WITH meeting_events AS (\n    SELECT event_id, event_name, type\n    FROM event\n    WHERE type = 'Meeting'\n),\nmeeting_expenses AS (\n    SELECT me.event_id, me.event_name, e.cost\n    FROM meeting_events me\n    INNER JOIN budget b ON me.event_id = b.link_to_event\n    INNER JOIN expense e ON b.budget_id = e.link_to_budget\n),\ncost_summary AS (\n    SELECT \n        SUM(COALESCE(cost, 0)) AS total_cost,\n        COUNT(DISTINCT event_id) AS event_count\n    FROM meeting_expenses\n)\nSELECT \n    (total_cost / CAST(event_count AS FLOAT)) * 100 AS percentage\nFROM cost_summary;",
+        "reward": 0.859375,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求计算\"会议事件的成本占比\"，但预测SQL计算的是\"平均成本百分比\"（总成本/事件数量×100）\n\n2. **聚合函数使用错误** - 使用了`COUNT(DISTINCT event_id)`和`SUM(cost)`后进行除法运算，这不符合\"占比\"的逻辑\n\n3. **证据信息利用不足** - 没有正确理解\"percentage = DIVIDE(SUM(cost), COUNT(event_id)) * 100\"的真正含义\n\n**核心问题：**\n预测SQL的最终计算公式`(total_cost / CAST(event_count AS FLOAT)) * 100`实际上是计算平均每个会议事件的成本占总成本的百分比，而不是会议事件总成本占所有事件总成本的百分比。\n\n**改进建议：**\n将最后的SELECT改为：`total_cost * 100.0 / (SELECT SUM(cost) FROM expense) AS percentage` 或者按照Gold SQL的逻辑重构查询"
+      },
+      "s7": {
+        "pred_sql": "WITH meeting_event_percentage AS (\n    SELECT \n        (SUM(exp.cost) * 100.0 / COUNT(e.event_id)) AS percentage_cost\n    FROM event e\n    JOIN budget b ON e.event_id = b.link_to_event\n    JOIN expense exp ON b.budget_id = exp.link_to_budget\n    WHERE e.type = 'Meeting'\n)\nSELECT percentage_cost FROM meeting_event_percentage;",
+        "reward": 0.8958333333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：`SUM(exp.cost) * 100.0 / COUNT(e.event_id)` 计算的是总成本除以会议事件数量，而非总成本占比\n\n2. **自然语言理解偏差**：题目要求\"会议事件的成本占总成本的百分比\"，但预测SQL计算的是\"会议事件总成本除以会议事件数再乘以100\"\n\n3. **证据信息利用不足**：未正确理解\"percentage = DIVIDE(SUM(cost), COUNT(event_id)) * 100\"应为总成本占比，而非会议事件成本与事件数的比值\n\n**改进建议：**\n将计算改为 `SUM(CASE WHEN e.type = 'Meeting' THEN exp.cost ELSE 0 END) * 100.0 / SUM(exp.cost)` 或者使用Gold SQL的逻辑，确保分母是所有事件的总成本。"
+      }
+    }
+  },
+  {
+    "qid": "1467",
+    "question": "Calculate the total amount spent on speaker gifts and list the name of the event they were spent on.",
+    "db": "student_club",
+    "evidence": "total amount spent = SUM(spent) where category = 'Speaker Gifts'",
+    "gold_sql": "SELECT SUM(T1.spent), T2.event_name FROM budget AS T1 INNER JOIN event AS T2 ON T1.link_to_event = T2.event_id WHERE T1.category = 'Speaker Gifts' GROUP BY T2.event_name",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH final_answer AS (\n    SELECT \n        SUM(b.spent) AS total_amount_spent,\n        GROUP_CONCAT(e.event_name, ', ') AS event_names\n    FROM budget b\n    JOIN event e ON b.link_to_event = e.event_id\n    WHERE b.category = 'Speaker Gifts'\n)\nSELECT total_amount_spent, event_names FROM final_answer;",
+        "reward": 0.8802083333333334,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求\"列出事件名称\"，但预测SQL用GROUP_CONCAT返回逗号分隔的字符串，不符合\"列出\"的语义\n\n2. **证据信息利用不足** - 证据显示应该按事件分组（GROUP BY T2.event_name），但预测SQL没有分组\n\n3. **聚合函数使用错误** - 使用GROUP_CONCAT而非GROUP BY来处理多事件情况\n\n**改进建议：**\n将GROUP_CONCAT改为GROUP BY，按事件分组显示每个事件的总支出，或如果需要显示所有事件名称，应使用GROUP BY而不是GROUP_CONCAT。"
+      },
+      "s2": {
+        "pred_sql": "WITH speaker_gifts_info AS (\n    SELECT \n        SUM(b.spent) AS total_spent,\n        GROUP_CONCAT(e.event_name, ', ') AS event_names\n    FROM budget b\n    INNER JOIN event e ON b.link_to_event = e.event_id\n    WHERE b.category = 'Speaker Gifts'\n)\nSELECT total_spent, event_names FROM speaker_gifts_info;",
+        "reward": 0.8229166666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用`GROUP_CONCAT`将所有事件名连接，但题目要求是\"list the name of the event\"，应该按事件分组显示各自金额\n\n2. **自然语言理解偏差**：预测SQL试图用单行显示所有事件，而Gold SQL按事件分组显示每个事件的总支出\n\n3. **证据信息利用不足**：未正确理解\"list the name of the event\"应为每个事件单独列出，而非合并\n\n**改进建议：**\n删除WITH子句，直接使用Gold SQL的结构，按事件分组显示各自的总支出和事件名称。"
+      },
+      "s7": {
+        "pred_sql": "WITH speaker_gifts_final AS (\n    SELECT \n        SUM(b.spent) AS total_amount_spent,\n        GROUP_CONCAT(e.event_name, ', ') AS event_names\n    FROM budget b\n    JOIN event e ON b.link_to_event = e.event_id\n    WHERE b.category = 'Speaker Gifts'\n)\nSELECT total_amount_spent, event_names FROM speaker_gifts_final;",
+        "reward": 0.9010416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：使用`GROUP_CONCAT`将所有事件名连接，但题目要求是\"list the name of the event\"，应该按事件分组显示各自金额。\n\n2. **自然语言理解偏差**：题目明确要求\"list the name of the event\"，应返回每个事件对应的总金额，而不是汇总所有事件。\n\n**具体问题：**\n- 预测SQL将所有Speaker Gifts支出合并为一个总和，而没有按事件分组\n- 使用了`GROUP_CONCAT`而非`GROUP BY`来处理多事件情况\n\n**改进建议：**\n```sql\nSELECT SUM(b.spent) AS total_amount_spent, e.event_name\nFROM budget b\nJOIN event e ON b.link_to_event = e.event_id\nWHERE b.category = 'Speaker Gifts'\nGROUP BY e.event_name\n```\n\n核心问题是混淆了\"汇总所有事件的总支出\"与\"按事件分别列出支出总额\"的概念。"
+      }
+    }
+  },
+  {
+    "qid": "1472",
+    "question": "In 2012, who had the least consumption in LAM?",
+    "db": "debit_card_specializing",
+    "evidence": "Year 2012 can be presented as Between 201201 And 201212; The first 4 strings of the Date values in the yearmonth table can represent year.",
+    "gold_sql": "SELECT T1.CustomerID FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Segment = 'LAM' AND SUBSTR(T2.Date, 1, 4) = '2012' GROUP BY T1.CustomerID ORDER BY SUM(T2.Consumption) ASC LIMIT 1",
+    "strategy_analyses": {
+      "s1": {
+        "pred_sql": "WITH cte_yearmonth_2012 AS (\n    SELECT CustomerID, Date, Consumption\n    FROM yearmonth\n    WHERE substr(Date, 1, 4) = '2012'\n)\nSELECT CustomerID\nFROM cte_yearmonth_2012\nORDER BY Consumption ASC\nLIMIT 1",
+        "reward": 0.6510416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **聚合函数使用错误**：预测SQL没有对消费数据进行聚合，直接按单条记录排序，无法得到每个客户的总消费\n\n2. **自然语言理解偏差**：问题要求\"最少消费\"，需要计算每位客户的总消费，但预测SQL仅按单条记录排序\n\n3. **证据信息利用不足**：未使用\"GROUP BY\"和\"SUM()\"来计算客户总消费\n\n**改进建议：**\n在ORDER BY前添加GROUP BY CustomerID和SUM(Consumption)，类似Gold SQL的写法。"
+      },
+      "s2": {
+        "pred_sql": "WITH cte1 AS (\n    SELECT CustomerID, Date, Consumption\n    FROM yearmonth\n    WHERE Date BETWEEN 201201 AND 201212\n)\nSELECT CustomerID\nFROM cte1\nWHERE Consumption > 0\nORDER BY Consumption ASC\nLIMIT 1",
+        "reward": 0.9635416666666666,
+        "llm_analysis": "**主要错误原因：**\n\n1. **自然语言理解偏差** - 题目要求找\"最少消费\"，但预测SQL没有使用聚合函数GROUP BY和SUM，直接按单条记录排序\n\n2. **聚合函数使用错误** - 没有对消费数据进行汇总统计，而是直接对原始消费记录排序\n\n3. **证据信息利用不足** - 没有利用\"Year 2012 can be presented as Between 201201 And 201212\"这个关键信息\n\n4. **缺少客户筛选** - 没有筛选'LAM'客户群体\n\n**改进建议：**\n- 添加GROUP BY CustomerID和SUM(Consumption)进行聚合\n- 使用WHERE T1.Segment = 'LAM'筛选客户\n- 正确使用日期范围条件\n- 按总消费升序排列并取最小值"
+      },
+      "s7": {
+        "pred_sql": "SELECT CustomerID\nFROM yearmonth\nWHERE substr(Date, 1, 4) = '2012'\nORDER BY Consumption ASC\nLIMIT 1",
+        "reward": 0.5572916666666666,
+        "llm_analysis": "**主要错误分析：**\n\n1. **表名理解错误** - 预测SQL只使用了yearmonth表，忽略了需要关联customers表来筛选LAM客户群体的要求\n\n2. **列名理解错误** - 预测SQL直接对Consumption排序，但没有通过CustomerID分组，无法确定每个客户的总消费\n\n3. **JOIN条件错误** - 缺少与customers表的连接，无法筛选Segment='LAM'的客户\n\n4. **聚合函数使用错误** - 没有使用SUM()对每个客户的消费进行汇总，而是对单条记录排序\n\n5. **自然语言理解偏差** - 误解了\"least consumption\"的含义，应该计算每个客户的总消费而非单次消费\n\n**改进建议：**\n- 添加customers表JOIN\n- 使用GROUP BY按CustomerID分组\n- 使用SUM(Consumption)计算总消费\n- 添加WHERE条件筛选LAM客户\n- 保持正确的排序和LIMIT逻辑"
+      }
+    }
+  }
+]
