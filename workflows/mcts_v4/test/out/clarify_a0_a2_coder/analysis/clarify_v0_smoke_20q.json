@@ -1,0 +1,1187 @@
+[
+  {
+    "qid": "32",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 32,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "Show the top schools by FRPM count and enrollment",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Select school name, FRPM count, and enrollment from the dataset",
+            "constraint_hint": {
+              "select_columns": [
+                "School Name",
+                "FRPM Count (K-12)",
+                "Enrollment (K-12)"
+              ],
+              "group_by": []
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Select CDS code, school name, and FRPM count for top schools",
+            "constraint_hint": {
+              "select_columns": [
+                "CDSCode",
+                "School",
+                "FRPM Count (K-12)"
+              ],
+              "group_by": []
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Display school, SOC, SOC type, and FRPM count grouped by school",
+            "constraint_hint": {
+              "select_columns": [
+                "School",
+                "SOC",
+                "SOCType",
+                "FRPM Count (K-12)"
+              ],
+              "group_by": [
+                "School"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity lies in the output structure—specifically which columns should be selected and whether grouping is required. The three clusters show different combinations of selected fields and levels of aggregation, indicating uncertainty about what exactly should be displayed in response to the question."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.45,
+        "evidence": "The NL question asks for 'top schools' which implies ranking/ordering criteria, but the schema doesn't specify any ordering columns. The question mentions 'FRPM count and enrollment' as criteria, but none of the candidates properly address how to rank/identify 'top' schools. Candidate A simply selects the requested fields without any ordering/grouping. Candidates B and C introduce additional fields (CDS code, SOC, SOC type) not mentioned in the NL question. There's insufficient evidence to definitively choose any candidate.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output"
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 28,
+        "pool_after": 28,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH top5_schools AS (\n    SELECT \n        CASE \n            WHEN f.`Enrollment (K-12)` > 0 THEN f.`FRPM Count (K-12)` / f.`Enrollment (K-12)`\n            ELSE 0 \n        END AS frpm_rate\n    FROM schools s\n    JOIN frpm f ON s.CDSCode = f.CDSCode\n    WHERE s.SOC = '66' \n        AND f.`Enrollment (K-12)` IS NOT NULL \n        AND f.`FRPM Count (K-12)` IS NOT NULL\n    ORDER BY f.`FRPM Count (K-12)` DESC\n    LIMIT 5\n)\nSELECT frpm_rate FROM top5_schools;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "346",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 346,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "Find cards with no power specified or marked as wildcard, showing their ID and artist",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Select card ID and artist from cards table joined with legalities table where power is either '*' or NULL",
+            "constraint_hint": {
+              "required_tables": [
+                "cards",
+                "legalities"
+              ],
+              "required_columns": [
+                "cards.id",
+                "cards.artist",
+                "cards.power",
+                "legalities.uuid"
+              ],
+              "join_path": [
+                "cards.uuid = legalities.uuid"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Select card ID and artist from cards table joined with legalities table where power is either '*' or NULL, using ID-based join",
+            "constraint_hint": {
+              "required_tables": [
+                "cards",
+                "legalities"
+              ],
+              "required_columns": [
+                "cards.id",
+                "cards.artist",
+                "cards.power",
+                "legalities.id"
+              ],
+              "join_path": [
+                "cards.id = legalities.id"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity centers on the reference/JOIN condition between the cards and legalities tables. The first cluster uses 'c.uuid = l.uuid' while the second uses 'c.id = l.id', which represents different ways to connect the tables. Both queries aim to find cards with unspecified power but differ in their join strategy, making this a clear reference ambiguity."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question explicitly states 'cards with no power specified or marked as wildcard' which directly maps to 'power is either '*' or NULL'. The schema reference to 'power' column and the clarification axis = Reference indicates this is about card power attributes.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "cards",
+          "legalities"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 6,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_result AS (\n    SELECT c.id, c.artist\n    FROM cards c\n    INNER JOIN legalities l ON c.id = l.id\n    WHERE (c.power = '*' OR c.power IS NULL) \n    AND l.format = 'commander' \n    AND l.status = 'Legal'\n)\nSELECT id, artist FROM final_result;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "26",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 26,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "31",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 31,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the total enrollment of schools eligible for free meals?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Total enrollment of all schools in the dataset.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "Enrollment (K-12)"
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Average enrollment of schools eligible for free meals.",
+            "constraint_hint": {
+              "agg": "AVG",
+              "column": "Enrollment (K-12)"
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Count of schools with enrollment data.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            }
+          }
+        ],
+        "rationale": "The ambiguity arises from whether the query intends to aggregate the 'Enrollment (K-12)' column using sum, average, or count. Each cluster reflects a different measure applied to the same underlying data, making it unclear which aggregation function was intended by the user."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question asks for 'total enrollment of schools eligible for free meals' - the phrase 'total enrollment' directly indicates a sum/total calculation rather than an average, and 'schools eligible for free meals' specifies the subset of interest. The schema context confirms we're looking at school-level enrollment data where eligibility for free meals is a distinguishing factor.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "SUM",
+          "enrollment (k-12)"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 15,
+        "pool_after": 0,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT \n        `CDSCode`,\n        `School Name`,\n        `Enrollment (K-12)`,\n        `Free Meal Count (K-12)`,\n        `Percent (%) Eligible Free (K-12)`\n    FROM frpm\n    WHERE `Enrollment (K-12)` IS NOT NULL\n    ORDER BY `Enrollment (K-12)` DESC\n    LIMIT 15\n)\nSELECT \n    LAG(`Percent (%) Eligible Free (K-12)`, 1) OVER (ORDER BY `Enrollment (K-12)` DESC) AS eligible_free_rate_11th,\n    `Percent (%) Eligible Free (K-12)` AS eligible_free_rate_10th\nFROM cte1\nLIMIT 1 OFFSET 9;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "72",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 72,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the total enrollment of students aged 5-17?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query sums up the 'Enrollment (Ages 5-17)' column from the frpm table without any joins or additional filtering.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "Enrollment (Ages 5-17)"
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "The query sums the 'Enrollment (Ages 5-17)' column from the frpm table joined with the schools table, but does not apply any specific filter on the joined data.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "Enrollment (Ages 5-17)"
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "The query sums the 'Enrollment (Ages 5-17)' column from the frpm table joined with the schools table and includes a condition on the frpm table's 'CDSCode' field.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "Enrollment (Ages 5-17)"
+            }
+          }
+        ],
+        "rationale": "All three SQL queries aim to compute a total enrollment count for students aged 5-17. The differences lie in how they structure the query—whether using a direct sum, joining with another table, or applying filters. These variations reflect ambiguity in how the measure should be computed, particularly whether joins or conditions affect the aggregation."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question asks for 'the total enrollment of students aged 5-17' which directly corresponds to the 'Enrollment (Ages 5-17)' column in the frpm table. There is no mention of needing to join with another table or apply any filters, and the schema shows this column exists in the frpm table alone.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "SUM",
+          "enrollment (ages 5-17)"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 21,
+        "pool_after": 20,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_answer AS (\n    SELECT SUM(f.`Enrollment (Ages 5-17)`) AS total_students\n    FROM frpm f\n    JOIN schools s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Academic Year` = '2014-2015'\n    AND s.`District` LIKE '%Fremont%'\n    AND s.`EdOpsCode` = 'SSS'\n)\nSELECT * FROM final_answer;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "186",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 186,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "What is the client account information including gender and frequency?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Get client account info with gender and frequency by joining client and disp tables",
+            "constraint_hint": {
+              "required_tables": [
+                "client",
+                "disp"
+              ],
+              "required_columns": [
+                "client_id",
+                "gender",
+                "frequency"
+              ],
+              "join_path": [
+                "client.client_id = disp.client_id"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Get weekly client data including gender and frequency by joining client and disp tables",
+            "constraint_hint": {
+              "required_tables": [
+                "client",
+                "disp"
+              ],
+              "required_columns": [
+                "client_id",
+                "gender",
+                "frequency"
+              ],
+              "join_path": [
+                "client.client_id = disp.client_id"
+              ]
+            }
+          }
+        ],
+        "rationale": "The primary ambiguity lies in the reference/tables used. Both SQL queries join 'client' and 'disp' tables but use different CTE names ('client_account_info' vs 'weekly_clients') and slightly different column references. The key difference is that one query uses 'a.frequency' while the other uses 'a.frequency' (though this appears to be a typo in the second query). The constraint hints show both require the same tables and columns, but the first query's CTE name suggests it's about general client account info while the second implies weekly data."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question asks for 'client account information including gender and frequency' which directly corresponds to getting client account info with gender and frequency. The phrase 'account information' suggests we're looking for core client details rather than temporal weekly data. The schema mentions 'disp' table which likely contains disposition/relationship information between clients and accounts, supporting the need to join client and disp tables.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "client",
+          "disp"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 11,
+        "pool_after": 11,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH weekly_clients AS (\n    SELECT c.client_id, c.gender, a.frequency\n    FROM client c\n    JOIN disp d ON c.client_id = d.client_id\n    JOIN account a ON d.account_id = a.account_id\n    WHERE a.frequency = 'POPLATEK TYDNE'\n),\nmale_weekly_clients AS (\n    SELECT COUNT(*) AS male_count\n    FROM weekly_clients\n    WHERE gender = 'M'\n),\ntotal_weekly_clients AS (\n    SELECT COUNT(*) AS total_count\n    FROM weekly_clients\n),\npercentage_calc AS (\n    SELECT \n        (CAST(m.male_count AS REAL) / t.total_count) * 100 AS percentage\n    FROM male_weekly_clients m\n    CROSS JOIN total_weekly_clients t\n)\nSELECT percentage\nFROM percentage_calc;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "25",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 25,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What schools and their funding types have SAT scores data?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Select school name and funding type from schools table joined with SAT scores, grouped by school and funding type.",
+            "constraint_hint": {
+              "select_columns": [
+                "school_name",
+                "funding_type"
+              ],
+              "group_by": [
+                "school_name",
+                "funding_type"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Select school and funding type from schools joined with SAT scores, without grouping.",
+            "constraint_hint": {
+              "select_columns": [
+                "School",
+                "FundingType"
+              ],
+              "group_by": []
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Select school and funding type from schools joined with SAT scores, grouped by school only.",
+            "constraint_hint": {
+              "select_columns": [
+                "School",
+                "FundingType"
+              ],
+              "group_by": [
+                "School"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity centers on the output structure—specifically whether to group by both school and funding type, just school, or not at all. Each cluster reflects a different interpretation of how to structure the final output, particularly around grouping and selection of columns."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question asks for 'schools and their funding types' which indicates we need both school name and funding type columns. The phrase 'have SAT scores data' indicates we need to join the schools table with SAT scores table. The requirement to 'group by school and funding type' is implied when we're selecting multiple attributes that should be uniquely identified together - this prevents duplicate rows when there might be multiple SAT score records per school-funding combination.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Output",
+        "required_select_columns": [
+          "funding_type",
+          "school_name"
+        ],
+        "required_group_by": [
+          "funding_type",
+          "school_name"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 0,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH schools_with_funding AS (\n    SELECT \n        s.`School`,\n        s.`FundingType`,\n        AVG(sc.`AvgScrMath`) AS avg_math_score\n    FROM schools s\n    INNER JOIN satscores sc ON s.`CDSCode` = sc.`cds`\n    WHERE s.`County` = 'Riverside' \n        AND s.`District` LIKE 'Riverside%'\n        AND s.`FundingType` IS NOT NULL\n    GROUP BY s.`School`, s.`FundingType`\n    HAVING AVG(sc.`AvgScrMath`) > 400\n)\nSELECT \n    `School`,\n    `FundingType`\nFROM schools_with_funding;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "36",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 36,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "Find schools with SAT scores and administrative contact information.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Retrieve school names, districts, and counties along with their SAT scores and enrollment numbers.",
+            "constraint_hint": {
+              "required_tables": [
+                "satscores"
+              ],
+              "required_columns": [
+                "sname",
+                "dname",
+                "cname",
+                "enroll12",
+                "NumGE1500"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Get full names of administrators for each school by joining school data with administrative details.",
+            "constraint_hint": {
+              "required_tables": [
+                "schools"
+              ],
+              "required_columns": [
+                "AdmFName1",
+                "AdmLName1"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Select SAT score data including county, district, school name, enrollment, and number of students scoring 1500 or higher.",
+            "constraint_hint": {
+              "required_tables": [
+                "satscores"
+              ],
+              "required_columns": [
+                "cds",
+                "sname",
+                "dname",
+                "cname",
+                "enroll12",
+                "NumGE1500"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            }
+          }
+        ],
+        "rationale": "The ambiguity arises from the reference axis because the question does not clearly specify which tables or columns are required to answer it. Each cluster represents a different interpretation of what information is being requested—either SAT scores alone, administrative contact info, or a combination. The constraint hints reflect these distinct interpretations based on the required tables and columns."
+      },
+      "answer": {
+        "choice": "C",
+        "confidence": 0.85,
+        "evidence": "The NL question explicitly mentions 'SAT scores' and 'administrative contact information', and candidate C directly addresses SAT score data including school name, county, district, enrollment, and students scoring 1500 or higher, which aligns with the explicit mention of SAT scores in the natural language query.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "satscores"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 17,
+        "pool_after": 17,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH admin_full_name AS (\n    SELECT \n        COALESCE(sch.AdmFName1, '') || ' ' || COALESCE(sch.AdmLName1, '') AS admin_full_name\n    FROM satscores s\n    JOIN schools sch ON s.cds = sch.CDSCode\n    WHERE s.NumGE1500 IS NOT NULL\n    ORDER BY s.NumGE1500 DESC\n    LIMIT 1\n)\nSELECT * FROM admin_full_name;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "50",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 50,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Ranking",
+        "question": "Find the school with the seventh highest math score.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Retrieve the school and street of the seventh highest math score using a CTE that ranks schools by average math score in descending order.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 7,
+              "key": "AvgScrMath"
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Identify the school and street associated with the seventh highest math score by selecting from a ranked list of schools ordered by average math score in descending order.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 7,
+              "key": "AvgScrMath"
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Select the school and street of the seventh highest math score using a CTE that computes average math scores and ranks them in descending order.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 7,
+              "key": "AvgScrMath"
+            }
+          }
+        ],
+        "rationale": "The ambiguity arises from how the 'seventh highest' ranking is interpreted in SQL. All three clusters involve ranking schools by their average math scores in descending order and retrieving the seventh entry. The core ambiguity lies in the interpretation of the ranking operation itself—specifically, whether it's based on a window function or a simple LIMIT/OFFSET approach, which affects how ties might be handled and how exactly the rank is computed."
+      },
+      "answer": {
+        "choice": "B",
+        "confidence": 0.85,
+        "evidence": "The NL question explicitly states 'Find the school with the seventh highest math score' and references 'school' and 'math score' columns. The phrase 'seventh highest math score' directly maps to ordering by average math score in descending order and selecting the 7th record, which is exactly what candidate B describes as 'selecting from a ranked list of schools ordered by average math score in descending order.'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Ranking",
+        "required_order": "DESC",
+        "required_limit": 7
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 0,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH seventh_highest_math_school AS (\n    SELECT s.School, s.Street\n    FROM schools s\n    INNER JOIN satscores ss ON s.CDSCode = ss.cds\n    WHERE ss.AvgScrMath IS NOT NULL\n    ORDER BY ss.AvgScrMath DESC\n    LIMIT 1 OFFSET 6\n)\nSELECT School, Street AS PostalStreetAddress\nFROM seventh_highest_math_school;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "145",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 145,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "What transactions have operation type 'withdrawal'?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Find transactions where operation is 'withdrawal' using the transaction_data CTE",
+            "constraint_hint": {
+              "required_tables": [
+                "trans"
+              ],
+              "required_columns": [
+                "operation"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Filter transactions with operation 'withdrawal' from the main trans table",
+            "constraint_hint": {
+              "required_tables": [
+                "trans"
+              ],
+              "required_columns": [
+                "operation"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            }
+          }
+        ],
+        "rationale": "The ambiguity centers on reference requirements because both SQL queries reference the same underlying data but use different approaches - one uses a CTE (Common Table Expression) while the other directly references the base table. The question about 'withdrawal' operations could be interpreted as requiring either approach, making the reference requirements ambiguous. Both candidates correctly identify that we need to filter by operation column in the trans table."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question asks about 'transactions' and specifies 'operation type withdrawal', which aligns with candidate A's mention of 'operation is withdrawal' using a transaction_data CTE. The schema reference to 'Reference' axis suggests a structured approach to transaction data, supporting the CTE-based filtering approach.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "trans"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT t.trans_id, t.account_id, t.amount, t.date, t.operation\n    FROM trans t\n    WHERE t.operation = 'VYBER KARTOU'\n    AND STRFTIME('%Y', t.date) = '1998'\n),\navg_amount AS (\n    SELECT AVG(amount) AS avg_trans_amount\n    FROM cte1\n),\nbelow_avg_accounts AS (\n    SELECT DISTINCT t.account_id\n    FROM cte1 t\n    WHERE t.amount < (SELECT avg_trans_amount FROM avg_amount)\n),\nclient_ids AS (\n    SELECT DISTINCT d.client_id\n    FROM below_avg_accounts baa\n    JOIN disp d ON baa.account_id = d.account_id\n    WHERE d.type = 'OWNER'\n)\nSELECT client_id\nFROM client_ids;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "173",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 173,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "197",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 197,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "Find molecules that have bonds, returning their IDs and labels.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Select molecule ID and label from molecule table joined with bond table on molecule_id.",
+            "constraint_hint": {
+              "required_tables": [
+                "molecule",
+                "bond"
+              ],
+              "required_columns": [
+                "molecule.molecule_id",
+                "molecule.label",
+                "bond.molecule_id"
+              ],
+              "join_path": [
+                "molecule.molecule_id = bond.molecule_id"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Select molecule ID and label from molecule table joined with bond table using molecule_id as join key.",
+            "constraint_hint": {
+              "required_tables": [
+                "molecule",
+                "bond"
+              ],
+              "required_columns": [
+                "molecule.molecule_id",
+                "molecule.label",
+                "bond.molecule_id"
+              ],
+              "join_path": [
+                "molecule.molecule_id = bond.molecule_id"
+              ]
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Select only molecule ID from molecule table where there is a matching record in bond table.",
+            "constraint_hint": {
+              "required_tables": [
+                "molecule",
+                "bond"
+              ],
+              "required_columns": [
+                "molecule.molecule_id",
+                "bond.molecule_id"
+              ],
+              "join_path": [
+                "molecule.molecule_id = bond.molecule_id"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity arises from how the reference to tables and columns is specified across different SQL queries. While all three clusters involve joining 'molecule' and 'bond' tables, they differ slightly in what columns are selected and whether the join condition is explicitly stated or implied. The 'Reference' axis captures this variation in how the schema entities are referenced."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question states 'Find molecules that have bonds, returning their IDs and labels' which clearly indicates we need to join the molecule table with the bond table to find molecules that have corresponding bond records, and then select both molecule ID and label columns.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "bond",
+          "molecule"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH single_bond_oxygen_counts AS (\n    SELECT a.molecule_id, COUNT(*) AS oxygen_count\n    FROM atom a\n    INNER JOIN bond b ON a.molecule_id = b.molecule_id\n    WHERE b.bond_type = '-' AND a.element = 'o'\n    GROUP BY a.molecule_id\n)\nSELECT AVG(oxygen_count) AS average_oxygen_atoms\nFROM single_bond_oxygen_counts;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "37",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 37,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "48",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 48,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "How many schools are in Orange County?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Count the total number of schools in Orange County using a simple COUNT(*) query.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR",
+              "column": "schools"
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Count the distinct number of schools in Orange County, possibly to avoid duplicates.",
+            "constraint_hint": {
+              "agg": "COUNT_DISTINCT",
+              "column": "schools"
+            }
+          }
+        ],
+        "rationale": "The primary ambiguity lies in how the count is interpreted—whether it's a straightforward count of all rows or a distinct count. Both clusters involve counting schools in Orange County, but the second cluster introduces a more complex ratio calculation which implies that the first two clusters may differ in their aggregation intent. The ambiguity centers on the measure used for counting."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question 'How many schools are in Orange County?' uses the phrase 'how many' which typically implies counting all records without needing to account for duplicates. The schema shows a direct relationship between schools and counties, making a simple COUNT(*) sufficient. There's no indication in the question that duplicate schools might exist or need to be handled.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "COUNT",
+          "*"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_ratio AS (\n    SELECT \n        CAST(muc.unified_merged_count AS REAL) / CAST(mec.elementary_merged_count AS REAL) AS ratio\n    FROM (\n        SELECT COUNT(*) AS unified_merged_count\n        FROM schools\n        WHERE County = 'Orange' AND StatusType = 'Merged' AND DOC = '54'\n    ) muc\n    CROSS JOIN (\n        SELECT COUNT(*) AS elementary_merged_count\n        FROM schools\n        WHERE County = 'Orange' AND StatusType = 'Merged' AND DOC = '52'\n    ) mec\n)\nSELECT * FROM final_ratio;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "169",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 169,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "128",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 128,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "136",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 136,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "213",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 213,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "Find bond types associated with atom TR004_8 and its connected atoms",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Get all distinct bond types for bonds connecting atom TR004_8 to its connected atoms",
+            "constraint_hint": {
+              "required_tables": [
+                "bond",
+                "connected"
+              ],
+              "required_columns": [
+                "bond.bond_id",
+                "connected.bond_id",
+                "connected.atom_id"
+              ],
+              "join_path": [
+                "connected.bond_id= bond.bond_id"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Retrieve bond type information for atom TR004_8 through its connections",
+            "constraint_hint": {
+              "required_tables": [
+                "connected",
+                "bond"
+              ],
+              "required_columns": [
+                "connected.atom_id",
+                "bond.bond_type"
+              ],
+              "banned_tables": [],
+              "join_path": [
+                "connected.bond_id = bond.bond_id"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity centers on reference requirements because both SQL queries involve joining 'connected' and 'bond' tables to find bond types related to atom TR004_8. The first query focuses on distinct bond types while the second appears to be more about retrieving bond type information. Both require proper table references and join conditions to correctly link the atom to its bonds."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.9,
+        "evidence": "The NL question explicitly states 'Find bond types associated with atom TR004_8 and its connected atoms' and the phrase 'bond types associated with...and its connected atoms' clearly indicates we need to look at bonds connecting TR004_8 to its connected atoms, which matches candidate A's formulation of 'Get all distinct bond types for bonds connecting atom TR004_8 to its connected atoms'. The schema context of atoms and bonds supports this interpretation.",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Reference",
+        "required_tables": [
+          "bond",
+          "connected"
+        ]
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 3,
+        "pool_after": 3,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_bond_type AS (\n    SELECT DISTINCT b.bond_type\n    FROM bond b\n    JOIN connected c ON b.bond_id = c.bond_id\n    WHERE (c.atom_id = 'TR004_8' AND c.atom_id2 = 'TR004_20') \n       OR (c.atom_id = 'TR004_20' AND c.atom_id2 = 'TR004_8')\n)\nSELECT bond_type FROM final_bond_type;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "231",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 231,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "371",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 371,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "How many distinct French story cards are there?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Count distinct French story cards using table 'cards' and join with 'foreign' table.",
+            "constraint_hint": {
+              "required_tables": [
+                "cards",
+                "foreign"
+              ],
+              "required_columns": [
+                "cards.id",
+                "foreign.card_id"
+              ],
+              "banned_tables": [],
+              "join_path": [
+                "cards.id = foreign.card_id"
+              ]
+            }
+          },
+          {
+            "cid": "B",
+            "summary": "Count distinct French story cards using table 'cards' and join with 'foreign' table, but referencing 'cs' alias.",
+            "constraint_hint": {
+              "required_tables": [
+                "cards",
+                "foreign"
+              ],
+              "required_columns": [
+                "cards.id",
+                "foreign.card_id"
+              ],
+              "banned_tables": [],
+              "join_path": [
+                "cards.id = foreign.card_id"
+              ]
+            }
+          },
+          {
+            "cid": "C",
+            "summary": "Count distinct French story cards using table 'cards' and join with 'foreign' table, but referencing 'c' alias.",
+            "constraint_hint": {
+              "required_tables": [
+                "cards",
+                "foreign"
+              ],
+              "required_columns": [
+                "cards.id",
+                "foreign.card_id"
+              ],
+              "banned_tables": [],
+              "join_path": [
+                "cards.id = foreign.card_id"
+              ]
+            }
+          }
+        ],
+        "rationale": "The ambiguity arises from the use of different table aliases ('c', 'cs') in the SQL queries, which could lead to confusion about whether the query refers to the same underlying structure or if it's attempting to reference different tables or joins. The core reference remains consistent across all three clusters, but the aliasing introduces potential misinterpretation."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "The NL question asks about counting distinct French story cards but doesn't provide any information about table aliases or specific join references that would distinguish between options A, B, and C. The schema description is too compressed to determine alias usage, and none of the candidates can be definitively selected based solely on the natural language question and compressed schema.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Reference"
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 6,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH french_story_spotlight AS (\n    SELECT COUNT(DISTINCT cs.id) AS french_count\n    FROM cards cs\n    INNER JOIN foreign_data fd ON cs.id = fd.id\n    WHERE cs.isStorySpotlight = 1 AND fd.language = 'French'\n),\ntotal_story_spotlight AS (\n    SELECT COUNT(DISTINCT id) AS total_count\n    FROM cards\n    WHERE isStorySpotlight = 1\n)\nSELECT \n    (CAST(f.french_count AS REAL) / t.total_count) * 100 AS percentage\nFROM french_story_spotlight f\nCROSS JOIN total_story_spotlight t;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  }
+]

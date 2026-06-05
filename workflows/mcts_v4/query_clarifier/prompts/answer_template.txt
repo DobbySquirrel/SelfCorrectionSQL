@@ -1,0 +1,40 @@
+You are deciding which interpretation is correct for an NL2SQL query.
+You CANNOT see the SQL candidates. You must judge from NL + schema only.
+
+NL Question: {nl_question}
+
+Schema (compressed):
+{schema_ddl}
+
+Clarification (axis = {axis}):
+{question}
+
+Candidates:
+{candidates_block}
+
+Rules:
+- If the NL phrasing or schema gives clear evidence, choose one.
+- If multiple candidates are plausible, set "abstain": true.
+
+Confidence anchors (self-assess honestly):
+    >=0.85: NL or schema contains an EXPLICIT phrase that uniquely
+            identifies this choice (quote it in evidence)
+    0.70-0.85: NL leans toward this choice but other candidate also
+            has partial support
+    0.60-0.70: weak signal, mostly schema heuristic
+    <0.60: must abstain
+
+MANDATORY ABSTAIN if ANY of:
+- You cannot quote an exact phrase from NL or a schema column/table name
+  that uniquely supports your choice
+- Two or more candidates have at least one supporting phrase each
+- The choice depends on domain assumption not stated in NL
+
+Evidence field constraint:
+- evidence MUST start with a verbatim quote from the NL question OR
+  a schema column/table name (e.g. "NL: '...'" or "schema: table.col").
+- Free-form reasoning without such a quote is rejected — set abstain=true.
+
+Output JSON only:
+{{"choice":"A"|"B"|null, "confidence":0.0-1.0,
+ "evidence":"...", "abstain":true|false}}

@@ -1,0 +1,295 @@
+{
+  "datasets": [
+    {
+      "name": "final_498",
+      "n_questions": 498,
+      "n_rollouts": 3984,
+      "rollout_tags": {
+        "ok": 3561,
+        "empty_rollout": 423
+      },
+      "empty_rollout_rate": 0.10617469879518072,
+      "q_all_8_empty": 51,
+      "q_all_8_empty_rate": 0.10240963855421686,
+      "q_rollout_empty_hist": {
+        "0": 439,
+        "1": 5,
+        "2": 2,
+        "6": 1,
+        "8": 51
+      }
+    },
+    {
+      "name": "ef2_rerun",
+      "n_questions": 21,
+      "n_rollouts": 168,
+      "rollout_tags": {
+        "ok": 167,
+        "empty_rollout": 1
+      },
+      "empty_rollout_rate": 0.005952380952380952,
+      "q_all_8_empty": 0,
+      "q_all_8_empty_rate": 0.0,
+      "q_rollout_empty_hist": {
+        "0": 20,
+        "1": 1
+      }
+    },
+    {
+      "name": "a0_30",
+      "n_questions": 30,
+      "n_rollouts": 240,
+      "rollout_tags": {
+        "ok": 240
+      },
+      "empty_rollout_rate": 0.0,
+      "q_all_8_empty": 0,
+      "q_all_8_empty_rate": 0.0,
+      "q_rollout_empty_hist": {
+        "0": 30
+      }
+    },
+    {
+      "name": "a3_30",
+      "n_questions": 30,
+      "n_rollouts": 240,
+      "rollout_tags": {
+        "ok": 240
+      },
+      "empty_rollout_rate": 0.0,
+      "q_all_8_empty": 0,
+      "q_all_8_empty_rate": 0.0,
+      "q_rollout_empty_hist": {
+        "0": 30
+      }
+    },
+    {
+      "name": "a0_30_r20",
+      "n_questions": 30,
+      "n_rollouts": 600,
+      "rollout_tags": {
+        "ok": 600
+      },
+      "empty_rollout_rate": 0.0,
+      "q_all_8_empty": 0,
+      "q_all_8_empty_rate": 0.0,
+      "q_rollout_empty_hist": {
+        "0": 30
+      }
+    },
+    {
+      "name": "baseline_498",
+      "n_questions": 498,
+      "n_rollouts": 9960,
+      "rollout_tags": {
+        "ok": 9831,
+        "empty_rollout": 129
+      },
+      "empty_rollout_rate": 0.012951807228915663,
+      "q_all_8_empty": 1,
+      "q_all_8_empty_rate": 0.002008032128514056,
+      "q_rollout_empty_hist": {
+        "0": 487,
+        "5": 1,
+        "6": 2,
+        "7": 1,
+        "11": 1,
+        "13": 3,
+        "17": 1,
+        "18": 1,
+        "20": 1
+      }
+    }
+  ],
+  "sel35_cross": {
+    "n_sel35": 35,
+    "n_polluted_any_empty": 0,
+    "pollution_rate": 0.0,
+    "r2_saved_n": 18,
+    "r2_saved_polluted": 0,
+    "r2_saved_pollution_rate": 0.0,
+    "adjusted_r2_net_upper": 18,
+    "polluted_qids": [],
+    "per_q": {
+      "27": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "136": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "186": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "219": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "220": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "230": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "232": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "268": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "281": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "397": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "414": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "416": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "440": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "462": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "480": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "528": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "529": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "584": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "598": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "637": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "726": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "766": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "773": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "788": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "792": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "884": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "944": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "954": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "1001": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "1150": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "1208": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "1241": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      },
+      "1270": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "1460": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": false
+      },
+      "1506": {
+        "empty_rollouts": 0,
+        "total": 8,
+        "in_r2_saved": true
+      }
+    }
+  },
+  "gateway": [
+    "PASS",
+    "\u8fdb Phase 3 \u8dd1 447"
+  ]
+}

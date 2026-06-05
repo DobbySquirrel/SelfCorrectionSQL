@@ -1,0 +1,193 @@
+[
+  {
+    "qid": "136",
+    "db": "financial",
+    "n_rollouts": 8,
+    "r2_winner_sig": "dd57b19eb2d184b7",
+    "r2_total_visit": 13,
+    "runner_up": [
+      [
+        "b3c5b045a72991db",
+        1
+      ],
+      [
+        "b0529cbd0af60fa8",
+        1
+      ]
+    ],
+    "r0_hit_posthoc": false,
+    "r2_hit_posthoc": true,
+    "r2_equals_max_visit_only": true,
+    "clusters": [
+      {
+        "sig_prefix": "dd57b19eb2d184b7",
+        "total_count": 90,
+        "total_visit": 13,
+        "max_rollout_reward": 1.0,
+        "n_variants": 90,
+        "n_correct_variants_posthoc": 90,
+        "rep_sql_prefix": "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM loan l\n    JOIN ac…",
+        "rep_hit_posthoc": true,
+        "picked_by_r2": true
+      },
+      {
+        "sig_prefix": "b3c5b045a72991db",
+        "total_count": 15,
+        "total_visit": 1,
+        "max_rollout_reward": 1.0,
+        "n_variants": 15,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH cte1 AS (\n    SELECT l.loan_id, l.account_id, l.date, l.amount\n    FROM loa…",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      },
+      {
+        "sig_prefix": "b0529cbd0af60fa8",
+        "total_count": 15,
+        "total_visit": 1,
+        "max_rollout_reward": 1.0,
+        "n_variants": 15,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH final_answer AS (\n    SELECT COUNT(*) AS answer\n    FROM loan l\n    JOIN ac…",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      }
+    ]
+  },
+  {
+    "qid": "186",
+    "db": "financial",
+    "n_rollouts": 8,
+    "r2_winner_sig": "5420c8037875b7a0",
+    "r2_total_visit": 5,
+    "runner_up": [
+      [
+        "0b7fdd7763bff8e7",
+        1
+      ],
+      [
+        "0cebc35c31d8463a",
+        1
+      ],
+      [
+        "aea2dbfefe7d8428",
+        1
+      ]
+    ],
+    "r0_hit_posthoc": false,
+    "r2_hit_posthoc": true,
+    "r2_equals_max_visit_only": true,
+    "clusters": [
+      {
+        "sig_prefix": "5420c8037875b7a0",
+        "total_count": 61,
+        "total_visit": 5,
+        "max_rollout_reward": 1.0,
+        "n_variants": 61,
+        "n_correct_variants_posthoc": 16,
+        "rep_sql_prefix": "WITH total_weekly_clients AS (\n    SELECT COUNT(*) AS total_count\n    FROM clien…",
+        "rep_hit_posthoc": true,
+        "picked_by_r2": true
+      },
+      {
+        "sig_prefix": "0b7fdd7763bff8e7",
+        "total_count": 15,
+        "total_visit": 1,
+        "max_rollout_reward": 1.0,
+        "n_variants": 15,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH male_weekly_clients AS (\n    SELECT COUNT(*) AS male_weekly_count\n    FROM …",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      },
+      {
+        "sig_prefix": "0cebc35c31d8463a",
+        "total_count": 14,
+        "total_visit": 1,
+        "max_rollout_reward": 0.9333,
+        "n_variants": 14,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH weekly_statement_clients AS (\n    SELECT DISTINCT c.client_id, c.gender\n   …",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      },
+      {
+        "sig_prefix": "aea2dbfefe7d8428",
+        "total_count": 1,
+        "total_visit": 1,
+        "max_rollout_reward": 0.9333,
+        "n_variants": 1,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH weekly_statement_clients AS (\n    SELECT DISTINCT c.client_id, c.gender\n   …",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      },
+      {
+        "sig_prefix": "52344221f48cfd6c",
+        "total_count": 14,
+        "total_visit": 1,
+        "max_rollout_reward": 0.9333,
+        "n_variants": 14,
+        "n_correct_variants_posthoc": 14,
+        "rep_sql_prefix": "WITH weekly_statement_clients AS (\n    SELECT c.client_id, c.gender, a.frequency…",
+        "rep_hit_posthoc": true,
+        "picked_by_r2": false
+      }
+    ]
+  },
+  {
+    "qid": "230",
+    "db": "toxicology",
+    "n_rollouts": 8,
+    "r2_winner_sig": "dfb1f11ddccaae61",
+    "r2_total_visit": 7,
+    "runner_up": [
+      [
+        "35ea0f951dd13c61",
+        3
+      ],
+      [
+        "5168eaf0ca3ac07b",
+        1
+      ]
+    ],
+    "r0_hit_posthoc": false,
+    "r2_hit_posthoc": true,
+    "r2_equals_max_visit_only": true,
+    "clusters": [
+      {
+        "sig_prefix": "dfb1f11ddccaae61",
+        "total_count": 75,
+        "total_visit": 7,
+        "max_rollout_reward": 1.0,
+        "n_variants": 75,
+        "n_correct_variants_posthoc": 75,
+        "rep_sql_prefix": "WITH final_answer AS (\n    SELECT DISTINCT a.element, m.label\n    FROM atom a\n  …",
+        "rep_hit_posthoc": true,
+        "picked_by_r2": true
+      },
+      {
+        "sig_prefix": "35ea0f951dd13c61",
+        "total_count": 30,
+        "total_visit": 3,
+        "max_rollout_reward": 1.0,
+        "n_variants": 30,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH molecule_elements AS (\n    SELECT \n        GROUP_CONCAT(DISTINCT a.element …",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      },
+      {
+        "sig_prefix": "5168eaf0ca3ac07b",
+        "total_count": 15,
+        "total_visit": 1,
+        "max_rollout_reward": 1.0,
+        "n_variants": 15,
+        "n_correct_variants_posthoc": 0,
+        "rep_sql_prefix": "WITH molecule_data AS (\n    SELECT \n        GROUP_CONCAT(element, ', ') AS eleme…",
+        "rep_hit_posthoc": false,
+        "picked_by_r2": false
+      }
+    ]
+  }
+]

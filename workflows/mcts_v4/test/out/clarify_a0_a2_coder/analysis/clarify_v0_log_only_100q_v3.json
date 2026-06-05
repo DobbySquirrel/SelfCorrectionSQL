@@ -1,0 +1,2422 @@
+[
+  {
+    "qid": "25",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 25,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "26",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 26,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "31",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 31,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "32",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 32,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "36",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 36,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "37",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 37,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "48",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 48,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "50",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 50,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Ranking",
+        "question": "Which school has the seventh-highest math score?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Find the school with the seventh-highest average math score using a CTE that ranks schools by their math scores in descending order.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 1,
+              "key": "AvgScrMath"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Identify the school with the seventh-highest math score by selecting the appropriate row after ordering all schools by math score in descending order.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 1,
+              "key": "AvgScrMath"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity arises from how to interpret 'seventh-highest math score'—specifically, whether we're looking for a ranked position or some other form of ordering. The SQL queries suggest ranking based on AvgScrMath in descending order and then limiting to the 7th entry. Clusters 1 and 2 both reflect this interpretation, while Cluster 3 uses a different approach (CTE with window function), but still implies a ranking operation. Therefore, the primary axis is Ranking."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'Which school has the seventh-highest math score?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Ranking",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH seventh_highest_math_school AS (\n    SELECT s.School, s.Street\n    FROM schools s\n    INNER JOIN satscores ss ON s.CDSCode = ss.cds\n    WHERE ss.AvgScrMath IS NOT NULL\n    ORDER BY ss.AvgScrMath DESC\n    LIMIT 1 OFFSET 6\n)\nSELECT School, Street AS PostalStreetAddress\nFROM seventh_highest_math_school;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "72",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 72,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the total enrollment of students aged 5-17 across all schools?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query calculates the total enrollment by summing up the 'Enrollment (Ages 5-17)' column from the frpm table, joining with the schools table on CDSCode.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "`Enrollment (Ages 5-17)`"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "B",
+            "summary": "This query also computes the total enrollment using the same aggregation and column as in cluster 2, but includes a condition that filters based on a specific value in the frpm table.",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "`Enrollment (Ages 5-17)`"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity arises primarily around how the measure (total enrollment) is computed. While both Cluster 2 and Cluster 3 involve summing the same column, Cluster 3 introduces a filtering condition which affects the interpretation of what exactly is being measured. The constraint hints reflect the core aggregation operation present in each SQL statement without introducing new elements not found in the original queries."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.85,
+        "evidence": "NL: 'What is the total enrollment of students aged 5-17 across all schools?'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "SUM",
+          "enrollment (ages 5-17)"
+        ],
+        "self_check_failed": false,
+        "self_check_rep_rank": 2
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 21,
+        "pool_after": 20,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_answer AS (\n    SELECT SUM(f.`Enrollment (Ages 5-17)`) AS total_students\n    FROM frpm f\n    JOIN schools s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Academic Year` = '2014-2015'\n    AND s.`District` LIKE '%Fremont%'\n    AND s.`EdOpsCode` = 'SSS'\n)\nSELECT * FROM final_answer;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "128",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 128,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "136",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 136,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "145",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 145,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "169",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 169,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "173",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 173,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "186",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 186,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "197",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 197,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "201",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 201,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "212",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 212,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "213",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 213,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "219",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 219,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "231",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 231,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "234",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 234,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "263",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 263,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "346",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 346,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "347",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 347,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "349",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 349,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "371",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 371,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "383",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 383,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "412",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 412,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "465",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 465,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "530",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 530,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What columns are selected when filtering cards by artist 'Allen Williams'?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Selects id, artist, frameVersion, and name columns for cards where the artist is 'Allen Williams'.",
+            "constraint_hint": {
+              "select_columns": [
+                "id",
+                "artist",
+                "frameVersion",
+                "name"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Selects id, name, frameVersion, and artist columns for cards where the artist is 'Allen Williams'.",
+            "constraint_hint": {
+              "select_columns": [
+                "id",
+                "name",
+                "frameVersion",
+                "artist"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Selects id, frameVersion, and name columns for cards where the artist is 'Allen Williams'.",
+            "constraint_hint": {
+              "select_columns": [
+                "id",
+                "frameVersion",
+                "name"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity arises from the different sets of columns selected in each SQL query. While all queries filter by the same artist ('Allen Williams'), they differ in which columns are returned. This makes the output axis the primary source of ambiguity. Each candidate maps directly to one of the provided clusters based on their SELECT clause."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "The NL question asks 'What columns are selected when filtering cards by artist 'Allen Williams'?' but does not specify which particular columns should be selected from the cards table. The schema information provided is compressed and doesn't contain explicit column names that would uniquely identify any of the candidates A, B, or C. Without an explicit statement in the NL question or clear schema evidence pointing to a specific column order or selection, multiple candidates could be plausible.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 12,
+        "pool_after": 12,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH allen_williams_cards AS (\n    SELECT id, frameVersion, name\n    FROM cards\n    WHERE artist = 'Allen Williams'\n)\nSELECT DISTINCT\n    awc.frameVersion AS frame_style,\n    awc.name AS card_name,\n    CASE \n        WHEN l.status = 'Banned' THEN 'YES'\n        ELSE 'NO'\n    END AS is_banned\nFROM allen_williams_cards awc\nLEFT JOIN legalities l ON awc.id = l.id\nORDER BY awc.frameVersion, awc.name",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "533",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 533,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "547",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 547,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "557",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 557,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What percentage of users older than 65 are there in the dataset?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculate the percentage of users whose age is greater than 65, based on the total count of users and the count of users older than 65.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "B",
+            "summary": "Determine the percentage of users over 65 by calculating the ratio of users with Age > 65 to the total number of users, rounded to a specific decimal place.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity centers around the 'Measure' axis because both clusters involve computing a percentage derived from counts of users based on age criteria. The first cluster computes this as a percentage with a CAST to FLOAT and multiplication by 100, while the second does the same but rounds the result. Both use COUNT(*) and conditional counting logic, making them ambiguous in terms of how the measure is computed and presented."
+      },
+      "answer": {
+        "choice": "B",
+        "confidence": 0.85,
+        "evidence": "NL: 'What percentage of users older than 65 are there in the dataset?'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "COUNT",
+          "*"
+        ],
+        "self_check_failed": false,
+        "self_check_rep_rank": 3
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_result AS (\n    SELECT \n        (CAST(COUNT(CASE WHEN u.Age > 65 THEN 1 END) AS FLOAT) / COUNT(*)) * 100 AS answer\n    FROM posts p\n    LEFT JOIN users u ON p.OwnerUserId = u.Id\n    WHERE p.Score > 5\n)\nSELECT answer FROM final_result;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "563",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 563,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "578",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 578,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "587",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 587,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "637",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 637,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "640",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 640,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "671",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 671,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "685",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 685,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "694",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 694,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "707",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 707,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "710",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 710,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "717",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 717,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "726",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 726,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "765",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 765,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "How many heroes have the Stealth power?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Count the total number of heroes who possess the Stealth power using a CTE named stealth_power_id to identify the power ID.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Count the number of heroes with the Stealth power by joining hero_power and superpower tables, using a CTE named stealth_heroes.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Determine how many heroes have the Stealth power by joining hero_power and superpower tables, using a CTE named stealth_hero_count.",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "All three SQL queries involve counting heroes with the 'Stealth' power, which makes the core ambiguity revolve around the measure being computed—specifically, the COUNT(*) operation. The different cluster representations reflect variations in how the query is structured (e.g., via CTEs), but they all aim to compute a count. Therefore, the primary axis of ambiguity is 'Measure'. Each candidate maps to a specific cluster based on its representative SQL and derives the constraint_hint as COUNT_STAR since that's the aggregate function used."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain any explicit phrases that uniquely identify the structure of the SQL query or the specific CTE naming conventions used in the candidates. The question simply asks 'How many heroes have the Stealth power?' which could be interpreted in multiple ways depending on the underlying schema relationships.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH stealth_power_id AS (\n    SELECT id\n    FROM superpower\n    WHERE power_name = 'Stealth'\n)\nSELECT COUNT(*) AS answer\nFROM hero_power hp\nJOIN stealth_power_id sp ON hp.power_id = sp.id;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "772",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 772,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Reference",
+        "question": "Find individuals with specific eye, hair, and skin colour IDs.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Retrieve individuals with eye colour ID 1, hair colour ID 2, and skin colour ID 3.",
+            "constraint_hint": {
+              "required_tables": [],
+              "required_columns": [
+                "eye_colour_id",
+                "hair_colour_id",
+                "skin_colour_id"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Select individuals where eye colour ID is 1, hair colour ID is 2, and skin colour ID is 3.",
+            "constraint_hint": {
+              "required_tables": [],
+              "required_columns": [
+                "eye_colour_id",
+                "hair_colour_id",
+                "skin_colour_id"
+              ],
+              "banned_tables": [],
+              "join_path": []
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity arises from the reference to which tables/columns are required to interpret the query correctly. Both clusters have identical SELECT statements involving id, eye_colour_id, hair_colour_id, and skin_colour_id. Since these are the only columns referenced in the SQL, we can infer that any interpretation must involve these columns. However, since no explicit filtering or joins are present in the provided SQL snippets, the ambiguity lies in how to interpret what 'specific' means in terms of referencing those columns — hence, the Reference axis applies."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'Find individuals with specific eye, hair, and skin colour IDs.'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Reference",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 3,
+        "pool_after": 3,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT \n        s.id,\n        s.eye_colour_id,\n        s.hair_colour_id,\n        s.skin_colour_id,\n        g.gender,\n        p.publisher_name\n    FROM superhero s\n    JOIN gender g ON s.gender_id = g.id\n    JOIN publisher p ON s.publisher_id = p.id\n    WHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics'\n)\nSELECT \n    co1.colour AS eyes,\n    co2.colour AS hair,\n    co3.colour AS skin\nFROM cte1\nJOIN colour co1 ON cte1.eye_colour_id = co1.id\nJOIN colour co2 ON cte1.hair_colour_id = co2.id\nJOIN colour co3 ON cte1.skin_colour_id = co3.id",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "788",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 788,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "794",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 794,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "822",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 822,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "861",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 861,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "868",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 868,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "875",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 875,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "894",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 894,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "901",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 901,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "904",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 904,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "915",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 915,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Ranking",
+        "question": "Find the oldest driver in the database.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query retrieves the oldest driver by ordering all drivers by date of birth in ascending order and selecting the first result.",
+            "constraint_hint": {
+              "order": "ASC",
+              "limit": 1,
+              "key": "dob"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query retrieves the oldest driver by ordering all drivers by date of birth in ascending order and selecting the first result, similar to the first candidate but with different visit count.",
+            "constraint_hint": {
+              "order": "ASC",
+              "limit": 1,
+              "key": "dob"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity arises from the 'Ranking' axis because both SQL queries use the same logic to find the oldest driver—ordering by dob ascending and limiting to 1 result. The difference lies in the number of visits and rewards, which do not affect the core query semantics. Therefore, the primary axis is Ranking, and both candidates map to the same ranking interpretation derived from the ORDER BY clause."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.85,
+        "evidence": "NL: 'Find the oldest driver in the database'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Ranking",
+        "required_order": "ASC",
+        "required_limit": 1,
+        "self_check_failed": false,
+        "self_check_rep_rank": 1
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 9,
+        "pool_after": 9,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "SELECT nationality\nFROM drivers\nORDER BY dob ASC\nLIMIT 1",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "948",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 948,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "955",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 955,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "959",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 959,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1002",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1002,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Value",
+        "question": "Find the youngest driver(s) based on the earliest date of birth.",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query identifies the driver with the earliest date of birth by filtering where dob equals the minimum dob value in the drivers table.",
+            "constraint_hint": {
+              "column": "dob",
+              "op": "=",
+              "value": "SELECT MIN(dob) FROM drivers"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query retrieves the driver(s) with the earliest date of birth by comparing dob to the result of a subquery that finds the minimum dob.",
+            "constraint_hint": {
+              "column": "dob",
+              "op": "=",
+              "value": "SELECT MIN(dob) FROM drivers"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "Both clusters use a WHERE clause comparing dob to a subquery that returns the minimum dob. The ambiguity lies in how the 'youngest driver' is interpreted—specifically, whether the system interprets this as finding records matching the absolute minimum dob value. This aligns with the 'Value' axis because both candidates define a value constraint on the 'dob' column using equality to a computed minimum."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain explicit phrases that uniquely identify either candidate A or B. Both candidates describe valid SQL approaches for finding the earliest date of birth, and the NL question's phrasing 'Find the youngest driver(s) based on the earliest date of birth' is consistent with both interpretations.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Value",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 5,
+        "pool_after": 5,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH youngest_driver AS (\n    SELECT driverId, forename, surname, dob, nationality\n    FROM drivers\n    WHERE dob = (SELECT MAX(dob) FROM drivers)\n)\nSELECT \n    y.forename || ' ' || y.surname AS full_name,\n    y.nationality,\n    r.name AS first_race_name\nFROM youngest_driver y\nJOIN results res ON y.driverId = res.driverId\nJOIN races r ON res.raceId = r.raceId\nWHERE res.raceId = (\n    SELECT MIN(raceId) \n    FROM results \n    WHERE driverId = y.driverId\n);",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1011",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1011,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1037",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1037,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1042",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1042,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1078",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1078,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1080",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1080,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1136",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1136,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1166",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1166,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1169",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1169,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1198",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1198,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1227",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1227,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1229",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1229,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1238",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1238,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1243",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1243,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1252",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1252,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1254",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1254,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1256",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1256,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1270",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1270,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1275",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1275,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1302",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1302,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1312",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1312,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1317",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1317,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1338",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1338,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1357",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1357,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Value",
+        "question": "Find members with the first name 'Connor' and last name starting with 'L'",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Members with first name 'Connor' and last name starting with 'L'",
+            "constraint_hint": {
+              "column": "last_name",
+              "op": "LIKE",
+              "value": "L%"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Members with first name 'Connor' and last name starting with 'L'",
+            "constraint_hint": {
+              "column": "last_name",
+              "op": "LIKE",
+              "value": "L%"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Members with first name 'Connor' and last name starting with 'L'",
+            "constraint_hint": {
+              "column": "last_name",
+              "op": "LIKE",
+              "value": "L%"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity arises from how the condition on last_name is interpreted. All three clusters have identical SQL patterns with a LIKE clause on last_name starting with 'L'. The only variation is in the specific value used for the LIKE operator, which is consistent across all clusters as 'L%'. Therefore, the primary axis of ambiguity is Value, where the interpretation hinges on the exact constraint applied to the last_name field."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.85,
+        "evidence": "NL: 'Find members with the first name 'Connor' and last name starting with 'L''",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "soft",
+        "axis": "Value",
+        "self_check_failed": false,
+        "self_check_rep_rank": 1
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 6,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH member_info AS (\n    SELECT member_id, first_name, last_name\n    FROM member\n    WHERE first_name = 'Connor' AND last_name = 'Hilton'\n),\ndues_date AS (\n    SELECT i.date_received\n    FROM income i\n    JOIN member_info m ON i.link_to_member = m.member_id\n    WHERE i.source = 'Dues'\n    ORDER BY i.date_received DESC\n    LIMIT 1\n)\nSELECT date_received\nFROM dues_date;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1359",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1359,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1376",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1376,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1387",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1387,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1389",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1389,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1401",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1401,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1422",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1422,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1426",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1426,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1472",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1472,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1486",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1486,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "How many customers are in the SME segment and what is the count of CZK transactions for each customer?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Select CustomerID, Segment, Currency from customers where Segment is 'SME', and count CZK transactions using a CTE named czk_count.",
+            "constraint_hint": {
+              "select_columns": [
+                "CustomerID",
+                "Segment",
+                "Currency"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Select CustomerID, Segment, Currency from customers where Segment is 'SME', and count CZK transactions using a CTE named czk_count with a different alias.",
+            "constraint_hint": {
+              "select_columns": [
+                "CustomerID",
+                "Segment",
+                "Currency"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Select CustomerID, Segment, Currency from customers where Segment is 'SME', and count CZK transactions using a CTE named sme_czk_count.",
+            "constraint_hint": {
+              "select_columns": [
+                "CustomerID",
+                "Segment",
+                "Currency"
+              ],
+              "group_by": []
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity arises from the output structure of the SQL queries. All three clusters retrieve the same base data (CustomerID, Segment, Currency) from the 'customers' table where Segment equals 'SME'. However, they differ in how they handle the counting of CZK transactions via CTEs with different names ('czk_count' vs 'sme_czk_count'). The constraint hints reflect the selected columns and grouping behavior derived directly from the representative SQL, which does not include any explicit GROUP BY or aggregate functions beyond the CTE definitions."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain any explicit phrase that uniquely identifies the CTE name choice between 'czk_count', 'czk_count' with different alias, or 'sme_czk_count'. All three candidates are plausible based on the NL phrasing which only asks for counting CZK transactions for SME customers without specifying CTE naming conventions.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH sme_currency_counts AS (\n    SELECT \n        SUM(CASE WHEN Currency = 'CZK' THEN 1 ELSE 0 END) AS czk_count,\n        SUM(CASE WHEN Currency = 'EUR' THEN 1 ELSE 0 END) AS eur_count\n    FROM customers\n    WHERE Segment = 'SME'\n),\nfinal_answer AS (\n    SELECT \n        CASE \n            WHEN czk_count > eur_count THEN 'Yes' \n            ELSE 'No' \n        END AS is_more_czk,\n        (czk_count - eur_count) AS difference\n    FROM sme_currency_counts\n)\nSELECT \n    is_more_czk,\n    difference\nFROM final_answer;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1490",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1490,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1498",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1498,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the highest monthly consumption value?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query seeks the maximum consumption value from the yearmonth table.",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "Consumption"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query retrieves the maximum consumption value for the year 2012.",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "Consumption"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity arises around the 'measure' being sought—specifically, whether the query intends to find the absolute highest consumption or the highest consumption within a specific context (like a particular year). Both clusters involve MAX(Consumption), but the second includes a WHERE clause filtering by year, which affects how we interpret the measure. The first cluster does not specify any filtering, while the second implies a temporal constraint. Therefore, the axis is 'Measure', and both candidates reflect different interpretations of what the maximum consumption represents."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'What is the highest monthly consumption value?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 5,
+        "pool_after": 5,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH highest_monthly_consumption_2012 AS (\n    SELECT MAX(Consumption) AS answer\n    FROM yearmonth\n    WHERE SUBSTR(Date, 1, 4) = '2012'\n)\nSELECT * FROM highest_monthly_consumption_2012;",
+        "gold_match": false
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1505",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1505,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1514",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1514,
+      "trigger": false,
+      "trigger_reason": "no_trigger",
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1529",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1529,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  },
+  {
+    "qid": "1531",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1531,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "candidate self-check failed"
+      },
+      "known_limitations": [
+        "AnswerAgent uses same Coder backbone as SQL generation (same-bias risk).",
+        "Reference/Value axes default to soft enforcement in v0.",
+        "Hard prune falls back to original pool when empty or all low reward."
+      ]
+    }
+  }
+]

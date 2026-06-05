@@ -1,0 +1,2891 @@
+[
+  {
+    "qid": "25",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 25,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information is being retrieved about schools and their funding types?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Retrieves school names and funding types with average SAT scores from a CTE that joins schools and sat_scores tables",
+            "constraint_hint": {
+              "select_columns": [
+                "school_name",
+                "funding_type",
+                "school_name",
+                "funding_type",
+                "avg_math_score"
+              ],
+              "group_by": [
+                "school",
+                "fundingtype"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns school names and funding types from a join between schools and sat_scores tables without aggregating SAT scores",
+            "constraint_hint": {
+              "select_columns": [
+                "school",
+                "fundingtype",
+                "school",
+                "fundingtype"
+              ],
+              "group_by": [
+                "school",
+                "fundingtype"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what information is actually being output by each query. Cluster 1 focuses on retrieving school names, funding types, and average SAT scores through a CTE approach, while Cluster 2 simply retrieves school names and funding types from a direct join without aggregation. The difference is clearly in the output fields and operations performed."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "The NL question asks 'What specific information is being retrieved about schools and their funding types?' but provides no explicit indication of whether SAT scores are being aggregated or referenced. The schema shows tables 'schools' and 'sat_scores' but doesn't specify any JOIN conditions or aggregation operations. Without explicit language indicating aggregation of SAT scores or a clear reference to AVG(), both candidates remain plausible based solely on the given information.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH schools_with_funding AS (\n    SELECT \n        s.`School`,\n        s.`FundingType`,\n        AVG(sc.`AvgScrMath`) AS avg_math_score\n    FROM schools s\n    INNER JOIN satscores sc ON s.`CDSCode` = sc.`cds`\n    WHERE s.`County` = 'Riverside' \n        AND s.`District` LIKE 'Riverside%'\n        AND s.`FundingType` IS NOT NULL\n    GROUP BY s.`School`, s.`FundingType`\n    HAVING AVG(sc.`AvgScrMath`) > 400\n)\nSELECT \n    `School`,\n    `FundingType`\nFROM schools_with_funding;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "26",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 26,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "31",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 31,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific school information is being retrieved in the results?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns detailed school information including CDSCode, School Name, Enrollment, and Free Meal Count",
+            "constraint_hint": {
+              "select_columns": [
+                "eligible_free_rate",
+                "cdscode",
+                "school name",
+                "enrollment (k-12)",
+                "free meal count (k-12)",
+                "percent (%) eligible free (k-12)",
+                "school name",
+                "enrollment (k-12)",
+                "free meal count (k-12)",
+                "eligible_free_rate",
+                "rank",
+                "school name",
+                "enrollment (k-12)",
+                "free meal count (k-12)",
+                "eligible_free_rate"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns school enrollment and eligibility percentage data for free meals",
+            "constraint_hint": {
+              "select_columns": [
+                "tenth_school_rate",
+                "eleventh_school_rate",
+                "eligible_free_rate",
+                "eligible_free_rate",
+                "cdscode",
+                "enrollment (k-12)",
+                "eligible_free_rate",
+                "rank_num"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what specific output fields are being requested. Cluster 1 focuses on comprehensive school details including enrollment numbers and meal counts, while Cluster 2 emphasizes enrollment and eligibility percentages. Both queries use CTEs but differ in their final selected columns and focus areas."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 15,
+        "pool_after": 15,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT \n        `CDSCode`,\n        `School Name`,\n        `Enrollment (K-12)`,\n        `Free Meal Count (K-12)`,\n        `Percent (%) Eligible Free (K-12)`\n    FROM frpm\n    WHERE `Enrollment (K-12)` IS NOT NULL\n    ORDER BY `Enrollment (K-12)` DESC\n    LIMIT 15\n)\nSELECT \n    LAG(`Percent (%) Eligible Free (K-12)`, 1) OVER (ORDER BY `Enrollment (K-12)` DESC) AS eligible_free_rate_11th,\n    `Percent (%) Eligible Free (K-12)` AS eligible_free_rate_10th\nFROM cte1\nLIMIT 1 OFFSET 9;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "32",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 32,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information should be returned about schools and their FRPM data?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns school name, SOC, SOCType, and FRPM count for each school",
+            "constraint_hint": {
+              "select_columns": [
+                "frpm_rate",
+                "school",
+                "soc",
+                "soctype",
+                "frpm count (k-12)",
+                "enrollment (k-12)",
+                "frpm_rate",
+                "frpm_rate"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns CDSCode, school name, enrollment, and FRPM count for each school",
+            "constraint_hint": {
+              "select_columns": [
+                "eligible_rate",
+                "cdscode",
+                "school name",
+                "enrollment (k-12)",
+                "frpm count (k-12)",
+                "percent (%) eligible frpm (k-12)",
+                "soc",
+                "cdscode",
+                "school name",
+                "enrollment (k-12)",
+                "frpm count (k-12)",
+                "percent (%) eligible frpm (k-12)",
+                "eligible_rate"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity lies in what fields are selected and returned in the final output. Cluster 1 focuses on school details like SOC and SOCType alongside FRPM count, while Cluster 2 emphasizes enrollment data with CDSCode and school name. Both clusters use FRPM count but differ in the other selected attributes."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in NL question or schema that uniquely identifies whether to return SOC/SOCType or enrollment data. Both candidates are plausible based on the ambiguous phrasing.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 28,
+        "pool_after": 28,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH top5_schools AS (\n    SELECT \n        CASE \n            WHEN f.`Enrollment (K-12)` > 0 THEN f.`FRPM Count (K-12)` / f.`Enrollment (K-12)`\n            ELSE 0 \n        END AS frpm_rate\n    FROM schools s\n    JOIN frpm f ON s.CDSCode = f.CDSCode\n    WHERE s.SOC = '66' \n        AND f.`Enrollment (K-12)` IS NOT NULL \n        AND f.`FRPM Count (K-12)` IS NOT NULL\n    ORDER BY f.`FRPM Count (K-12)` DESC\n    LIMIT 5\n)\nSELECT frpm_rate FROM top5_schools;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "36",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 36,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "37",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 37,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "48",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 48,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information is being requested about Orange County schools?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query asks for a count of all schools in Orange County",
+            "constraint_hint": {
+              "select_columns": [
+                "answer",
+                "unified_count",
+                "elementary_count",
+                "ratio"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query requests a ratio comparing unified school counts to elementary school counts",
+            "constraint_hint": {
+              "select_columns": [
+                "ratio",
+                "unified_merged_count",
+                "elementary_merged_count"
+              ]
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what type of output is expected from the queries. Cluster 1 and 2 both return simple counts of schools in Orange County, while cluster 3 returns a calculated ratio between different school category counts. This represents a clear distinction in the output type and purpose of the queries."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_ratio AS (\n    SELECT \n        CAST(muc.unified_merged_count AS REAL) / CAST(mec.elementary_merged_count AS REAL) AS ratio\n    FROM (\n        SELECT COUNT(*) AS unified_merged_count\n        FROM schools\n        WHERE County = 'Orange' AND StatusType = 'Merged' AND DOC = '54'\n    ) muc\n    CROSS JOIN (\n        SELECT COUNT(*) AS elementary_merged_count\n        FROM schools\n        WHERE County = 'Orange' AND StatusType = 'Merged' AND DOC = '52'\n    ) mec\n)\nSELECT * FROM final_ratio;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "50",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 50,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Ranking",
+        "question": "What is the seventh highest math school by average math score?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns the school and street of the seventh highest math scoring school using a CTE with ordered ranking.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 1,
+              "key": "ss.avgscrmath"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns the school and street of the seventh highest math scoring school using a different CTE structure with explicit ordering.",
+            "constraint_hint": {
+              "order": "DESC",
+              "limit": 1,
+              "key": "ss.avgscrmath"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on how the 'seventh highest' ranking is computed and expressed in the SQL. While both clusters aim to find the same result (the seventh highest math school), they differ in their approach to achieving this ranking - one uses a more direct CTE with ordering while another may use a different method or structure for determining the rank."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in NL or schema column/table name uniquely identifies either candidate A or B. Both candidates describe essentially the same approach (CTE with ordered ranking) with only minor structural differences that aren't specified in the natural language question.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Ranking",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH seventh_highest_math_school AS (\n    SELECT s.School, s.Street\n    FROM schools s\n    INNER JOIN satscores ss ON s.CDSCode = ss.cds\n    WHERE ss.AvgScrMath IS NOT NULL\n    ORDER BY ss.AvgScrMath DESC\n    LIMIT 1 OFFSET 6\n)\nSELECT School, Street AS PostalStreetAddress\nFROM seventh_highest_math_school;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "72",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 72,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the total enrollment of students aged 5-17 across all schools?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query uses a CTE to calculate total students and labels the result as 'total_students'",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "enrollment (ages 5-17)"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query directly sums enrollment and labels the result as 'total_enrollment'",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "enrollment (ages 5-17)"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "The query sums enrollment and labels the result as 'student_count'",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "enrollment (ages 5-17)"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity centers on the measure being reported - while all queries aim to compute total enrollment, they differ in how they label or structure the final output measure. Cluster 1 uses a CTE with a specific alias, Cluster 2 uses a direct sum with a different alias, and Cluster 3 also uses a direct sum but with another alias. The core calculation remains the same but the naming/structure varies."
+      },
+      "answer": {
+        "choice": "B",
+        "confidence": 0.85,
+        "evidence": "NL: 'total enrollment of students aged 5-17 across all schools'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "SUM",
+          "enrollment (ages 5-17)"
+        ],
+        "self_check_failed": false,
+        "self_check_rep_rank": 2
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 21,
+        "pool_after": 20,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_answer AS (\n    SELECT SUM(f.`Enrollment (Ages 5-17)`) AS total_students\n    FROM frpm f\n    JOIN schools s ON f.`CDSCode` = s.`CDSCode`\n    WHERE f.`Academic Year` = '2014-2015'\n    AND s.`District` LIKE '%Fremont%'\n    AND s.`EdOpsCode` = 'SSS'\n)\nSELECT * FROM final_answer;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "128",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 128,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "136",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 136,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "145",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 145,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "169",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 169,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "173",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 173,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "186",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 186,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "197",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 197,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information is being retrieved about molecules in the results?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Retrieves molecule ID and label for molecules with bonds",
+            "constraint_hint": {
+              "select_columns": [
+                "average_oxygen_atoms",
+                "molecule_id",
+                "label",
+                "molecule_id",
+                "oxygen_count"
+              ],
+              "group_by": [
+                "molecule_id"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Retrieves only molecule ID for molecules with bonds",
+            "constraint_hint": {
+              "select_columns": [
+                "average_oxygen_atoms",
+                "molecule_id",
+                "molecule_id",
+                "oxygen_count",
+                "average_oxygen_atoms"
+              ],
+              "group_by": [
+                "molecule_id",
+                "molecule_id"
+              ]
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what fields are selected in the final output. Cluster 1 selects both molecule_id and label, while cluster 3 only selects molecule_id. Cluster 2 appears to have incomplete SQL but seems to follow similar logic to cluster 1. The difference is clearly in the output fields being returned."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in NL question or schema column/table name uniquely identifies whether both molecule ID and label are retrieved versus just molecule ID. Both candidates A and B could be plausible based on the information provided.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH single_bond_oxygen_counts AS (\n    SELECT a.molecule_id, COUNT(*) AS oxygen_count\n    FROM atom a\n    INNER JOIN bond b ON a.molecule_id = b.molecule_id\n    WHERE b.bond_type = '-' AND a.element = 'o'\n    GROUP BY a.molecule_id\n)\nSELECT AVG(oxygen_count) AS average_oxygen_atoms\nFROM single_bond_oxygen_counts;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "201",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 201,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "212",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 212,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "213",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 213,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "219",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 219,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "231",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 231,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "234",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 234,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "263",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 263,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific metric is being calculated in the SQL queries?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculates total atom count per molecule using a window function approach",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "total_atoms"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Counts atoms per molecule and includes bond type information for each atom",
+            "constraint_hint": {
+              "agg": "COUNT",
+              "column": "atom_id"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on what measure is being computed. Cluster 1 focuses on counting atoms with a window function approach, while Cluster 2 emphasizes atom-bond relationships. The core difference lies in whether the measure is simply atom counting or includes additional relational data about bonds."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 6,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH chlorine_percentage AS (\n    SELECT \n        CAST(SUM(CASE WHEN a.element = 'cl' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(a.atom_id) AS percentage\n    FROM atom a\n    JOIN bond b ON a.molecule_id = b.molecule_id\n    WHERE b.bond_type = '-'\n)\nSELECT percentage FROM chlorine_percentage;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "346",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 346,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "347",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 347,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "349",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 349,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "371",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 371,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "383",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 383,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "412",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 412,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "465",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 465,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "530",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 530,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What columns should be included in the result when querying cards by artist Allen Williams?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns id, artist, frameVersion, and name columns in that specific order",
+            "constraint_hint": {
+              "select_columns": [
+                "frame_style",
+                "card_name",
+                "is_banned",
+                "id",
+                "artist",
+                "frameversion",
+                "name",
+                "frameversion",
+                "name",
+                "is_banned"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns id, name, frameVersion, and artist columns in that specific order",
+            "constraint_hint": {
+              "select_columns": [
+                "frame_style",
+                "card_name",
+                "is_banned",
+                "id",
+                "name",
+                "frameversion",
+                "artist"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Returns id, frameVersion, and name columns without artist column",
+            "constraint_hint": {
+              "select_columns": [
+                "frameversion",
+                "name",
+                "is_banned",
+                "id",
+                "frameversion",
+                "name",
+                "frameversion",
+                "name",
+                "is_banned"
+              ]
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The primary ambiguity lies in the output column selection and ordering. Cluster 1 includes artist column, cluster 2 swaps artist with name position, and cluster 3 excludes artist entirely while maintaining different column ordering. All three clusters query the same artist filter but differ in what data they return."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not explicitly state which columns should be included in the result when querying cards by artist Allen Williams",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 12,
+        "pool_after": 12,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH allen_williams_cards AS (\n    SELECT id, frameVersion, name\n    FROM cards\n    WHERE artist = 'Allen Williams'\n)\nSELECT DISTINCT\n    awc.frameVersion AS frame_style,\n    awc.name AS card_name,\n    CASE \n        WHEN l.status = 'Banned' THEN 'YES'\n        ELSE 'NO'\n    END AS is_banned\nFROM allen_williams_cards awc\nLEFT JOIN legalities l ON awc.id = l.id\nORDER BY awc.frameVersion, awc.name",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "533",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 533,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "How should the result be presented - as a count or as a list of users?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns a list of users with their IDs and last access dates who accessed after 2014-09-01",
+            "constraint_hint": {
+              "select_columns": [
+                "answer",
+                "id",
+                "lastaccessdate",
+                "total_users"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns a single count value representing the number of users who accessed after 2014-09-01",
+            "constraint_hint": {
+              "select_columns": [
+                "user_count",
+                "user_count"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on the output format of the query. Cluster 1 uses a CTE to retrieve user data (Id, LastAccessDate) for users meeting the date condition, while Cluster 2 uses a COUNT(*) function to return just the number of such users. Both queries answer the same question but produce fundamentally different outputs - one returns detailed records, the other returns a scalar count."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 12,
+        "pool_after": 12,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte_final AS (\n    SELECT COUNT(*) AS answer\n    FROM users\n    WHERE LastAccessDate > '2014-09-01'\n)\nSELECT * FROM cte_final;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "547",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 547,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific metric or calculation is being derived from the posts data?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query calculates a filtered score for elder posts based on their scores and owner user IDs",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query counts total elder posts and those with a score of at least 20 to determine post quality",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what measure or calculation is being performed on the posts data. Cluster 1 focuses on filtering and selecting posts with specific score and user criteria, while Cluster 2 emphasizes counting operations with conditional logic to assess post quality based on score thresholds."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 19,
+        "pool_after": 19,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT u.Id, u.Age\n    FROM users u\n    WHERE u.Age > 65\n)\nSELECT COUNT(*) AS answer\nFROM posts p\nINNER JOIN cte1 u ON p.OwnerUserId = u.Id\nWHERE p.Score >= 20;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "557",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 557,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific metric is being calculated regarding users over 65?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculates percentage of users over 65 among all users who have posts with score greater than 5",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Calculates percentage of users over 65 among all users in the database",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on what population is being measured - cluster 1 focuses on users with high-scoring posts, while cluster 2 considers all users. Both calculate percentages but differ in their denominator population, making 'measure' the primary axis of ambiguity."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not provide explicit information about filtering users based on post scores or limiting the population to users with posts",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_result AS (\n    SELECT \n        (CAST(COUNT(CASE WHEN u.Age > 65 THEN 1 END) AS FLOAT) / COUNT(*)) * 100 AS answer\n    FROM posts p\n    LEFT JOIN users u ON p.OwnerUserId = u.Id\n    WHERE p.Score > 5\n)\nSELECT answer FROM final_result;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "563",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 563,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "578",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 578,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "587",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 587,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "637",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 637,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "640",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 640,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "671",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 671,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "685",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 685,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "694",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 694,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "707",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 707,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "710",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 710,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "717",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 717,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "726",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 726,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "765",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 765,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "How many heroes have the Stealth power?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Counts total number of heroes with Stealth power using a CTE to identify the power ID",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Counts number of heroes with Stealth power by joining hero_power and superpower tables directly",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on how the measure is calculated - cluster 1 uses a subquery approach to first identify the stealth power ID before counting heroes, while cluster 2 directly joins the tables without the intermediate CTE. Both aim to count heroes with stealth power but differ in their implementation approach."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'How many heroes have the Stealth power?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH stealth_power_id AS (\n    SELECT id\n    FROM superpower\n    WHERE power_name = 'Stealth'\n)\nSELECT COUNT(*) AS answer\nFROM hero_power hp\nJOIN stealth_power_id sp ON hp.power_id = sp.id;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "772",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 772,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "788",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 788,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "794",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 794,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "822",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 822,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "861",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 861,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "868",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 868,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "875",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 875,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What is the URL of the season page for the race with ID 901?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns the season URL using a CTE that first identifies the race year from races table",
+            "constraint_hint": {
+              "select_columns": [
+                "url",
+                "year",
+                "year"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns the season URL by directly comparing year value from seasons table",
+            "constraint_hint": {
+              "select_columns": [
+                "season_page",
+                "season_page",
+                "year"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on how the output is structured and retrieved. Cluster 1 uses a nested subquery approach with a CTE to first get the race year before joining with seasons, while cluster 2 directly compares the year value without the intermediate CTE. Both produce the same logical result but differ in their output construction methodology."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'What is the URL of the season page for the race with ID 901?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 13,
+        "pool_after": 13,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH race_year AS (\n    SELECT year\n    FROM races\n    WHERE raceId = 901\n)\nSELECT s.url\nFROM seasons s\nWHERE s.year = (SELECT year FROM race_year);",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "894",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 894,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "901",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 901,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "904",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 904,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "915",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 915,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information about the oldest driver is being requested?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query returns all driver details including driverId, forename, surname, dob, and nationality for the oldest driver",
+            "constraint_hint": {
+              "select_columns": [
+                "country",
+                "driverid",
+                "forename",
+                "surname",
+                "dob",
+                "nationality"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query returns only the driverId and name (forename and surname) of the oldest driver",
+            "constraint_hint": {
+              "select_columns": [
+                "nationality",
+                "driverid",
+                "forename",
+                "surname",
+                "dob",
+                "nationality"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "Looking at the two clusters, both use the same CTE with identical ORDER BY clause, but the SELECT statements differ in their output columns. Cluster 1 selects all columns (driverId, forename, surname, dob, nationality) while cluster 2 appears to select only driverId, forename, and surname. This represents an output ambiguity where the same query structure yields different result sets based on what fields are returned."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not specify what information about the oldest driver is being requested, and the schema does not provide explicit column names or table structure to determine the exact output requirements.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 9,
+        "pool_after": 9,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "SELECT nationality\nFROM drivers\nORDER BY dob ASC\nLIMIT 1",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "948",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 948,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the maximum points scored by British constructors in the database?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Finding the maximum points achieved by any British constructor in a single race",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "points"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Listing all British constructors with their IDs, names, and nationalities without calculating maximum points",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "points"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what measure or calculation is being requested. Cluster 1 focuses on finding the maximum points value through aggregation, while Cluster 2 simply retrieves constructor information without any measure calculation. This represents a clear distinction between asking for a computed value versus just retrieving data."
+      },
+      "answer": {
+        "choice": "A",
+        "confidence": 0.85,
+        "evidence": "NL: 'maximum points scored by British constructors'",
+        "abstain": false
+      },
+      "constraint": {
+        "level": "hard",
+        "axis": "Measure",
+        "required_agg": [
+          "MAX",
+          "points"
+        ],
+        "self_check_failed": false,
+        "self_check_rep_rank": 1
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 9,
+        "pool_after": 9,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH max_british_points AS (\n    SELECT MAX(cr.points) AS max_points\n    FROM constructors c\n    INNER JOIN constructorResults cr ON c.constructorId = cr.constructorId\n    WHERE c.nationality = 'British'\n)\nSELECT max_points\nFROM max_british_points;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "955",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 955,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "959",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 959,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1002",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1002,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1011",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1011,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information is being retrieved about drivers in the top 20 fastest lap times?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns full names of drivers with top 20 fastest lap times using concatenation of forename and surname",
+            "constraint_hint": {
+              "select_columns": [
+                "full_name",
+                "full_name",
+                "driverid",
+                "min_lap_time"
+              ],
+              "group_by": [
+                "driverid"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns driver IDs and their minimum lap times without including driver names",
+            "constraint_hint": {
+              "select_columns": [
+                "forename",
+                "surname",
+                "driverid",
+                "min_time"
+              ],
+              "group_by": [
+                "driverid"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Returns driver details (ID, forename, surname) along with their minimum lap times",
+            "constraint_hint": {
+              "select_columns": [
+                "fullname",
+                "driverid",
+                "forename",
+                "surname",
+                "min_lap_time"
+              ],
+              "group_by": [
+                "driverid",
+                "forename",
+                "surname"
+              ]
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity centers on what information is actually being output by each query. Cluster 1 outputs concatenated driver names, Cluster 2 outputs driver IDs with minimum times but no names, and Cluster 3 outputs full driver details with their minimum lap times. This represents different levels of information granularity in the output."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain any explicit phrase that uniquely identifies whether driver names are returned, or only driver IDs, or both. The question asks about \"specific information\" but does not specify what form that information should take.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 12,
+        "pool_after": 12,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte2 AS (\n    SELECT lt.driverId, MIN(lt.time) AS min_time\n    FROM lapTimes lt\n    GROUP BY lt.driverId\n)\nSELECT d.forename, d.surname\nFROM drivers d\nJOIN cte2 ON d.driverId = cte2.driverId\nORDER BY cte2.min_time ASC\nLIMIT 20;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1037",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1037,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific metric is being calculated in the WITH clause?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculates the ratio of left-footed players to total players using SUM and CASE statement",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Creates a CTE with player attributes including birthday and preferred foot without calculating any ratio",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what measure or calculation is being performed. Cluster 1 focuses on computing a specific ratio (left-footed players), while Cluster 2 simply defines a CTE with player data but doesn't perform any calculation. The difference is clearly in the measure being computed."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase from NL question or schema column/table name can be found that uniquely identifies whether the WITH clause calculates a ratio or merely creates a CTE with player attributes. Both interpretations are plausible based on the information provided.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 17,
+        "pool_after": 17,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_result AS (\n    SELECT \n        CAST(SUM(CASE WHEN pa.preferred_foot = 'left' THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) AS percentage\n    FROM Player p\n    JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\n    WHERE p.birthday IS NOT NULL\n        AND STRFTIME('%Y', p.birthday) BETWEEN '1987' AND '1992'\n)\nSELECT * FROM final_result;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1042",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1042,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1078",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1078,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1080",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1080,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1136",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1136,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "How many players have the highest crossing attribute value?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Counts all players who have the maximum crossing value using a subquery in WHERE clause",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Counts players with the maximum crossing value by joining with a derived table containing the max crossing",
+            "constraint_hint": {
+              "agg": "COUNT_STAR"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on how to measure 'how many players' - cluster 1 uses a direct count with subquery comparison, while cluster 2 uses a more explicit join approach to find players matching the maximum crossing value. Both attempt to answer the same question but use different SQL patterns for the measurement operation."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain any explicit phrases that clearly indicate whether to use a subquery in WHERE clause or join with a derived table for finding the maximum crossing value. Both approaches are valid SQL patterns for this type of query and the natural language doesn't provide enough specificity to prefer one over the other.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 24,
+        "pool_after": 24,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "SELECT COUNT(*) AS player_count\nFROM Player_Attributes\nWHERE preferred_foot = 'left' \n  AND crossing = (\n    SELECT MAX(crossing)\n    FROM Player_Attributes\n    WHERE preferred_foot = 'left'\n  );",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1166",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1166,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1169",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1169,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1198",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1198,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1227",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1227,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1229",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1229,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific metric or count is being calculated in the query?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculates the total number of distinct patients with laboratory results",
+            "constraint_hint": {
+              "agg": "COUNT_DISTINCT",
+              "column": "id"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "B",
+            "summary": "Counts patients over 50 years old with high TG levels",
+            "constraint_hint": {
+              "agg": "COUNT_DISTINCT",
+              "column": "id"
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The ambiguity centers on what measure is being computed. Cluster 1 appears to be incomplete and focuses on data retrieval rather than aggregation. Cluster 2 computes a simple count of distinct patients with lab results. Cluster 3 computes a more complex filtered count of patients over 50 with high TG values. The difference lies in the specific measure being calculated - from basic patient count to age and lab value filtered count."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in NL question or schema column/table names that uniquely supports either candidate A or B. The NL question is empty/missing, and no schema details are provided to determine what specific metric or count is being calculated.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH patients_with_high_tg AS (\n    SELECT DISTINCT p.ID, p.Birthday\n    FROM Patient p\n    INNER JOIN Laboratory l ON p.ID = l.ID\n    WHERE l.TG >= 200\n)\nSELECT COUNT(DISTINCT ID) AS answer\nFROM patients_with_high_tg\nWHERE (strftime('%Y', 'now') - strftime('%Y', Birthday)) > 50",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1238",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1238,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What information should be included in the final result set for patients with SLE?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query returns only patient ID and sex for the oldest SLE patients",
+            "constraint_hint": {
+              "select_columns": [
+                "id",
+                "sex",
+                "id",
+                "sex"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query returns patient ID, sex, birthday, and HGB levels for the oldest SLE patients",
+            "constraint_hint": {
+              "select_columns": [
+                "id",
+                "sex",
+                "id",
+                "sex",
+                "birthday",
+                "hgb"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on what fields are selected in the final output. Cluster 1 selects only ID and SEX while cluster 2 includes additional fields (Birthday, HGB) which represents different levels of detail in the output specification."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not explicitly mention returning patient ID, sex, birthday, and HGB levels for the oldest SLE patients. The question only asks about what information should be included in the final result set for patients with SLE, without specifying particular columns.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 15,
+        "pool_after": 15,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH oldest_sle_patient AS (\n    SELECT p.ID, p.SEX\n    FROM Patient p\n    INNER JOIN Laboratory l ON p.ID = l.ID\n    WHERE p.Diagnosis = 'SLE' \n    AND l.HGB > 10 \n    AND l.HGB < 17\n    ORDER BY p.Birthday ASC\n    LIMIT 1\n)\nSELECT ID, SEX FROM oldest_sle_patient;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1243",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1243,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1252",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1252,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1254",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1254,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1256",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1256,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What specific information should be returned about patients with abnormal CRP levels?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns patient ID, description, and CRP value for abnormal CRP patients",
+            "constraint_hint": {
+              "select_columns": [
+                "answer",
+                "id",
+                "description",
+                "crp"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns only patient ID and description for abnormal CRP patients",
+            "constraint_hint": {
+              "select_columns": [
+                "*",
+                "id",
+                "description",
+                "crp"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on what fields are included in the final output. Cluster 1 includes all three fields (ID, Description, CRP), while Cluster 2 excludes the CRP field from the SELECT clause, making it a clear difference in output specification."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH final_answer AS (\n    SELECT COUNT(*) AS patient_count\n    FROM Patient p\n    INNER JOIN Laboratory l ON p.ID = l.ID\n    WHERE l.CRP = '+' AND p.Description IS NULL\n)\nSELECT patient_count FROM final_answer;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1270",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1270,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1275",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1275,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What specific count or measurement is being requested in the query?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query asks for the count of distinct male patients who have laboratory results, focusing on the 'male_count' metric.",
+            "constraint_hint": {
+              "agg": "COUNT_DISTINCT",
+              "column": "id"
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "B",
+            "summary": "The query retrieves patient demographics and lab results without aggregating or counting any specific measure.",
+            "constraint_hint": {
+              "agg": "COUNT_DISTINCT",
+              "column": "id"
+            },
+            "maps_to_cluster_rank": 1
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what type of measure or aggregation is intended. Cluster 1 focuses on retrieving data but doesn't compute a specific measure, while Cluster 2 computes a count (male_count), making it the primary axis of ambiguity around 'measure'."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 8,
+        "pool_after": 8,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT l.ID, l.CENTROMEA, l.SSB, p.SEX\n    FROM Laboratory l\n    INNER JOIN Patient p ON l.ID = p.ID\n    WHERE l.CENTROMEA IN ('negative', '0') AND l.SSB IN ('negative', '0')\n)\nSELECT COUNT(*) AS answer\nFROM cte1\nWHERE SEX = 'M';",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1302",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1302,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1312",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1312,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1317",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1317,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1338",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1338,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What information should be returned about the October Meeting event?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns event ID, name, and date for the October Meeting event",
+            "constraint_hint": {
+              "select_columns": [
+                "answer",
+                "event_id",
+                "event_name",
+                "event_date",
+                "expense_id",
+                "approved",
+                "event_id"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns only the event ID for the October Meeting event with date filtering",
+            "constraint_hint": {
+              "select_columns": [
+                "result",
+                "event_id",
+                "event_id"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what fields are selected in the final output. Cluster 1 selects event_id, event_name, and event_date while cluster 2 only selects event_id with additional date filtering conditions. This represents a clear difference in the output specification of the SQL query."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in NL question or schema that uniquely identifies whether all fields (ID, name, date) or just ID are returned for the October Meeting event.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 15,
+        "pool_after": 15,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH all_expenses_approved AS (\n    SELECT \n        CASE \n            WHEN COUNT(*) = COUNT(CASE WHEN e.approved = 'true' THEN 1 END) THEN 'true'\n            ELSE 'false'\n        END AS answer\n    FROM expense e\n    JOIN budget b ON e.link_to_budget = b.budget_id\n    WHERE b.link_to_event = 'recggMW2eyCYceNcy'\n)\nSELECT answer FROM all_expenses_approved;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1357",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1357,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1359",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1359,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1376",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1376,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1387",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1387,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1389",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1389,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "How should the total cost be calculated when there are potential NULL values in the cost column?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Uses SUM(exp.cost) directly without handling NULL values, which may lead to incorrect aggregation if costs are missing.",
+            "constraint_hint": {
+              "agg": "MIN",
+              "column": "total_cost"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Uses COALESCE(SUM(exp.cost), 0) to explicitly treat NULL cost values as zero, ensuring accurate total calculation.",
+            "constraint_hint": {
+              "agg": "MIN",
+              "column": "total_cost"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on how to handle NULL values in the cost column during aggregation. Cluster 1 uses simple SUM which might propagate NULLs, while Cluster 2 explicitly handles NULLs with COALESCE, making this a clear measure-level ambiguity."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrase in the NL question or schema that uniquely identifies how NULL values should be handled in the cost calculation. The question asks about the calculation method but doesn't specify whether NULLs should be ignored or treated as zero.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 9,
+        "pool_after": 9,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH cte1 AS (\n    SELECT e.event_id, e.event_name, SUM(exp.cost) AS total_cost\n    FROM event e\n    LEFT JOIN budget b ON e.event_id = b.link_to_event\n    LEFT JOIN expense exp ON b.budget_id = exp.link_to_budget\n    GROUP BY e.event_id, e.event_name\n)\nSELECT event_name\nFROM cte1\nWHERE total_cost = (SELECT MIN(total_cost) FROM cte1)\nORDER BY event_name ASC\nLIMIT 1;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1401",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1401,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What is the difference in the output format between the two SQL queries?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The first query returns only event information with event_id and event_name for the 'September Speaker' event.",
+            "constraint_hint": {
+              "select_columns": [
+                "cost",
+                "event_id",
+                "event_name"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The second query includes additional poster information along with event details for the 'September Speaker' event.",
+            "constraint_hint": {
+              "select_columns": [
+                "poster_cost",
+                "event_id",
+                "event_name",
+                "cost"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what is being output by each query. Cluster 1 outputs just event_id and event_name from the event table where event_name equals 'September Speaker'. Cluster 2 outputs similar event information but includes additional poster-related data through the 'poster' reference in the CTE, making the output more comprehensive."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrases in the NL question or schema that uniquely identify whether the first query returns only event information or the second includes additional poster information. Both candidates appear plausible based on the limited information provided.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 4,
+        "pool_after": 4,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH event_info AS (\n    SELECT event_id, event_name\n    FROM event\n    WHERE event_name = 'September Speaker'\n)\nSELECT e.cost\nFROM expense e\nJOIN budget b ON e.link_to_budget = b.budget_id\nJOIN event_info ev ON b.link_to_event = ev.event_id\nWHERE e.expense_description = 'Posters';",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1422",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1422,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What is the difference in the output format between the two SQL queries?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The first query returns the 'type' column directly from the final_categories CTE, while the second query renames the 'type' column to 'category' in the final SELECT.",
+            "constraint_hint": {
+              "select_columns": [
+                "type",
+                "type"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The second query uses an alias 'category' for the 'type' column in the final SELECT, whereas the first query simply selects 'type' without renaming it.",
+            "constraint_hint": {
+              "select_columns": [
+                "category"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary axis of ambiguity lies in the output formatting of the selected column. Both queries retrieve distinct event types from location 'MU 215', but differ in whether they rename the output column. The first query outputs the column as 'type', while the second explicitly aliases it as 'category'. This represents a clear difference in output structure that can be interpreted differently depending on user intent."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "No explicit phrases in the NL question or schema that uniquely identify whether the 'type' column is renamed to 'category' in the final SELECT versus simply being selected as 'type'. Both interpretations are equally plausible based on the information provided.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 6,
+        "pool_after": 6,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "SELECT DISTINCT type\nFROM event\nWHERE location = 'MU 215';",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1426",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1426,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1472",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1472,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1486",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1486,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Output",
+        "question": "What is the count of Czech Koruna (CZK) transactions for SME customers?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Returns the count of CZK transactions using alias 'czk_count' in the CTE",
+            "constraint_hint": {
+              "select_columns": [
+                "is_more_czk",
+                "difference",
+                "customerid",
+                "segment",
+                "currency",
+                "czk_smes",
+                "eur_smes",
+                "is_more_czk",
+                "difference"
+              ]
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Returns the count of CZK transactions using alias 'czk_count' but with different column naming in the final SELECT",
+            "constraint_hint": {
+              "select_columns": [
+                "is_more_czk",
+                "difference",
+                "customerid",
+                "segment",
+                "currency",
+                "czk_smes",
+                "eur_smes",
+                "is_more_czk",
+                "difference"
+              ]
+            },
+            "maps_to_cluster_rank": 2
+          },
+          {
+            "cid": "C",
+            "summary": "Returns the count of CZK transactions using alias 'sme_czk_count' in the CTE",
+            "constraint_hint": {
+              "select_columns": [
+                "is_more_czk",
+                "difference_count",
+                "customerid",
+                "segment",
+                "currency",
+                "czk_count",
+                "eur_count",
+                "czk_count",
+                "eur_count",
+                "difference"
+              ]
+            },
+            "maps_to_cluster_rank": 3
+          }
+        ],
+        "rationale": "The primary ambiguity lies in the output column naming and potentially the final selection logic. All three clusters perform the same core operation (counting CZK transactions for SME customers), but differ in how they name their CTE and possibly how they reference or present the final count value. The difference is most apparent in the CTE alias names ('czk_count' vs 'sme_czk_count') and the final SELECT clause structure."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL question does not contain any explicit phrase that uniquely identifies the column alias used in the CTE for counting CZK transactions. The question asks for \"the count of Czech Koruna (CZK) transactions for SME customers\" but does not specify any particular alias name for the result. Additionally, none of the candidates can be definitively supported by an exact phrase from the NL question or schema column/table names.",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Output",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 10,
+        "pool_after": 10,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH sme_currency_counts AS (\n    SELECT \n        SUM(CASE WHEN Currency = 'CZK' THEN 1 ELSE 0 END) AS czk_count,\n        SUM(CASE WHEN Currency = 'EUR' THEN 1 ELSE 0 END) AS eur_count\n    FROM customers\n    WHERE Segment = 'SME'\n),\nfinal_answer AS (\n    SELECT \n        CASE \n            WHEN czk_count > eur_count THEN 'Yes' \n            ELSE 'No' \n        END AS is_more_czk,\n        (czk_count - eur_count) AS difference\n    FROM sme_currency_counts\n)\nSELECT \n    is_more_czk,\n    difference\nFROM final_answer;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1490",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1490,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1498",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1498,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the highest monthly consumption value?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "The query returns the maximum consumption value with an alias 'highest_monthly_consumption'",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "consumption"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "The query returns the maximum consumption value with an alias 'answer' but only for the year 2012",
+            "constraint_hint": {
+              "agg": "MAX",
+              "column": "consumption"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The ambiguity centers on what measure is being requested and whether time filtering applies. Cluster 1 asks for the highest monthly consumption without any temporal constraints, while Cluster 2 specifically filters for 2012 data but uses a different column alias ('answer' vs 'highest_monthly_consumption'). Both address the 'highest consumption' measure but differ in scope and naming."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'What is the highest monthly consumption value?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 5,
+        "pool_after": 5,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH highest_monthly_consumption_2012 AS (\n    SELECT MAX(Consumption) AS answer\n    FROM yearmonth\n    WHERE SUBSTR(Date, 1, 4) = '2012'\n)\nSELECT * FROM highest_monthly_consumption_2012;",
+        "gold_match": false
+      }
+    }
+  },
+  {
+    "qid": "1505",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1505,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1514",
+    "trigger": false,
+    "trigger_reason": "no_trigger",
+    "trace": {
+      "qid": 1514,
+      "trigger": false,
+      "trigger_reason": "no_trigger"
+    }
+  },
+  {
+    "qid": "1529",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1529,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "None",
+        "question": "",
+        "candidates": [],
+        "rationale": "extract/self-check failed"
+      }
+    }
+  },
+  {
+    "qid": "1531",
+    "trigger": true,
+    "trigger_reason": "high_reward>=6 && clusters>=2",
+    "trace": {
+      "qid": 1531,
+      "trigger": true,
+      "trigger_reason": "high_reward>=6 && clusters>=2",
+      "clarify": {
+        "axis": "Measure",
+        "question": "What is the total spending amount for customers?",
+        "candidates": [
+          {
+            "cid": "A",
+            "summary": "Calculates total spending by summing transaction prices grouped by customer ID",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "price"
+            },
+            "maps_to_cluster_rank": 1
+          },
+          {
+            "cid": "B",
+            "summary": "Calculates total spending by summing transaction prices grouped by customer ID without additional customer details",
+            "constraint_hint": {
+              "agg": "SUM",
+              "column": "price"
+            },
+            "maps_to_cluster_rank": 2
+          }
+        ],
+        "rationale": "The primary ambiguity lies in what measure is being calculated - Cluster 1 computes total_spent which includes currency information and customer details, while Cluster 2 computes total_spending which is purely the sum of prices grouped by customer without additional context. Both use SUM(t.Price) but differ in the level of detail and aggregation performed."
+      },
+      "answer": {
+        "choice": null,
+        "confidence": 0.0,
+        "evidence": "NL: 'What is the total spending amount for customers?'",
+        "abstain": true
+      },
+      "constraint": {
+        "level": "none",
+        "axis": "Measure",
+        "self_check_failed": false
+      },
+      "enforcement": {
+        "applied": false,
+        "pool_before": 11,
+        "pool_after": 11,
+        "regenerate_used": false,
+        "safety_fallback": false
+      },
+      "outcome": {
+        "selector": "R0",
+        "final_sql": "WITH top_customer_info AS (\n    SELECT \n        c.CustomerID,\n        c.Currency,\n        SUM(t.Price) AS total_spent,\n        SUM(t.Price) / SUM(t.Amount) AS avg_price_per_item\n    FROM customers c\n    JOIN transactions_1k t ON c.CustomerID = t.CustomerID\n    GROUP BY c.CustomerID, c.Currency\n    ORDER BY total_spent DESC\n    LIMIT 1\n)\nSELECT \n    CustomerID AS top_spending_customer,\n    avg_price_per_item AS average_price_per_single_item,\n    Currency AS currency_used\nFROM top_customer_info;",
+        "gold_match": false
+      }
+    }
+  }
+]

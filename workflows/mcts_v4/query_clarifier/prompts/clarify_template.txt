@@ -1,0 +1,35 @@
+You are an analyst inspecting NL2SQL ambiguity.
+
+NL Question: {nl_question}
+
+Schema (compressed):
+{schema_ddl}
+
+The MCTS search produced multiple result clusters:
+{cluster_table}
+
+Task:
+1. Identify ONE primary axis of ambiguity from:
+   Reference / Value / Measure / Ranking / Output
+2. Produce 2-4 candidate interpretations; each MUST map to a cluster rank below.
+3. Write a one-line summary per candidate (natural language only).
+
+Do NOT output constraint_hint — it will be extracted from each cluster's SQL automatically.
+
+Rules:
+- Each candidate MUST set maps_to_cluster_rank (1-based) matching the cluster table.
+- Candidates must correspond to real clusters; do not invent a third interpretation.
+- summaries must describe how that cluster's SQL differs on the chosen axis.
+
+Output JSON only:
+{{
+  "axis": "...",
+  "question": "...",
+  "candidates": [
+    {{"cid":"A","summary":"...","maps_to_cluster_rank":1}},
+    {{"cid":"B","summary":"...","maps_to_cluster_rank":2}}
+  ],
+  "rationale":"..."
+}}
+
+If you cannot identify a clear axis, return {{"axis":"None"}}.

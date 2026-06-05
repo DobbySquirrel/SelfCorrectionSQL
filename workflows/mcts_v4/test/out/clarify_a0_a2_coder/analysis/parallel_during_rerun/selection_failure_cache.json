@@ -1,0 +1,644 @@
+[
+  {
+    "qid": "27",
+    "bucket": "B5",
+    "db": "california_schools",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "9efce191167cfeb556e12a5fd615e606",
+      "gold_sigs": [
+        "0bcec5eaf4f9650ee89f49231164c37a",
+        "c961eefe1acc8f459d6dadaa689e3b4a",
+        "d4c1f66c140f19ba7efcae650c8ab882"
+      ],
+      "tied_sigs": [
+        "93fa7e06c12e142dac97cdec7e140652"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "136",
+    "bucket": "B6",
+    "db": "financial",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "b0529cbd0af60fa87c6c18dae9b541c5",
+      "gold_sigs": [
+        "dd57b19eb2d184b73d71a3f3e5494a34"
+      ],
+      "tied_sigs": [
+        "b3c5b045a72991db8dcc23884f3b6e2c"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "186",
+    "bucket": "B5",
+    "db": "financial",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 5,
+      "final_sig": "0b7fdd7763bff8e78d118c82171fcade",
+      "gold_sigs": [
+        "5420c8037875b7a0a431a469c6809aff",
+        "52344221f48cfd6c328090e5f61e09f3"
+      ],
+      "tied_sigs": [
+        "0b7fdd7763bff8e78d118c82171fcade"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "219",
+    "bucket": "B5",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 7,
+      "final_sig": "b49d5a07ee50b12e8a4d974d2181de08",
+      "gold_sigs": [
+        "c56e9e3a4bc62883cda68a4d802e8fd9",
+        "566f701be6b2fb5688609c88c5c3d968"
+      ],
+      "tied_sigs": [
+        "b49d5a07ee50b12e8a4d974d2181de08"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "220",
+    "bucket": "B3",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 5,
+      "final_sig": "b01dab9e3058cb19f36b3d943889b488",
+      "gold_sigs": [
+        "b8ea3c76a4a035f404584c20a179f776"
+      ],
+      "tied_sigs": [
+        "b8ea3c76a4a035f404584c20a179f776"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "230",
+    "bucket": "B3",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "5168eaf0ca3ac07bea9615a6d6ab9275",
+      "gold_sigs": [
+        "dfb1f11ddccaae61bb9a497a692e491a"
+      ],
+      "tied_sigs": [
+        "dfb1f11ddccaae61bb9a497a692e491a"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "232",
+    "bucket": "B1",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 6,
+      "final_sig": "7d57158c2a15f95774607e11d1eea013",
+      "gold_sigs": [
+        "1de94db23553ea49196f6f5a11e64806"
+      ],
+      "tied_sigs": [
+        "7d57158c2a15f95774607e11d1eea013"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "268",
+    "bucket": "B3",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "106f5ad949478198311223169d9fee8f",
+      "gold_sigs": [
+        "c7c8fbd3512a1cd26c6029e114f25e2e"
+      ],
+      "tied_sigs": [
+        "c7c8fbd3512a1cd26c6029e114f25e2e"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "281",
+    "bucket": "B6",
+    "db": "toxicology",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 7,
+      "final_sig": "61e6de9d3c852c7d88cc7fe381ca9af7",
+      "gold_sigs": [
+        "ba797ead13e2d816338324e30855a46b"
+      ],
+      "tied_sigs": [
+        "34af15b171f53a10d19ebaa0ee772718"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "397",
+    "bucket": "B3",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "510034d58723f68e65a7d9e9051f0152",
+      "gold_sigs": [
+        "9cb5021fccd523c134c88ae3afbfb722"
+      ],
+      "tied_sigs": [
+        "9cb5021fccd523c134c88ae3afbfb722"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "414",
+    "bucket": "B3",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 7,
+      "final_sig": "8445be25213401a6a8f3de55a6904b25",
+      "gold_sigs": [
+        "c17bc019cbd0c200b675621d732af687"
+      ],
+      "tied_sigs": [
+        "c17bc019cbd0c200b675621d732af687"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "416",
+    "bucket": "B3",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "0373b62fa462ae83fa014b7d3d86cc7a",
+      "gold_sigs": [
+        "ea9ae7e6c188fbe42f35a121775b1ea9"
+      ],
+      "tied_sigs": [
+        "ea9ae7e6c188fbe42f35a121775b1ea9"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "440",
+    "bucket": "B1",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 1,
+      "final_sig": "a41bb77d2cb4196c9c516a6e7eaae59a",
+      "gold_sigs": [
+        "1a60aaab1355e2f7b9f558b87fe128a7"
+      ],
+      "tied_sigs": [
+        "a41bb77d2cb4196c9c516a6e7eaae59a"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "462",
+    "bucket": "B5",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 4,
+      "final_sig": "59dc726414db3fbe13cd9d2f03ccb9b0",
+      "gold_sigs": [
+        "286518618778dcd482d5f6fc75aa0be7",
+        "f08be8ca570b60885b4a3b375e751ad0",
+        "2b5937941ebe74080ee77506a43d50a1"
+      ],
+      "tied_sigs": [
+        "59dc726414db3fbe13cd9d2f03ccb9b0"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "480",
+    "bucket": "B1",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 5,
+      "final_sig": "92f50f3ad58a2035391fe41015be2785",
+      "gold_sigs": [
+        "a80b1b7de38fb70f3ad1eba4ee093543"
+      ],
+      "tied_sigs": [
+        "92f50f3ad58a2035391fe41015be2785"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "528",
+    "bucket": "B5",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 6,
+      "final_sig": "7e40a35f8a01ba3135d90435fec534d8",
+      "gold_sigs": [
+        "2f814b1557b13a5ab798eea7244e89c8",
+        "756b2891c35cb4c66fd2a0a23c14e0ea"
+      ],
+      "tied_sigs": [
+        "2f814b1557b13a5ab798eea7244e89c8"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "529",
+    "bucket": "B1",
+    "db": "card_games",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 4,
+      "final_sig": "1ca8f15fd33f24149fc7f1349413ccb9",
+      "gold_sigs": [
+        "037ee8f25b115851890524650a52bb34"
+      ],
+      "tied_sigs": [
+        "1ca8f15fd33f24149fc7f1349413ccb9"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "584",
+    "bucket": "B6",
+    "db": "codebase_community",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 4,
+      "final_sig": "0f525ddcd1246fba408dc82fdfa751c9",
+      "gold_sigs": [
+        "dae2867f27b9698c940bba24e0143bbe"
+      ],
+      "tied_sigs": [
+        "4ff86616abd11ba6264ded040334a4e6"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "598",
+    "bucket": "B1",
+    "db": "codebase_community",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "01770461ebfca76b869135ae2428fc30",
+      "gold_sigs": [
+        "e897bec0056c6ca820b645cd56dc5787"
+      ],
+      "tied_sigs": [
+        "01770461ebfca76b869135ae2428fc30"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "637",
+    "bucket": "B1",
+    "db": "codebase_community",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 6,
+      "final_sig": "e29c567cf09545555b77a1fc7ca1244b",
+      "gold_sigs": [
+        "8d3b5494f755ac79626c89a7ed8ac2c1"
+      ],
+      "tied_sigs": [
+        "e29c567cf09545555b77a1fc7ca1244b"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "726",
+    "bucket": "B6",
+    "db": "superhero",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 4,
+      "final_sig": "ee94801070c547771bfce0a9fed5d71b",
+      "gold_sigs": [
+        "77a72da1e032d42c3cb08a3e8666ff7b"
+      ],
+      "tied_sigs": [
+        "0e6ac9e81a77b45a608b157d6740fd8b"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "766",
+    "bucket": "B5",
+    "db": "superhero",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "28bd78a6d2132b6313b74ce7e1b9f898",
+      "gold_sigs": [
+        "b24f728ed9e44fa5ce443a046e33fa0e",
+        "d3bd6e8263eb42eb5bdc34d7818d1144"
+      ],
+      "tied_sigs": [
+        "b24f728ed9e44fa5ce443a046e33fa0e"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "773",
+    "bucket": "B3",
+    "db": "superhero",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 6,
+      "final_sig": "1bc049c2e0ecff97a1231d6541e48914",
+      "gold_sigs": [
+        "24d896f8738c04a3d56cc7953e213594"
+      ],
+      "tied_sigs": [
+        "24d896f8738c04a3d56cc7953e213594"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "788",
+    "bucket": "B1",
+    "db": "superhero",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "4aedea772089bbd12d114bc6acd27c13",
+      "gold_sigs": [
+        "b99eed4a1f8a141a48d4d51f04956262"
+      ],
+      "tied_sigs": [
+        "4aedea772089bbd12d114bc6acd27c13"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "792",
+    "bucket": "B3",
+    "db": "superhero",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "3a1b7a85af82a8e887b14f4d302af607",
+      "gold_sigs": [
+        "5ac996d0a2c1407399256344aa0bd1ce"
+      ],
+      "tied_sigs": [
+        "5ac996d0a2c1407399256344aa0bd1ce"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "884",
+    "bucket": "B3",
+    "db": "formula_1",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "20b9f802df166932471e91170eea2e03",
+      "gold_sigs": [
+        "806df5f88cda6d25640c41a9c8424cf7"
+      ],
+      "tied_sigs": [
+        "806df5f88cda6d25640c41a9c8424cf7"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "944",
+    "bucket": "B1",
+    "db": "formula_1",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 1,
+      "final_sig": "c59a89ddb082c35357f76ffd3d8032ff",
+      "gold_sigs": [
+        "49e8123c110fe477b596c4044ef8c364"
+      ],
+      "tied_sigs": [
+        "c59a89ddb082c35357f76ffd3d8032ff"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "954",
+    "bucket": "B6",
+    "db": "formula_1",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 5,
+      "final_sig": "e60d211165da7beafb62ff61f0a97f85",
+      "gold_sigs": [
+        "e60d211165da7beafb62ff61f0a97f85",
+        "a05d37008d77b5e8caa1ab864a7f8286",
+        "5ffa6e4d7a66f56e7352e110be1bfa5c"
+      ],
+      "tied_sigs": [
+        "e60d211165da7beafb62ff61f0a97f85"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "1001",
+    "bucket": "B3",
+    "db": "formula_1",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "a39eab032bc28cc395cd8618a4cc7c0e",
+      "gold_sigs": [
+        "87d24998cb52b97e71d6fa6d6b2a568e"
+      ],
+      "tied_sigs": [
+        "87d24998cb52b97e71d6fa6d6b2a568e"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "1150",
+    "bucket": "B6",
+    "db": "thrombosis_prediction",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "4a0663c9266129b24059b0db4ceb192b",
+      "gold_sigs": [
+        "1696b9758cf685210f2e9a16f9b39ca5",
+        "4a0663c9266129b24059b0db4ceb192b"
+      ],
+      "tied_sigs": [
+        "1696b9758cf685210f2e9a16f9b39ca5"
+      ],
+      "sim_matches_final": true,
+      "reason": "residual_selection"
+    }
+  },
+  {
+    "qid": "1208",
+    "bucket": "B3",
+    "db": "thrombosis_prediction",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "d0088c81f1a7e3c8be9fc824dccff9bf",
+      "gold_sigs": [
+        "cda7c42a26e36618c92cf121c8ee6594"
+      ],
+      "tied_sigs": [
+        "cda7c42a26e36618c92cf121c8ee6594"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "1241",
+    "bucket": "B5",
+    "db": "thrombosis_prediction",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 7,
+      "final_sig": "e94b7b30a036e790c74bfff668b2c711",
+      "gold_sigs": [
+        "3914dea204144026e6568977041529b4",
+        "e84ed02c0180e81e2b7120c7238ba44a"
+      ],
+      "tied_sigs": [
+        "3914dea204144026e6568977041529b4"
+      ],
+      "sim_matches_final": true,
+      "reason": "multiple_gold_signatures_or_v2_split"
+    }
+  },
+  {
+    "qid": "1270",
+    "bucket": "B1",
+    "db": "thrombosis_prediction",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "657f3341c7982b24a076de7f6f0b93b0",
+      "gold_sigs": [
+        "f85fe8550579f9f00b1e9db37d46c2f8"
+      ],
+      "tied_sigs": [
+        "657f3341c7982b24a076de7f6f0b93b0"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  },
+  {
+    "qid": "1460",
+    "bucket": "B3",
+    "db": "student_club",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "d2d4964ae31d0365170c732ab693b9ae",
+      "gold_sigs": [
+        "4f665abf1b77432cbbf64672bd01cd69"
+      ],
+      "tied_sigs": [
+        "4f665abf1b77432cbbf64672bd01cd69"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_bucket_count_15_gt_wrong_0_but_other_rollout_won"
+    }
+  },
+  {
+    "qid": "1506",
+    "bucket": "B1",
+    "db": "debit_card_specializing",
+    "meta": {
+      "max_reward": 1.0,
+      "n_top_rollouts": 8,
+      "final_sig": "e4c4e6b1629801c1576227caff34f21a",
+      "gold_sigs": [
+        "91ff4fdf6fbc5ce67ccbce0fb50a9444"
+      ],
+      "tied_sigs": [
+        "e4c4e6b1629801c1576227caff34f21a"
+      ],
+      "sim_matches_final": true,
+      "reason": "gold_cluster_lower_bucket_count_in_winning_rollout"
+    }
+  }
+]

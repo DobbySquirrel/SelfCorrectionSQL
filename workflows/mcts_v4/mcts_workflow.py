@@ -32,11 +32,13 @@ from .utils.sql_selector import SQLSelector
 from .utils.cte_processor import CTEProcessor
 from .utils.cte_error_handler import CTEErrorHandler
 from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
+import os
 import time as _time_for_timing
 
 # mcts_v4: 问题拆分 + 子问题验证
 from .agents.question_decomposer import QuestionDecomposer
 from .agents.cte_sufficient_checker import CTESufficientChecker
+from .utils.cte_diverse import diverse_prompt_enabled, diverse_n, fetch_diverse_cte_extras
 
 
 class MCTSWorkflow:
@@ -121,6 +123,7 @@ class MCTSWorkflow:
         self.root_dirichlet_alpha = 0.3  # Dirichlet 分布的 alpha 参数（越小噪声越大）
         self.root_noise_weight = 0.1  # 噪声权重（与 UCB 混合）
         self._current_rollout_expansion_records: List[Dict[str, Any]] = []
+        self._v4_decompose_expand_traces: List[Dict[str, Any]] = []
         # 分阶段计时统计
         self._timing = {
             'total_s': 0.0,
@@ -154,7 +157,8 @@ class MCTSWorkflow:
             self.cte_sufficient_checker = CTESufficientChecker(llm_config)
         
     def solve(self, question: str, schema_info: str, additional_context: str = "", 
-              original_schema: Optional[str] = None, _retry: bool = False) -> Dict[str, Any]:
+              original_schema: Optional[str] = None, _retry: bool = False,
+              qid: int = 0) -> Dict[str, Any]:
         """
         Args:
             question: 自然语言问题
@@ -170,6 +174,7 @@ class MCTSWorkflow:
         # 重置计时统计
         for k in list(self._timing.keys()):
             self._timing[k] = 0.0 if k.endswith('_s') else 0
+        self._v4_decompose_expand_traces = []
         
         # 初始化根节点
         root_node = MCTSNode(
@@ -211,8 +216,23 @@ class MCTSWorkflow:
             rollout_stats['is_quick_path'] = False
             rollout_stats_list.append(rollout_stats)
 
+        from .query_clarifier.config import ENV_TRACE_PATH, clarify_enabled
+        from .query_clarifier.integration import maybe_apply_clarify
+        from .query_clarifier.logging_utils import set_trace_path
 
-        optimal_sql = SQLSelector.select_by_highest_reward(rollout_stats_list)
+        clarify_record = None
+        if clarify_enabled():
+            trace = os.environ.get(ENV_TRACE_PATH)
+            if trace:
+                set_trace_path(trace)
+            rollout_stats_list, clarify_record = maybe_apply_clarify(
+                rollout_stats_list,
+                qid=qid,
+                nl_question=question,
+                schema_ddl=schema_info,
+            )
+
+        optimal_sql = SQLSelector.select(rollout_stats_list)
 
         # 收集所有路径的 SQL，供 test_mcts 做「任一路径对即算对」统计（每条 rollout 的 selected_sql + 各 rollout 的 all_sql_variants）
         all_sqls_with_attributes = []
@@ -235,9 +255,13 @@ class MCTSWorkflow:
             'rollout_stats': rollout_stats_list,  # 每个rollout的详细统计信息
             'all_sqls_with_attributes': all_sqls_with_attributes,  # 所有路径/变体的 SQL，供 gold 验证与任一路径对统计
         }
+        if clarify_record is not None:
+            out['clarify_trace'] = clarify_record.to_dict()
         # mcts_v4: 问题拆分结果写入输出，供下游保存到 JSON
         if self.use_decompose_flow and self.mcts_tree.root is not None:
             out['sub_questions'] = getattr(self.mcts_tree.root, 'sub_questions', [])
+            if self._v4_decompose_expand_traces:
+                out['decompose_expand_traces'] = list(self._v4_decompose_expand_traces)
         return out
     
     def _select_node(self) -> MCTSNode:
@@ -1285,6 +1309,24 @@ class MCTSWorkflow:
                 cte_variants = self._generate_cte_variants(leaf, failed_attempts_v4=failed_attempts_for_gen)
             finally:
                 leaf.question = orig_question
+
+            if diverse_prompt_enabled():
+                preceding_for_diverse = self.cte_generator._get_preceding_cte_info(leaf)
+                used_cte_names = self.cte_generator._get_used_cte_names(leaf)
+                extras, diverse_trace = fetch_diverse_cte_extras(
+                    node=leaf,
+                    llm_config=self.llm_config,
+                    n_requested=diverse_n(),
+                    existing_temp_ctes=cte_variants,
+                    preceding_cte_info=preceding_for_diverse,
+                    used_cte_names=used_cte_names,
+                    extract_fn=self.cte_generator._extract_cte_from_response,
+                )
+                diverse_trace["sub_question_index"] = idx
+                diverse_trace["iteration"] = iteration
+                self._v4_decompose_expand_traces.append(diverse_trace)
+                if extras:
+                    cte_variants = cte_variants + extras
 
             if not cte_variants:
                 break

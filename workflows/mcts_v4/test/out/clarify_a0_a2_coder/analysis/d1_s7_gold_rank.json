@@ -1,0 +1,99 @@
+{
+  "qids": [
+    "201",
+    "263",
+    "685",
+    "1238",
+    "1486",
+    "1490"
+  ],
+  "rows": [
+    {
+      "qid": "201",
+      "case": "C",
+      "n_clusters": 4,
+      "gold_best_rank": 2,
+      "gold_all_ranks": [
+        2,
+        4
+      ],
+      "bucket": "rank2_R7_candidate",
+      "high_reward_rollouts": 7,
+      "r2_hit": false,
+      "r7_hit": true,
+      "r7_would_trigger": true
+    },
+    {
+      "qid": "263",
+      "case": "C",
+      "n_clusters": 4,
+      "gold_best_rank": 4,
+      "gold_all_ranks": [
+        4
+      ],
+      "bucket": "rank3_5_need_new_signal",
+      "high_reward_rollouts": 8,
+      "r2_hit": false,
+      "r7_hit": false,
+      "r7_would_trigger": true
+    },
+    {
+      "qid": "685",
+      "case": "C",
+      "n_clusters": 5,
+      "gold_best_rank": 2,
+      "gold_all_ranks": [
+        2,
+        3,
+        4
+      ],
+      "bucket": "rank2_R7_candidate",
+      "high_reward_rollouts": 8,
+      "r2_hit": false,
+      "r7_hit": true,
+      "r7_would_trigger": true
+    },
+    {
+      "qid": "1238",
+      "case": "A",
+      "n_clusters": 2,
+      "gold_best_rank": 2,
+      "gold_all_ranks": [
+        2
+      ],
+      "bucket": "rank2_R7_candidate",
+      "high_reward_rollouts": 8,
+      "r2_hit": false,
+      "r7_hit": true,
+      "r7_would_trigger": true
+    },
+    {
+      "qid": "1486",
+      "case": "C",
+      "n_clusters": 5,
+      "gold_best_rank": 3,
+      "gold_all_ranks": [
+        3
+      ],
+      "bucket": "rank3_5_need_new_signal",
+      "high_reward_rollouts": 7,
+      "r2_hit": false,
+      "r7_hit": false,
+      "r7_would_trigger": true
+    },
+    {
+      "qid": "1490",
+      "case": "B",
+      "n_clusters": 2,
+      "gold_best_rank": 2,
+      "gold_all_ranks": [
+        2
+      ],
+      "bucket": "rank2_R7_candidate",
+      "high_reward_rollouts": 7,
+      "r2_hit": false,
+      "r7_hit": true,
+      "r7_would_trigger": true
+    }
+  ]
+}

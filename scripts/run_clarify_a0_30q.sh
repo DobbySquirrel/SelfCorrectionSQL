@@ -51,6 +51,7 @@ cd "$ROOT_DIR"
 : "${PORT_STRIDE:=100}"
 : "${MULTI_BASE_URLS:=http://127.0.0.1:8000/v1,http://127.0.0.1:8100/v1,http://127.0.0.1:8200/v1,http://127.0.0.1:8300/v1}"
 : "${SHARD_MODE:=0}"
+: "${SHARD_BASENAME:=}"
 
 OUT_DIR="${OUT_DIR:-workflows/mcts_v4/test/out/clarify_a0_a2_${MODEL_TAG}}"
 QIDS_SHARD_DIR="${QIDS_SHARD_DIR:-${OUT_DIR}/qids_shards_r${ROLL_OUTS}}"
@@ -235,6 +236,8 @@ _run_mcts_body() {
   export PYTHONPATH="${ROOT_DIR}:${ROOT_DIR}/Alpha-SQL-2.2.4"
   export PYTHONUNBUFFERED=1
   export MCTS_USE_SIGNATURE_V2="${MCTS_USE_SIGNATURE_V2:-0}"
+  export MCTS_SELECTOR_STRATEGY="${MCTS_SELECTOR_STRATEGY:-}"
+  export MCTS_REWARD_CALIBRATED="${MCTS_REWARD_CALIBRATED:-0}"
   export VLLM_API_URL="${VLLM_URL}"
   [[ -n "${model_id}" ]] && export VLLM_MODEL="${model_id}"
   [[ -n "${resume_banner}" ]] && printf '%s\n' "${resume_banner}" | ${tee_first} "${LOG}"
@@ -255,16 +258,24 @@ _shard_meta() {
   echo "${port},clarify_a0_${MODEL_TAG}_r${ROLL_OUTS}_w${i},${QIDS_SHARD_DIR}/shard${i}.json"
 }
 
+_shard_basename() {
+  if [[ -n "${SHARD_BASENAME}" ]]; then
+    echo "${SHARD_BASENAME}"
+  else
+    echo "v4_a0_30q_${MODEL_TAG}_rollouts${ROLL_OUTS}"
+  fi
+}
+
 _shard_json_out() {
-  echo "${OUT_DIR}/v4_a0_30q_${MODEL_TAG}_rollouts${ROLL_OUTS}_w${1}.json"
+  echo "${OUT_DIR}/$(_shard_basename)_w${1}.json"
 }
 
 _shard_sql_out() {
-  echo "${OUT_DIR}/v4_a0_30q_${MODEL_TAG}_rollouts${ROLL_OUTS}_w${1}.txt"
+  echo "${OUT_DIR}/$(_shard_basename)_w${1}.txt"
 }
 
 _shard_log() {
-  echo "${OUT_DIR}/v4_a0_30q_${MODEL_TAG}_rollouts${ROLL_OUTS}_w${1}.log"
+  echo "${OUT_DIR}/$(_shard_basename)_w${1}.log"
 }
 
 cmd_prepare_shards() {
@@ -324,7 +335,8 @@ merged = json.loads(merged_path.read_text(encoding="utf-8"))
 for i in range(n_shards):
     shard_qids_path = shard_dir / f"shard{i}.json"
     shard_qids = set(json.loads(shard_qids_path.read_text(encoding="utf-8")).get("qids", []))
-    shard_out = out_dir / f"v4_a0_30q_{model_tag}_rollouts{roll_outs}_w{i}.json"
+    shard_base = "${SHARD_BASENAME}" or f"v4_a0_30q_{model_tag}_rollouts{roll_outs}"
+    shard_out = out_dir / f"{shard_base}_w{i}.json"
     subset = {k: v for k, v in merged.items() if str(k) in shard_qids}
     if subset:
         shard_out.write_text(json.dumps(subset, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -341,14 +353,13 @@ import json
 from pathlib import Path
 
 out_dir = Path("${OUT_DIR}")
-model_tag = "${MODEL_TAG}"
-roll_outs = "${ROLL_OUTS}"
+shard_base = "${SHARD_BASENAME}" or f"v4_a0_30q_${MODEL_TAG}_rollouts${ROLL_OUTS}"
 n_shards = int("${N_SHARDS}")
 merged_path = Path("${merged}")
 
 by_qid = {}
 for i in range(n_shards):
-    path = out_dir / f"v4_a0_30q_{model_tag}_rollouts{roll_outs}_w{i}.json"
+    path = out_dir / f"{shard_base}_w{i}.json"
     if not path.is_file():
         print(f"[merge] skip missing {path}")
         continue
@@ -385,6 +396,8 @@ export RUN_INLINE=1
 export SHARD_MODE=1
 export MULTI_BASE_URLS=
 export MCTS_USE_SIGNATURE_V2='${MCTS_USE_SIGNATURE_V2:-0}'
+export MCTS_SELECTOR_STRATEGY='${MCTS_SELECTOR_STRATEGY:-}'
+export MCTS_REWARD_CALIBRATED='${MCTS_REWARD_CALIBRATED:-0}'
 export ROOT_DIR='${ROOT_DIR}'
 export CONDA_BASE='${CONDA_BASE}'
 export CONDA_ENV='${CONDA_ENV}'

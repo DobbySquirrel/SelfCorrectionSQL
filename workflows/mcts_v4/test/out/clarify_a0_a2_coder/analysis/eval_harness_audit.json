@@ -1,0 +1,239 @@
+{
+  "judges": {
+    "j1": {
+      "saved": 0,
+      "hurt": 0
+    },
+    "j2": {
+      "saved": 0,
+      "hurt": 0
+    },
+    "j3": {
+      "saved": 0,
+      "hurt": 0
+    }
+  },
+  "t112": [
+    {
+      "qid": "32",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH top5_schools AS (     SELECT          CASE              WHEN f.`Enrollment ",
+      "gold_head": "SELECT CAST(T1.\"FRPM Count (K-12)\" AS REAL) / T1.\"Enrollment (K-12)\" FROM frpm A"
+    },
+    {
+      "qid": "213",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH final_bond_type AS (     SELECT DISTINCT b.bond_type     FROM bond b     JO",
+      "gold_head": "SELECT distinct T1.bond_type FROM bond AS T1 INNER JOIN connected AS T2 ON T1.bo"
+    },
+    {
+      "qid": "346",
+      "j1_hit": false,
+      "j2_hit": false,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH final_result AS (     SELECT c.id, c.artist     FROM cards c     INNER JOIN",
+      "gold_head": "SELECT T1.id, T1.artist FROM cards AS T1 INNER JOIN legalities AS T2 ON T1.uuid "
+    },
+    {
+      "qid": "371",
+      "j1_hit": false,
+      "j2_hit": false,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH french_story_spotlight AS (     SELECT COUNT(DISTINCT cs.id) AS french_coun",
+      "gold_head": "SELECT CAST(COUNT(DISTINCT CASE WHEN T2.language = 'French' THEN T1.id ELSE NULL"
+    },
+    {
+      "qid": "547",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH cte1 AS (     SELECT u.Id, u.Age     FROM users u     WHERE u.Age > 65 ) SE",
+      "gold_head": "SELECT COUNT(T1.Id) FROM posts AS T1 INNER JOIN users AS T2 ON T1.OwnerUserId = "
+    },
+    {
+      "qid": "563",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH user_comment AS (     SELECT PostId     FROM comments     WHERE UserId = 30",
+      "gold_head": "SELECT T1.FavoriteCount FROM posts AS T1 INNER JOIN comments AS T2 ON T1.Id = T2"
+    },
+    {
+      "qid": "685",
+      "j1_hit": false,
+      "j2_hit": false,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH final_answer AS (     SELECT          p.ViewCount AS total_views,         u",
+      "gold_head": "SELECT T2.ViewCount, T3.DisplayName FROM postHistory AS T1 INNER JOIN posts AS T"
+    },
+    {
+      "qid": "765",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH stealth_power_id AS (     SELECT id     FROM superpower     WHERE power_nam",
+      "gold_head": "SELECT COUNT(T1.hero_id) FROM hero_power AS T1 INNER JOIN superpower AS T2 ON T1"
+    },
+    {
+      "qid": "822",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH green_skinned_villains AS (     SELECT s.id, s.superhero_name, c.colour AS ",
+      "gold_head": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN alignment AS T2 ON T1.alignm"
+    },
+    {
+      "qid": "875",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH race_year AS (     SELECT year     FROM races     WHERE raceId = 901 ) SELE",
+      "gold_head": "SELECT T2.url FROM races AS T1 INNER JOIN seasons AS T2 ON T2.year = T1.year WHE"
+    },
+    {
+      "qid": "959",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH cte1 AS (     SELECT r.raceId, r.year, r.name, res.driverId, res.fastestLap",
+      "gold_head": "SELECT T1.fastestLap FROM results AS T1 INNER JOIN races AS T2 on T1.raceId = T2"
+    },
+    {
+      "qid": "1042",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH final_leagues AS (     SELECT l.name     FROM Match m     JOIN League l ON ",
+      "gold_head": "SELECT t1.name FROM League AS t1 INNER JOIN Match AS t2 ON t1.id = t2.league_id "
+    },
+    {
+      "qid": "1229",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH patients_with_high_tg AS (     SELECT DISTINCT p.ID, p.Birthday     FROM Pa",
+      "gold_head": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T"
+    },
+    {
+      "qid": "1238",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH oldest_sle_patient AS (     SELECT p.ID, p.SEX     FROM Patient p     INNER",
+      "gold_head": "SELECT T1.ID, T1.SEX FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T"
+    },
+    {
+      "qid": "1275",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH cte1 AS (     SELECT l.ID, l.CENTROMEA, l.SSB, p.SEX     FROM Laboratory l ",
+      "gold_head": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T"
+    },
+    {
+      "qid": "1317",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH students_with_medium_tshirt AS (     SELECT COUNT(*) AS answer     FROM att",
+      "gold_head": "SELECT COUNT(T1.event_id) FROM event AS T1 INNER JOIN attendance AS T2 ON T1.eve"
+    },
+    {
+      "qid": "1338",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH all_expenses_approved AS (     SELECT          CASE              WHEN COUNT",
+      "gold_head": "SELECT T3.approved FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2."
+    },
+    {
+      "qid": "1401",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH event_info AS (     SELECT event_id, event_name     FROM event     WHERE ev",
+      "gold_head": "SELECT T3.cost FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2.link"
+    },
+    {
+      "qid": "1422",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": true,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "SELECT DISTINCT type FROM event WHERE location = 'MU 215';",
+      "gold_head": "SELECT `type` FROM `event` WHERE `location` = 'MU 215';"
+    },
+    {
+      "qid": "1486",
+      "j1_hit": false,
+      "j2_hit": false,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH sme_currency_counts AS (     SELECT          SUM(CASE WHEN Currency = 'CZK'",
+      "gold_head": "SELECT SUM(Currency = 'CZK') - SUM(Currency = 'EUR') FROM customers WHERE Segmen"
+    },
+    {
+      "qid": "1505",
+      "j1_hit": false,
+      "j2_hit": true,
+      "j3_hit": false,
+      "pool_j1": false,
+      "pool_j2": true,
+      "pick_head": "WITH cte1 AS (     SELECT c.CustomerID, c.Currency, y.Consumption     FROM custo",
+      "gold_head": "SELECT COUNT(DISTINCT T1.CustomerID) FROM yearmonth AS T1 INNER JOIN customers A"
+    }
+  ],
+  "baselines": {
+    "calib_498_normalize": 6,
+    "merged_498_normalize": 6,
+    "calib_498_exec_equiv": 347,
+    "merged_498_exec_equiv": 350,
+    "calib_498_ast": 43,
+    "merged_498_ast": 48
+  },
+  "j2_r2_hits_on_21": 17,
+  "canonical": "exec_equiv",
+  "action": "skip_r1b_fix_evaluator"
+}

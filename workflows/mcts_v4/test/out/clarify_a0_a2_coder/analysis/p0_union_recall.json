@@ -1,0 +1,2623 @@
+{
+  "n": 498,
+  "workers": "batch",
+  "timeout": 0,
+  "unique_sql_evals": 0,
+  "elapsed_sec": 754.898856,
+  "single": {
+    "final": 379,
+    "ef2_51_only": 44,
+    "calib": 414,
+    "merged_overlay_check": 423
+  },
+  "union": {
+    "final_ef2": 423,
+    "final_calib": 432,
+    "ef2_calib": 414,
+    "final_ef2_calib": 432
+  },
+  "exclusive": {
+    "calib_only": [
+      "32",
+      "346",
+      "465",
+      "685",
+      "955",
+      "1238",
+      "1486",
+      "1490",
+      "1505"
+    ],
+    "final_only": [
+      "26",
+      "31",
+      "72",
+      "186",
+      "219",
+      "234",
+      "530",
+      "637",
+      "694",
+      "726",
+      "788",
+      "868",
+      "915",
+      "1166",
+      "1254",
+      "1270",
+      "1387",
+      "1472"
+    ],
+    "ef2_only": [],
+    "missed_by_all": [
+      "11",
+      "23",
+      "24",
+      "25",
+      "36",
+      "37",
+      "41",
+      "48",
+      "50",
+      "62",
+      "77",
+      "85",
+      "145",
+      "159",
+      "169",
+      "173",
+      "197",
+      "201",
+      "212",
+      "263",
+      "347",
+      "349",
+      "383",
+      "407",
+      "412",
+      "533",
+      "557",
+      "587",
+      "639",
+      "640",
+      "671",
+      "772",
+      "794",
+      "829",
+      "861",
+      "892",
+      "894",
+      "901",
+      "904",
+      "948",
+      "1002",
+      "1011",
+      "1028",
+      "1032",
+      "1037",
+      "1080",
+      "1114",
+      "1136",
+      "1148",
+      "1149",
+      "1169",
+      "1175",
+      "1187",
+      "1227",
+      "1243",
+      "1252",
+      "1256",
+      "1302",
+      "1357",
+      "1359",
+      "1376",
+      "1389",
+      "1481",
+      "1498",
+      "1529",
+      "1531"
+    ]
+  },
+  "overlap_matrix": {
+    "final-/ef2-/calib-": 66,
+    "final-/ef2-/calib+": 9,
+    "final-/ef2+/calib-": 0,
+    "final-/ef2+/calib+": 44,
+    "final+/ef2-/calib-": 18,
+    "final+/ef2-/calib+": 361,
+    "final+/ef2+/calib-": 0,
+    "final+/ef2+/calib+": 0
+  },
+  "recall_qid": {
+    "5": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "11": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "12": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "17": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "23": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "24": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "25": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "26": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "27": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "28": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "31": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "32": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "36": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "37": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "39": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "40": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "41": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "45": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "46": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "47": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "48": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "50": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "62": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "72": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "77": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "79": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "82": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "83": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "85": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "87": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "89": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "92": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "93": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "94": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "95": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "98": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "99": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "100": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "112": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "115": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "116": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "117": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "118": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "125": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "128": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "129": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "136": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "137": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "138": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "145": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "149": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "152": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "159": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "168": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "169": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "173": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "186": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "189": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "192": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "194": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "195": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "197": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "198": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "200": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "201": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "206": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "207": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "208": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "212": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "213": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "215": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "218": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "219": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "220": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "226": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "227": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "228": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "230": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "231": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "232": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "234": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "236": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "239": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "240": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "242": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "243": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "244": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "245": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "247": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "248": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "249": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "253": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "255": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "260": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "263": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "268": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "273": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "281": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "282": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "327": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "340": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "341": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "344": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "345": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "346": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "347": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "349": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "352": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "356": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "358": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "366": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "368": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "371": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "377": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "379": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "383": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "391": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "397": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "402": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "405": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "407": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "408": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "409": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "412": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "414": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "415": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "416": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "422": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "424": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "427": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "440": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "459": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "462": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "465": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "466": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "468": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "469": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "472": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "473": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "474": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "477": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "479": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "480": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "483": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "484": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "486": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "487": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "518": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "522": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "528": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "529": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "530": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "531": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "532": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "533": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "537": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "539": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "544": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "547": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "549": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "555": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "557": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "563": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "565": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "567": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "568": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "571": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "572": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "573": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "576": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "578": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "581": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "584": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "586": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "587": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "592": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "595": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "598": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "604": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "629": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "633": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "634": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "637": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "639": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "640": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "665": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "669": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "671": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "672": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "678": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "682": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "683": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "685": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "687": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "694": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "701": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "704": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "705": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "707": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "710": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "716": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "717": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "719": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "723": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "724": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "726": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "728": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "730": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "732": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "733": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "736": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "737": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "738": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "739": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "740": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "743": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "744": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "745": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "747": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "750": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "751": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "753": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "758": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "760": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "761": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "764": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "765": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "766": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "769": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "772": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "773": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "775": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "779": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "781": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "782": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "785": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "786": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "788": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "790": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "791": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "792": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "794": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "796": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "797": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "798": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "800": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "801": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "806": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "819": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "822": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "824": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "825": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "829": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "846": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "847": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "850": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "854": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "857": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "859": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "861": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "862": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "865": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "866": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "868": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "869": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "872": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "875": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "877": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "879": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "880": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "881": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "884": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "892": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "894": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "895": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "896": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "897": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "898": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "901": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "902": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "904": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "906": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "909": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "910": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "912": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "915": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "928": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "930": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "931": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "933": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "937": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "940": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "944": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "945": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "948": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "950": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "951": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "954": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "955": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "959": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "960": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "962": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "963": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "964": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "967": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "971": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "972": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "977": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "978": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "981": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "988": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "989": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "990": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "994": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1001": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1002": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1003": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1011": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1014": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1025": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1028": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1029": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1030": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1031": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1032": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1035": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1036": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1037": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1039": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1040": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1042": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1044": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1048": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1057": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1058": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1068": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1076": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1078": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1079": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1080": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1084": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1088": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1091": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1092": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1094": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1096": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1098": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1102": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1103": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1105": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1107": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1110": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1113": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1114": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1115": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1116": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1122": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1124": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1130": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1133": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1134": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1135": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1136": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1139": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1141": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1144": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1145": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1146": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1147": {
+      "final": false,
+      "ef2": true,
+      "calib": true
+    },
+    "1148": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1149": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1150": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1152": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1153": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1155": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1156": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1157": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1162": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1164": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1166": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "1168": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1169": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1171": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1175": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1179": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1185": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1187": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1189": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1192": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1195": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1198": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1201": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1205": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1208": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1209": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1220": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1225": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1227": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1229": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1231": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1232": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1235": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1238": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "1239": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1241": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1242": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1243": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1247": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1251": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1252": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1254": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "1255": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1256": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1257": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1265": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1267": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1270": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "1275": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1281": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1302": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1312": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1317": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1322": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1323": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1331": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1334": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1338": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1339": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1340": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1344": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1346": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1350": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1351": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1352": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1356": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1357": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1359": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1361": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1362": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1368": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1371": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1375": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1376": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1378": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1380": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1381": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1387": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "1389": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1390": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1392": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1394": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1398": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1399": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1401": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1403": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1404": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1405": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1409": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1410": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1411": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1422": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1426": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1427": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1432": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1435": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1457": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1460": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1464": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1471": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1472": {
+      "final": true,
+      "ef2": false,
+      "calib": false
+    },
+    "1473": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1476": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1479": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1480": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1481": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1482": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1483": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1484": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1486": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "1490": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "1493": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1498": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1500": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1501": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1505": {
+      "final": false,
+      "ef2": false,
+      "calib": true
+    },
+    "1506": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1507": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1509": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1514": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1515": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1521": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1524": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1525": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1526": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1528": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    },
+    "1529": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1531": {
+      "final": false,
+      "ef2": false,
+      "calib": false
+    },
+    "1533": {
+      "final": true,
+      "ef2": false,
+      "calib": true
+    }
+  }
+}

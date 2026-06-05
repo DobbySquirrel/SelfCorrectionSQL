@@ -1,0 +1,194 @@
+[
+  {
+    "qid": "32",
+    "db": "california_schools",
+    "bucket": "S5",
+    "meta": {
+      "gold": {
+        "tables": "{'FRPM', 'SCHOOLS'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'COUNT'}",
+        "len": 199
+      },
+      "rollout": {
+        "mean_depth": 7.625,
+        "max_depth": 8,
+        "d1_clusters_mean": 2.75,
+        "tables": "{'FINAL_RESULT', 'CTE3', 'TOP_5_SCHOOLS', 'FINAL_RATES', 'TOP5_MEAL_RATES', 'SCHOOLS', 'CTE2', 'FILTERED_SCHOOLS', 'FINAL_ANSWER', 'AVG_RATE_FOR_TOP_5', 'CTE1', 'FRPM'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 19270,
+      "reason": "high_reward_no_correct_path"
+    }
+  },
+  {
+    "qid": "263",
+    "db": "toxicology",
+    "bucket": "S5",
+    "meta": {
+      "gold": {
+        "tables": "{'MOLECULE', 'ATOM', 'BOND'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'COUNT'}",
+        "len": 275
+      },
+      "rollout": {
+        "mean_depth": 6.75,
+        "max_depth": 8,
+        "d1_clusters_mean": 1.625,
+        "tables": "{'CHLORINE_PERCENTAGE', 'FINAL_RESULT', 'SINGLE_BOND_MOLECULES', 'ATOM', 'SINGLE_BOND_ATOMS', 'CHLORINE_IN_SINGLE_BONDS', 'CTE2', 'MOLECULE', 'CHLORINE_COMPOSITION', 'CTE1', 'BOND'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 2514,
+      "reason": "high_reward_no_correct_path"
+    }
+  },
+  {
+    "qid": "1227",
+    "db": "thrombosis_prediction",
+    "bucket": "S5",
+    "meta": {
+      "gold": {
+        "tables": "{'LABORATORY', 'PATIENT'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'AVG'}",
+        "len": 215
+      },
+      "rollout": {
+        "mean_depth": 7.25,
+        "max_depth": 8,
+        "d1_clusters_mean": 1.7142857142857142,
+        "tables": "{'MALE_HIGH_CHOLESTEROL_PATIENTS', 'PATIENT_INFO', 'CHOLESTEROL_DATA', 'CTE2', 'LABORATORY', 'CTE3', 'PATIENT', 'AVG_AGE_CALC', 'MALE_PATIENTS_WITH_HIGH_CHOLESTEROL', 'CHOLESTEROL_PATIENTS', 'MALE_PATIENTS', 'CTE1', 'MALE_CHOL_PATIENTS', 'AVERAGE_AGE_CALC'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 7537,
+      "reason": "high_reward_no_correct_path"
+    }
+  },
+  {
+    "qid": "1238",
+    "db": "thrombosis_prediction",
+    "bucket": "S5",
+    "meta": {
+      "gold": {
+        "tables": "{'LABORATORY', 'PATIENT'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "set()",
+        "len": 176
+      },
+      "rollout": {
+        "mean_depth": 7.25,
+        "max_depth": 8,
+        "d1_clusters_mean": 1.5,
+        "tables": "{'LABORATORY', 'PATIENT', 'EXAMINATION', 'OLDEST_SLE_PATIENT', 'OLDEST_PATIENT', 'CTE2', 'CTE1'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 7530,
+      "reason": "high_reward_no_correct_path"
+    }
+  },
+  {
+    "qid": "1357",
+    "db": "student_club",
+    "bucket": "S2",
+    "meta": {
+      "gold": {
+        "tables": "{'INCOME', 'MEMBER'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "set()",
+        "len": 183
+      },
+      "rollout": {
+        "mean_depth": 6.75,
+        "max_depth": 8,
+        "d1_clusters_mean": 1.125,
+        "tables": "{'MEMBER_INFO', 'FINAL_DUES_DATE', 'DUES_PAYMENT', 'EARLIEST_DUES_DATE', 'DUES_DETAILS', 'DUES_DATES', 'INCOME', 'LATEST_DUES_DATE', 'MEMBER'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 10516,
+      "reason": "low_d1_diversity"
+    }
+  },
+  {
+    "qid": "1486",
+    "db": "debit_card_specializing",
+    "bucket": "S5",
+    "meta": {
+      "gold": {
+        "tables": "{'CUSTOMERS'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'SUM'}",
+        "len": 89
+      },
+      "rollout": {
+        "mean_depth": 5.875,
+        "max_depth": 8,
+        "d1_clusters_mean": 2.0,
+        "tables": "{'COMPARISON', 'SME_CURRENCY_COUNTS', 'SME_EUR_COUNT', 'SME_CUSTOMERS', 'SME_CURRENCY_COMPARISON', 'SME_COMPARISON', 'CZK_COUNT', 'SME_COUNTS', 'FINAL_ANSWER', 'CTE1', 'SME_CZK_COUNT', 'CUSTOMERS'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 1606,
+      "reason": "high_reward_no_correct_path"
+    }
+  },
+  {
+    "qid": "1498",
+    "db": "debit_card_specializing",
+    "bucket": "S2",
+    "meta": {
+      "gold": {
+        "tables": "{'YEARMONTH'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'SUM'}",
+        "len": 139
+      },
+      "rollout": {
+        "mean_depth": 7.25,
+        "max_depth": 8,
+        "d1_clusters_mean": 1.2,
+        "tables": "{'HIGHEST_MONTHLY_CONSUMPTION', 'CTE1', 'YEARMONTH', 'HIGHEST_MONTHLY_CONSUMPTION_2012'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 1620,
+      "reason": "low_d1_diversity"
+    }
+  },
+  {
+    "qid": "1505",
+    "db": "debit_card_specializing",
+    "bucket": "S2",
+    "meta": {
+      "gold": {
+        "tables": "{'YEARMONTH', 'CUSTOMERS'}",
+        "has_window": false,
+        "has_recursive": false,
+        "cte_layers": 0,
+        "funcs": "{'COUNT'}",
+        "len": 172
+      },
+      "rollout": {
+        "mean_depth": 4.0,
+        "max_depth": 4,
+        "d1_clusters_mean": 1.0,
+        "tables": "{'FINAL_COUNT', 'CTE2', 'CTE1', 'YEARMONTH', 'CUSTOMERS'}",
+        "n_rollouts": 8
+      },
+      "ddl_chars": 1613,
+      "reason": "low_d1_diversity"
+    }
+  }
+]

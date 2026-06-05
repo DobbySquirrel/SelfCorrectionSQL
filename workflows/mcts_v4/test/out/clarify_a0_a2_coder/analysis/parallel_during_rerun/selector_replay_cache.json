@@ -1,0 +1,326 @@
+{
+  "a0_30": {
+    "R0_max_reward": {
+      "hit1": 20,
+      "hit1_pct": 66.66666666666667,
+      "recall": 25,
+      "saved_vs_r0": 0,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 0,
+      "saved_qids": [],
+      "hurt_qids": []
+    },
+    "R1_max_cluster_size": {
+      "hit1": 20,
+      "hit1_pct": 66.66666666666667,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 1,
+      "net_vs_r0": 0,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1480"
+      ]
+    },
+    "R2_max_cluster_visit": {
+      "hit1": 22,
+      "hit1_pct": 73.33333333333333,
+      "recall": 25,
+      "saved_vs_r0": 2,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 2,
+      "saved_qids": [
+        "1498",
+        "1524"
+      ],
+      "hurt_qids": []
+    },
+    "R3_reward_x_size": {
+      "hit1": 20,
+      "hit1_pct": 66.66666666666667,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 1,
+      "net_vs_r0": 0,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1480"
+      ]
+    },
+    "R4_majority_then_reward": {
+      "hit1": 21,
+      "hit1_pct": 70.0,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": []
+    },
+    "R5_max_cluster_then_visit": {
+      "hit1": 20,
+      "hit1_pct": 66.66666666666667,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 1,
+      "net_vs_r0": 0,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1480"
+      ]
+    }
+  },
+  "a3_30": {
+    "R0_max_reward": {
+      "hit1": 20,
+      "hit1_pct": 66.66666666666667,
+      "recall": 25,
+      "saved_vs_r0": 0,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 0,
+      "saved_qids": [],
+      "hurt_qids": []
+    },
+    "R1_max_cluster_size": {
+      "hit1": 19,
+      "hit1_pct": 63.333333333333336,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 2,
+      "net_vs_r0": -1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1505",
+        "1525"
+      ]
+    },
+    "R2_max_cluster_visit": {
+      "hit1": 19,
+      "hit1_pct": 63.333333333333336,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 2,
+      "net_vs_r0": -1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1505",
+        "1525"
+      ]
+    },
+    "R3_reward_x_size": {
+      "hit1": 19,
+      "hit1_pct": 63.333333333333336,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 2,
+      "net_vs_r0": -1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1505",
+        "1525"
+      ]
+    },
+    "R4_majority_then_reward": {
+      "hit1": 19,
+      "hit1_pct": 63.333333333333336,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 2,
+      "net_vs_r0": -1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1505",
+        "1525"
+      ]
+    },
+    "R5_max_cluster_then_visit": {
+      "hit1": 19,
+      "hit1_pct": 63.333333333333336,
+      "recall": 25,
+      "saved_vs_r0": 1,
+      "hurt_vs_r0": 2,
+      "net_vs_r0": -1,
+      "saved_qids": [
+        "1524"
+      ],
+      "hurt_qids": [
+        "1505",
+        "1525"
+      ]
+    }
+  },
+  "sel35": {
+    "R0_max_reward": {
+      "hit1": 0,
+      "hit1_pct": 0.0,
+      "recall": null,
+      "saved_vs_r0": 0,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 0,
+      "saved_qids": [],
+      "hurt_qids": []
+    },
+    "R1_max_cluster_size": {
+      "hit1": 18,
+      "hit1_pct": 51.42857142857143,
+      "recall": null,
+      "saved_vs_r0": 18,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 18,
+      "saved_qids": [
+        "136",
+        "186",
+        "230",
+        "232",
+        "268",
+        "397",
+        "414",
+        "416",
+        "462",
+        "528",
+        "766",
+        "773",
+        "792",
+        "884",
+        "1001",
+        "1208",
+        "1241",
+        "1506"
+      ],
+      "hurt_qids": []
+    },
+    "R2_max_cluster_visit": {
+      "hit1": 18,
+      "hit1_pct": 51.42857142857143,
+      "recall": null,
+      "saved_vs_r0": 18,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 18,
+      "saved_qids": [
+        "136",
+        "186",
+        "230",
+        "232",
+        "268",
+        "397",
+        "414",
+        "416",
+        "462",
+        "528",
+        "766",
+        "773",
+        "792",
+        "884",
+        "1001",
+        "1208",
+        "1241",
+        "1506"
+      ],
+      "hurt_qids": []
+    },
+    "R3_reward_x_size": {
+      "hit1": 18,
+      "hit1_pct": 51.42857142857143,
+      "recall": null,
+      "saved_vs_r0": 18,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 18,
+      "saved_qids": [
+        "136",
+        "186",
+        "230",
+        "232",
+        "268",
+        "397",
+        "414",
+        "416",
+        "462",
+        "528",
+        "766",
+        "773",
+        "792",
+        "884",
+        "1001",
+        "1208",
+        "1241",
+        "1506"
+      ],
+      "hurt_qids": []
+    },
+    "R4_majority_then_reward": {
+      "hit1": 18,
+      "hit1_pct": 51.42857142857143,
+      "recall": null,
+      "saved_vs_r0": 18,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 18,
+      "saved_qids": [
+        "136",
+        "186",
+        "230",
+        "232",
+        "268",
+        "397",
+        "414",
+        "416",
+        "462",
+        "528",
+        "766",
+        "773",
+        "792",
+        "884",
+        "1001",
+        "1208",
+        "1241",
+        "1506"
+      ],
+      "hurt_qids": []
+    },
+    "R5_max_cluster_then_visit": {
+      "hit1": 18,
+      "hit1_pct": 51.42857142857143,
+      "recall": null,
+      "saved_vs_r0": 18,
+      "hurt_vs_r0": 0,
+      "net_vs_r0": 18,
+      "saved_qids": [
+        "136",
+        "186",
+        "230",
+        "232",
+        "268",
+        "397",
+        "414",
+        "416",
+        "462",
+        "528",
+        "766",
+        "773",
+        "792",
+        "884",
+        "1001",
+        "1208",
+        "1241",
+        "1506"
+      ],
+      "hurt_qids": []
+    }
+  },
+  "eliminated": []
+}
