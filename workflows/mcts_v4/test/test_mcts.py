@@ -19,7 +19,7 @@ import random
 import numpy as np
 from pathlib import Path
 from typing import List, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
@@ -107,7 +107,8 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
         res = w.solve(
             question=question,
             schema_info=f"db_name:{db_name}\n{schema_info}\nforeign_key:{foreign_key}",
-            additional_context=f"{evidence_to_use}"
+            additional_context=f"{evidence_to_use}",
+            qid=int(sample.get("question_id", sample.get("qid", 0)) or 0),
         )
 
         optimal_sql = res.get("optimal_sql", "")
@@ -115,13 +116,25 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
         all_sqls_with_attributes = res.get("all_sqls_with_attributes", [])
         rollout_stats = res.get("rollout_stats", [])  # 每个rollout的详细统计信息
         sub_questions = res.get("sub_questions", [])  # mcts_v4 问题拆分结果
-        return {
+        decompose_expand_traces = res.get("decompose_expand_traces") or []
+        payload = {
             "sql": optimal_sql,
             "stats": stats,
             "all_sqls_with_attributes": all_sqls_with_attributes,
             "rollout_stats": rollout_stats,
             "sub_questions": sub_questions,
         }
+        if decompose_expand_traces:
+            payload["decompose_expand_traces"] = decompose_expand_traces
+        for k in (
+            "plan_proposals",
+            "plan_dedup_count",
+            "per_plan_rollout_stats",
+            "union_rollout_stats",
+        ):
+            if res.get(k) is not None:
+                payload[k] = res[k]
+        return payload
     finally:
         # 无论 solve 是否异常，都关闭连接，避免连接泄漏导致卡住
         if db is not None:
@@ -187,16 +200,27 @@ def process_single_task(args_tuple):
             stats_obj['gold_match'] = gold_match
             stats_obj['gold_sql'] = gold_sqls[qid]
         
-        return {
+        ret = {
             'idx': idx,
             'qid': qid,
             'sql': result['sql'],
             'stats': stats_obj,
             'gold_match': gold_match,
-            'all_sqls_with_attributes': all_sqls_with_gold,  # 包含gold验证结果的所有SQL
-            'rollout_stats': result.get('rollout_stats', []),  # 每个rollout的详细统计信息
-            'sub_questions': result.get('sub_questions', []),  # mcts_v4 问题拆分结果
+            'all_sqls_with_attributes': all_sqls_with_gold,
+            'rollout_stats': result.get('rollout_stats', []),
+            'sub_questions': result.get('sub_questions', []),
         }
+        if result.get('decompose_expand_traces'):
+            ret['decompose_expand_traces'] = result['decompose_expand_traces']
+        for k in (
+            'plan_proposals',
+            'plan_dedup_count',
+            'per_plan_rollout_stats',
+            'union_rollout_stats',
+        ):
+            if result.get(k) is not None:
+                ret[k] = result[k]
+        return ret
     except Exception as e:
         print(f"❌ 样本#{idx} 处理失败: {e}")
         import traceback
@@ -210,6 +234,95 @@ def process_single_task(args_tuple):
             'error': str(e),
             'sub_questions': [],
         }
+
+
+def _fast_fallback_task(task):
+    """Single-rollout fallback when the main MCTS run exceeds the hard timeout."""
+    idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, strategy_mode, collect_stats, use_decompose = task
+    fast_cfg = dict(mcts_config or {})
+    fast_cfg['rollouts_per_iteration'] = 1
+    fast_cfg['num_sql_variants'] = 1
+    return (idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, fast_cfg, strategy_mode, collect_stats, use_decompose)
+
+
+def _empty_timeout_result(task, timeout_s: int, fallback_failed: bool = False) -> dict:
+    idx, sample = task[0], task[1]
+    qid = str(sample.get('question_id', idx))
+    msg = f'任务超时（>{timeout_s}秒）'
+    if fallback_failed:
+        msg += '；fast fallback 也失败'
+    return {
+        'idx': idx,
+        'qid': qid,
+        'sql': '',
+        'stats': {'gold_match': False, 'task_timeout': True, 'timeout_fallback_failed': fallback_failed},
+        'gold_match': False,
+        'error': msg,
+        'all_sqls_with_attributes': [],
+        'rollout_stats': [],
+        'sub_questions': [],
+    }
+
+
+def _run_task_in_subprocess(task, timeout_s: int):
+    """Run one sample in a child process; kill the worker on hard timeout."""
+    qid = str(task[1].get('question_id', task[0]))
+    with ProcessPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(process_single_task, task)
+        try:
+            return future.result(timeout=timeout_s)
+        except FutureTimeoutError:
+            print(f"⏱️ 样本 qid={qid} 硬超时 (>{timeout_s}s)，终止 worker")
+            pool.shutdown(wait=False, cancel_futures=True)
+            return None
+
+
+def _resolve_task_after_timeout(task, timeout_s: int, fallback_timeout_s: int):
+    """On timeout: run a 1-rollout fallback, else persist an empty timed-out record."""
+    fb = _run_task_in_subprocess(_fast_fallback_task(task), fallback_timeout_s)
+    if fb and fb.get('sql'):
+        fb.setdefault('stats', {})
+        if isinstance(fb['stats'], dict):
+            fb['stats']['timeout_fallback'] = True
+            fb['stats']['original_task_timeout_s'] = timeout_s
+        print(f"  ↳ qid={fb.get('qid')} 使用 fast fallback（1 rollout）")
+        return fb
+    print(f"  ↳ qid={task[1].get('question_id', task[0])} fallback 无结果，写入 timeout 占位")
+    return _empty_timeout_result(task, timeout_s, fallback_failed=True)
+
+
+def _save_checkpoint(args, ppls, indices, processed_indices, results, results_with_stats):
+    """Merge checkpoint JSON with any existing on-disk results."""
+    if args.qids is not None:
+        all_indices_for_output = sorted(processed_indices)
+    else:
+        all_indices_for_output = indices if args.index is not None else list(range(len(ppls)))
+
+    if args.sql_out:
+        Path(args.sql_out).parent.mkdir(parents=True, exist_ok=True)
+        with open(args.sql_out, 'w', encoding='utf-8') as fw:
+            for j in all_indices_for_output:
+                key = str(ppls[j].get('question_id', j))
+                sql = results.get(key, "") if (j in processed_indices) else ""
+                if sql:
+                    sql = ' '.join(sql.split())
+                fw.write(str(sql) + "\n")
+
+    if args.json_out:
+        Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
+        out_obj = {}
+        if os.path.exists(args.json_out):
+            try:
+                with open(args.json_out, 'r', encoding='utf-8') as fr:
+                    out_obj = json.load(fr)
+            except Exception:
+                pass
+        for j in processed_indices:
+            key = str(ppls[j].get('question_id', j))
+            if key in results_with_stats:
+                out_obj[key] = results_with_stats[key]
+        with open(args.json_out, 'w', encoding='utf-8') as fw:
+            json.dump(out_obj, fw, ensure_ascii=False, indent=2)
 
 
 def _normalize_sample_mcts_v3(item: dict) -> dict:
@@ -380,11 +493,13 @@ def main():
     parser.add_argument("--max_cte_nodes", type=int, default=5, help="每次扩展节点时生成的CTE变体数量（默认3）")
     parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
     parser.add_argument("--rollouts_per_iteration", type=int, default=8, help="每次迭代的rollout数量（默认8）")
-    parser.add_argument("--num_sql_variants", type=int, default=15, help="每个rollout末尾生成的SQL变体数量（默认15）")
+    parser.add_argument("--num_sql_variants", type=int, default=5, help="每个rollout末尾生成的SQL变体数量（默认5）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
-    parser.add_argument("--task_timeout", type=int, default=1800,
-                       help="单个任务的最大超时时间（秒），默认1800秒（30分钟）。8个rollout时建议设置为1800秒以上")
+    parser.add_argument("--task_timeout", type=int, default=600,
+                       help="单个任务的最大超时时间（秒），默认600秒（10分钟）。超时后尝试 1-rollout fallback")
+    parser.add_argument("--timeout_fallback_secs", type=int, default=180,
+                       help="主任务硬超时后的 fast fallback 时限（秒），默认180")
     parser.add_argument("--skip_processed", action="store_true",
                        help="跳过已处理的问题（检查JSON输出文件中是否已有结果）")
     parser.add_argument("--collect_stats", action="store_true", default=True,
@@ -541,95 +656,54 @@ def main():
         sample = load_sample(args.ppl_file, idx)
         tasks.append((idx, sample, args.parallel_workers, gold_sqls, ppls, multi_base_urls, mcts_config, args.strategy_mode, collect_stats_on_node_creation, args.use_decompose_flow))
     
-    # 统一使用并行处理模式（max_workers=1时也是并行处理，只是单线程）
-    print(f"处理 {len(tasks)} 个样本 (max_workers={args.max_workers})")
+    # 逐题子进程 + 硬超时：避免 ThreadPool 超时后 worker 线程仍占用 max_workers=1 导致整 shard 卡死
+    print(f"处理 {len(tasks)} 个样本 (sequential subprocess, task_timeout={args.task_timeout}s)")
     save_lock = threading.Lock()
-    
-    # 使用线程池并行处理
-    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        future_to_task = {executor.submit(process_single_task, task): task for task in tasks}
-        
-        completed_count = 0
-        for future in tqdm(as_completed(future_to_task), total=len(tasks), desc="处理样本"):
-            try:
-                # 添加超时处理，避免任务卡住
-                try:
-                    result_dict = future.result(timeout=args.task_timeout)
-                except FutureTimeoutError:
-                    # 获取任务信息以便记录
-                    task = future_to_task.get(future)
-                    if task:
-                        idx = task[0]
-                        qid = str(task[1].get('question_id', idx))
-                        print(f"⏱️ 样本#{idx} 超时 (>{args.task_timeout}s)，跳过")
-                        result_dict = {
-                            'idx': idx,
-                            'qid': qid,
-                            'sql': '',
-                            'stats': {},
-                            'gold_match': None,
-                            'error': f'任务超时（>{args.task_timeout}秒）',
-                            'all_sqls_with_attributes': [],
-                            'rollout_stats': [],
-                        }
-                    else:
-                        # 如果无法获取任务信息，创建一个默认的错误结果
-                        print(f"⏱️ 任务超时 (>{args.task_timeout}s)，跳过")
-                        continue
-                
-                idx = result_dict['idx']
-                qid = result_dict['qid']
-                results[qid] = result_dict['sql']
-                results_with_stats[qid] = {
-                    'sql': result_dict['sql'],
-                    'stats': result_dict['stats'],
-                    'all_sqls_with_attributes': result_dict.get('all_sqls_with_attributes', []),  # 保存所有SQL及其属性
-                    'rollout_stats': result_dict.get('rollout_stats', []),  # 保存每个rollout的详细统计信息
-                    'sub_questions': result_dict.get('sub_questions', []),  # mcts_v4 问题拆分结果
-                }
-                processed_indices.append(idx)
-                completed_count += 1
-                
-                # 统计gold验证结果
-                if result_dict.get('gold_match') is not None:
-                    total_count += 1
-                    if result_dict['gold_match']:
-                        correct_count += 1
-                
-                # 每完成一个任务或全部完成时保存一次
-                if completed_count % 1 == 0 or completed_count == len(tasks):
-                    with save_lock:
-                        # 确定输出索引
-                        if args.qids is not None:
-                            all_indices_for_output = sorted(processed_indices)
-                        else:
-                            all_indices_for_output = indices if args.index is not None else list(range(len(ppls)))
+    completed_count = 0
 
-                        # 保存TXT
-                        if args.sql_out:
-                            Path(args.sql_out).parent.mkdir(parents=True, exist_ok=True)
-                            with open(args.sql_out, 'w', encoding='utf-8') as fw:
-                                for j in all_indices_for_output:
-                                    key = str(ppls[j].get('question_id', j))
-                                    sql = results.get(key, "") if (j in processed_indices) else ""
-                                    if sql:
-                                        sql = ' '.join(sql.split())
-                                    fw.write(str(sql) + "\n")
+    for task in tqdm(tasks, desc="处理样本"):
+        try:
+            result_dict = _run_task_in_subprocess(task, args.task_timeout)
+            if result_dict is None:
+                result_dict = _resolve_task_after_timeout(task, args.task_timeout, args.timeout_fallback_secs)
 
-                        # 保存JSON
-                        if args.json_out:
-                            Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
-                            out_obj = {}
-                            for j in processed_indices:
-                                key = str(ppls[j].get('question_id', j))
-                                out_obj[key] = results_with_stats.get(key, {'sql': '', 'stats': {}})
-                            with open(args.json_out, 'w', encoding='utf-8') as fw:
-                                json.dump(out_obj, fw, ensure_ascii=False, indent=2)
-                        
-            except Exception as e:
-                print(f"❌ 处理任务出错: {e}")
-                import traceback
-                traceback.print_exc()
+            idx = result_dict['idx']
+            qid = result_dict['qid']
+            results[qid] = result_dict['sql']
+            results_with_stats[qid] = {
+                'sql': result_dict['sql'],
+                'optimal_sql': result_dict['sql'],
+                'stats': result_dict['stats'],
+                'all_sqls_with_attributes': result_dict.get('all_sqls_with_attributes', []),
+                'rollout_stats': result_dict.get('rollout_stats', []),
+                'sub_questions': result_dict.get('sub_questions', []),
+            }
+            if result_dict.get('decompose_expand_traces'):
+                results_with_stats[qid]['decompose_expand_traces'] = result_dict['decompose_expand_traces']
+            for k in (
+                'plan_proposals',
+                'plan_dedup_count',
+                'per_plan_rollout_stats',
+                'union_rollout_stats',
+            ):
+                if result_dict.get(k) is not None:
+                    results_with_stats[qid][k] = result_dict[k]
+            if result_dict.get('error'):
+                results_with_stats[qid]['error'] = result_dict['error']
+            processed_indices.append(idx)
+            completed_count += 1
+
+            if result_dict.get('gold_match') is not None:
+                total_count += 1
+                if result_dict['gold_match']:
+                    correct_count += 1
+
+            with save_lock:
+                _save_checkpoint(args, ppls, indices, processed_indices, results, results_with_stats)
+        except Exception as e:
+            print(f"❌ 处理任务出错: {e}")
+            import traceback
+            traceback.print_exc()
     
     # 打印最终统计
     if gold_sqls and total_count > 0:

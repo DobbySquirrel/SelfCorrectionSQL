@@ -45,6 +45,15 @@ cd "$ROOT_DIR"
 : "${ROLL_OUTS:=8}"
 : "${RANDOM_SEED:=20240601}"
 : "${MODEL_TAG:=coder}"
+# diverse-C opt 默认（2-call, N=5, skip M_verify, sql_var=5 via test_mcts default）
+: "${MCTS_CTE_DIVERSE_PROMPT:=0}"
+: "${MCTS_CTE_DIVERSE_N:=5}"
+: "${MCTS_CTE_DIVERSE_TEMPS:=0.3,0.6}"
+: "${MCTS_SQL_GEN_TEMPS:=${MCTS_CTE_DIVERSE_TEMPS}}"
+: "${MCTS_SKIP_M_VERIFY:=0}"
+: "${MCTS_USE_DECOMPOSE_FLOW:=0}"
+: "${DECOMPOSE_STRATEGY:=S2}"
+: "${NUM_SQL_VARIANTS:=5}"
 : "${RUN_INLINE:=0}"
 : "${N_SHARDS:=4}"
 : "${BASE_PORT:=8000}"
@@ -153,6 +162,7 @@ _mcts_py_invocation() {
     --json_out "${JSON_OUT}"
     --sql_out "${SQL_OUT}"
     --rollouts_per_iteration "${ROLL_OUTS}"
+    --num_sql_variants "${NUM_SQL_VARIANTS}"
     --random_seed "${RANDOM_SEED}"
     --max_workers "${MAX_WORKERS}"
     --parallel_workers "${PARALLEL_WORKERS}"
@@ -163,6 +173,12 @@ _mcts_py_invocation() {
   fi
   if [[ -n "${MULTI_BASE_URLS}" && "${SHARD_MODE}" != "1" ]]; then
     cmd+=(--multi_base_urls "${MULTI_BASE_URLS}")
+  fi
+  if [[ "${MCTS_USE_DECOMPOSE_FLOW:-0}" == "1" ]]; then
+    cmd+=(--use_decompose_flow)
+    cmd+=(--decompose_strategy "${DECOMPOSE_STRATEGY:-S2}")
+    cmd+=(--strategy_mode "${MCTS_STRATEGY_MODE:-FORCE_S2}")
+    cmd+=(--max_cte_nodes "${MAX_CTE_NODES:-5}")
   fi
   local q=()
   local a
@@ -398,6 +414,17 @@ export MULTI_BASE_URLS=
 export MCTS_USE_SIGNATURE_V2='${MCTS_USE_SIGNATURE_V2:-0}'
 export MCTS_SELECTOR_STRATEGY='${MCTS_SELECTOR_STRATEGY:-}'
 export MCTS_REWARD_CALIBRATED='${MCTS_REWARD_CALIBRATED:-0}'
+export MCTS_USE_DECOMPOSE_FLOW='${MCTS_USE_DECOMPOSE_FLOW:-0}'
+export DECOMPOSE_STRATEGY='${DECOMPOSE_STRATEGY:-S2}'
+export MCTS_STRATEGY_MODE='${MCTS_STRATEGY_MODE:-}'
+export MAX_CTE_NODES='${MAX_CTE_NODES:-5}'
+export MCTS_CTE_DIVERSE_PROMPT='${MCTS_CTE_DIVERSE_PROMPT:-0}'
+export MCTS_CTE_DIVERSE_N='${MCTS_CTE_DIVERSE_N:-5}'
+export MCTS_CTE_DIVERSE_TEMPS='${MCTS_CTE_DIVERSE_TEMPS:-0.3,0.6}'
+export MCTS_SQL_GEN_TEMPS='${MCTS_SQL_GEN_TEMPS:-${MCTS_CTE_DIVERSE_TEMPS:-0.3,0.6}}'
+export MCTS_SKIP_M_VERIFY='${MCTS_SKIP_M_VERIFY:-0}'
+export OUT_DIR='${OUT_DIR}'
+export SHARD_BASENAME='${SHARD_BASENAME:-}'
 export ROOT_DIR='${ROOT_DIR}'
 export CONDA_BASE='${CONDA_BASE}'
 export CONDA_ENV='${CONDA_ENV}'
@@ -405,6 +432,7 @@ export VLLM_HOST='127.0.0.1'
 export VLLM_PORT='${port}'
 export MODEL_TAG='${MODEL_TAG}'
 export ROLL_OUTS='${ROLL_OUTS}'
+export NUM_SQL_VARIANTS='${NUM_SQL_VARIANTS:-5}'
 export RESUME='${RESUME}'
 export RANDOM_SEED='${RANDOM_SEED}'
 export MAX_WORKERS='${MAX_WORKERS}'

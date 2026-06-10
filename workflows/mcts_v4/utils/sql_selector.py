@@ -4,12 +4,120 @@ SQL选择策略
 包含不同的SQL选择策略
 """
 
-from typing import Dict, List, Any, Optional
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional, Tuple
+
+STRATEGY_ENV = "MCTS_SELECTOR_STRATEGY"
+
+_STRATEGY_ALIASES = {
+    "R0": "R0",
+    "R0_MAX_REWARD": "R0",
+    "R0_max_reward": "R0",
+    "max_reward": "R0",
+    "R2": "R2",
+    "R2_MAX_CLUSTER_VISIT": "R2",
+    "R2_max_cluster_visit": "R2",
+    "R3": "R3",
+    "R3_REWARD_X_SIZE": "R3",
+    "R3_reward_x_size": "R3",
+}
+
+
+@dataclass
+class _Cluster:
+    sig: str
+    total_count: int = 0
+    total_visit: int = 0
+    variants: List[Tuple[str, float, int]] = field(default_factory=list)
+
+    @property
+    def max_rollout_reward(self) -> float:
+        return max((v[1] for v in self.variants), default=0.0)
 
 
 class SQLSelector:
     """SQL选择策略工具类"""
-    
+
+    @staticmethod
+    def resolve_strategy(strategy: Optional[str] = None) -> str:
+        raw = (strategy or os.environ.get(STRATEGY_ENV, "R0") or "R0").strip()
+        return _STRATEGY_ALIASES.get(raw, _STRATEGY_ALIASES.get(raw.upper(), "R0"))
+
+    @staticmethod
+    def select(
+        rollout_stats_list: List[Dict[str, Any]],
+        strategy: Optional[str] = None,
+    ) -> str:
+        """Final SQL pick; default R0 unless MCTS_SELECTOR_STRATEGY is set."""
+        sid = SQLSelector.resolve_strategy(strategy)
+        if sid == "R2":
+            return SQLSelector._select_r2_max_cluster_visit(rollout_stats_list)
+        if sid == "R3":
+            return SQLSelector._select_r3_reward_x_size(rollout_stats_list)
+        return SQLSelector.select_by_highest_reward(rollout_stats_list)
+
+    @staticmethod
+    def _tiebreak_pick(variants: List[Tuple[str, float, int]]) -> str:
+        if not variants:
+            return ""
+        best = min(variants, key=lambda x: (x[2] if x[2] else 0, len(x[0] or "")))
+        return (best[0] or "").strip()
+
+    @staticmethod
+    def _build_clusters(rss: List[Dict[str, Any]]) -> Dict[str, _Cluster]:
+        clusters: Dict[str, _Cluster] = {}
+        for r in rss:
+            rb = r.get("result_buckets") or {}
+            rw = float(r.get("reward", 0.0))
+            leaf_v = int(r.get("leaf_visit_count") or 0)
+            if not leaf_v and r.get("visit_counts"):
+                vc = r.get("visit_counts")
+                leaf_v = int((vc[-1] if isinstance(vc, list) else 0) or 0)
+            for sig, cnt in rb.items():
+                if not sig:
+                    continue
+                c = clusters.setdefault(sig, _Cluster(sig=sig))
+                c.total_count += int(cnt)
+                c.total_visit += leaf_v
+            for v in r.get("all_sql_variants") or []:
+                sig = v.get("result_signature") or ""
+                if not sig:
+                    continue
+                c = clusters.setdefault(sig, _Cluster(sig=sig))
+                rows = int(v.get("result_row_count") or 0) if v.get("valid") else 0
+                c.variants.append((v.get("sql", ""), rw, rows))
+        return clusters
+
+    @staticmethod
+    def _select_r2_max_cluster_visit(rollout_stats_list: List[Dict[str, Any]]) -> str:
+        clusters = SQLSelector._build_clusters(rollout_stats_list)
+        if not clusters:
+            return SQLSelector.select_by_highest_reward(rollout_stats_list)
+        best_sig = max(clusters, key=lambda s: clusters[s].total_visit)
+        print(
+            f"[Selection] R2: max total_visit cluster sig={best_sig[:16]}… "
+            f"visit={clusters[best_sig].total_visit}"
+        )
+        return SQLSelector._tiebreak_pick(clusters[best_sig].variants)
+
+    @staticmethod
+    def _select_r3_reward_x_size(rollout_stats_list: List[Dict[str, Any]]) -> str:
+        clusters = SQLSelector._build_clusters(rollout_stats_list)
+        if not clusters:
+            return SQLSelector.select_by_highest_reward(rollout_stats_list)
+        best_sig = max(
+            clusters,
+            key=lambda s: clusters[s].max_rollout_reward * max(1, clusters[s].total_count),
+        )
+        print(
+            f"[Selection] R3: max reward×size cluster sig={best_sig[:16]}… "
+            f"score={clusters[best_sig].max_rollout_reward * max(1, clusters[best_sig].total_count):.4f}"
+        )
+        return SQLSelector._tiebreak_pick(clusters[best_sig].variants)
+
     @staticmethod
     def select_by_highest_reward(rollout_stats_list: List[Dict[str, Any]]) -> str:
         """

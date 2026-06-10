@@ -9,7 +9,39 @@ from typing import Dict, List, Any
 import Levenshtein
 import concurrent.futures
 import threading
+import os
 from openai import OpenAI
+
+
+def _parse_temperature_list(env_key: str, default: List[float]) -> List[float]:
+    raw = os.environ.get(env_key, "").strip()
+    if not raw:
+        return list(default)
+    out: List[float] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            out.append(float(part))
+        except ValueError:
+            continue
+    return out if out else list(default)
+
+
+def sql_gen_temperatures() -> List[float]:
+    """Complete SQL generation temps.
+
+    Priority: MCTS_SQL_GEN_TEMPS (explicit) > MCTS_CTE_DIVERSE_TEMPS (diverse mode)
+    > default [0.3, 0.6]. Keeps CTE/SQL call counts aligned for decompose runs.
+    """
+    if os.environ.get("MCTS_SQL_GEN_TEMPS", "").strip():
+        return _parse_temperature_list("MCTS_SQL_GEN_TEMPS", [0.3, 0.6])
+    if os.environ.get("MCTS_CTE_DIVERSE_PROMPT", "0") == "1":
+        from ..utils.cte_diverse import diverse_temps
+
+        return diverse_temps()
+    return [0.3, 0.6]
 
 
 class CompleteSQLGenerator:
@@ -89,7 +121,8 @@ class CompleteSQLGenerator:
    - **NO Over-Selection**: Strictly SELECT ONLY the columns explicitly requested in the question. Do NOT include auxiliary columns, computed flags, or extra information not asked for. If the question asks for ONE thing, return ONLY that ONE column.
    - **NO Under-Selection**: If the question implies multiple intents, you MUST select ALL requested columns.
    - **Column Order**: Arrange columns in the SELECT clause in the same order as they appear in the question.
-2.  **Aggregation (MAX/MIN):** Only use `MAX()` or `MIN()` when the question explicitly asks for the "highest", "maximum", "lowest", "minimum", "best", or "worst" value. If the question does not explicitly request an aggregated value, return all matching values without using aggregation functions. Always perform JOINs before using `MAX()` or `MIN()`.
+   - **Multi-Metric Wide Output**: "Respectively" queries shall output one row with multiple columns (horizontal expansion via conditional aggregation), not multiple rows with one column (vertical stacking via grouping), unless the query explicitly requests listing each category as separate rows.
+2.  **Aggregation (MAX/MIN):** Only use `MAX()` or `MIN()` when the question explicitly asks for the "highest", "maximum", "lowest", "minimum", "best", or "worst" value. If the question does not explicitly request an aggregated value, return all matching values without using aggregation functions. Always perform JOINs before using `MAX()` or `MIN()`. When the question asks for the highest/lowest **monthly**, **yearly**, or **per-entity** total, first `GROUP BY` the time period or entity and `SUM`/`COUNT` as needed, then take `MAX`/`MIN` or `ORDER BY ... LIMIT 1` on those **aggregated** totals—not on raw row-level values.
 3.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
 4.  **Handling NULLs:** If a column may contain NULL values (indicated by "None" in value examples or explicitly stated), use `JOIN` or `WHERE <column> IS NOT NULL`.
 5.  **FROM/JOIN Clauses:** Only include tables essential to answer the question.
@@ -271,9 +304,8 @@ class CompleteSQLGenerator:
         Returns:
             完整SQL变体列表
         """
-        # 使用多个temperature值增加多样性
-        # 将变体分成多个temperature组：[0.3, 0.6, 0.9]
-        temperature_groups = [0.3, 0.6, 0.9]
+        # 将变体分到多个 temperature 组（默认 2-call: 0.3, 0.6）
+        temperature_groups = sql_gen_temperatures()
         num_groups = len(temperature_groups)
         
         # 计算每组应该生成多少个变体
@@ -375,7 +407,7 @@ class CompleteSQLGenerator:
                     return []
             
             # 并行执行所有temperature组
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=max(1, num_groups)) as executor:
                 futures = {}
                 for group_idx, temperature in enumerate(temperature_groups):
                     group_size = variants_per_group + (1 if group_idx < remainder else 0)

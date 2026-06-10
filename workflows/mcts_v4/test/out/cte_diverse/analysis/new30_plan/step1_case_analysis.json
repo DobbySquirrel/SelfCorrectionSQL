@@ -1,0 +1,968 @@
+{
+  "901": {
+    "qid": "901",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 3,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": false,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": false,
+      "hit5": false,
+      "hit8": false,
+      "gold_cluster_rank": null,
+      "gold_rank_bucket": "not_in_pool",
+      "selection_efficiency": 0.0,
+      "s7_like": false
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "37f7232fbd7ef275",
+        "visit": 0,
+        "count": 45,
+        "max_reward": 1.0,
+        "r3_score": 45.0,
+        "has_gold": false,
+        "n_variants": 45
+      },
+      {
+        "rank": 2,
+        "sig": "259b075ec4ff3dde",
+        "visit": 0,
+        "count": 13,
+        "max_reward": 1.0,
+        "r3_score": 13.0,
+        "has_gold": false,
+        "n_variants": 13
+      },
+      {
+        "rank": 3,
+        "sig": "7430d474081d70ec",
+        "visit": 0,
+        "count": 2,
+        "max_reward": 0.8,
+        "r3_score": 1.6,
+        "has_gold": true,
+        "n_variants": 2
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "37f7232fbd7ef275",
+        "visit": 0,
+        "count": 60,
+        "max_reward": 1.0,
+        "r3_score": 60.0,
+        "has_gold": false,
+        "n_variants": 60
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [],
+    "mechanism_hypothesis": "gold_lost_from_pool"
+  },
+  "948": {
+    "qid": "948",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 3,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": false,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": false,
+      "hit5": false,
+      "hit8": false,
+      "gold_cluster_rank": null,
+      "gold_rank_bucket": "not_in_pool",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "66b0ed2488e52bfb",
+        "visit": 0,
+        "count": 34,
+        "max_reward": 1.0,
+        "r3_score": 34.0,
+        "has_gold": false,
+        "n_variants": 34
+      },
+      {
+        "rank": 2,
+        "sig": "d798e91d46257033",
+        "visit": 0,
+        "count": 11,
+        "max_reward": 1.0,
+        "r3_score": 11.0,
+        "has_gold": false,
+        "n_variants": 11
+      },
+      {
+        "rank": 3,
+        "sig": "f839c517829fefcc",
+        "visit": 0,
+        "count": 7,
+        "max_reward": 1.0,
+        "r3_score": 7.0,
+        "has_gold": true,
+        "n_variants": 7
+      },
+      {
+        "rank": 4,
+        "sig": "9eea3075c179680e",
+        "visit": 0,
+        "count": 4,
+        "max_reward": 0.8,
+        "r3_score": 3.2,
+        "has_gold": false,
+        "n_variants": 4
+      },
+      {
+        "rank": 5,
+        "sig": "5c6ba9094b82fbef",
+        "visit": 0,
+        "count": 3,
+        "max_reward": 0.6,
+        "r3_score": 1.8,
+        "has_gold": true,
+        "n_variants": 3
+      },
+      {
+        "rank": 6,
+        "sig": "3dc5e92a689a820e",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.8,
+        "r3_score": 0.8,
+        "has_gold": false,
+        "n_variants": 1
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "d798e91d46257033",
+        "visit": 0,
+        "count": 23,
+        "max_reward": 1.0,
+        "r3_score": 23.0,
+        "has_gold": false,
+        "n_variants": 23
+      },
+      {
+        "rank": 2,
+        "sig": "9eea3075c179680e",
+        "visit": 0,
+        "count": 17,
+        "max_reward": 1.0,
+        "r3_score": 17.0,
+        "has_gold": false,
+        "n_variants": 17
+      },
+      {
+        "rank": 3,
+        "sig": "66b0ed2488e52bfb",
+        "visit": 0,
+        "count": 15,
+        "max_reward": 1.0,
+        "r3_score": 15.0,
+        "has_gold": false,
+        "n_variants": 15
+      },
+      {
+        "rank": 4,
+        "sig": "0f048fdb6af21c23",
+        "visit": 0,
+        "count": 5,
+        "max_reward": 1.0,
+        "r3_score": 5.0,
+        "has_gold": false,
+        "n_variants": 5
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [],
+    "mechanism_hypothesis": "gold_lost_from_pool"
+  },
+  "424": {
+    "qid": "424",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 2,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": true,
+      "hit1_r3": true,
+      "hit1_r2": false,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 1,
+      "gold_rank_bucket": "1",
+      "selection_efficiency": 1.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "c7ae49e9892bed91",
+        "visit": 0,
+        "count": 30,
+        "max_reward": 1.0,
+        "r3_score": 30.0,
+        "has_gold": false,
+        "n_variants": 30
+      },
+      {
+        "rank": 2,
+        "sig": "dab5ffbf133f45f1",
+        "visit": 0,
+        "count": 30,
+        "max_reward": 1.0,
+        "r3_score": 30.0,
+        "has_gold": true,
+        "n_variants": 30
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "dab5ffbf133f45f1",
+        "visit": 0,
+        "count": 32,
+        "max_reward": 1.0,
+        "r3_score": 32.0,
+        "has_gold": true,
+        "n_variants": 32
+      },
+      {
+        "rank": 2,
+        "sig": "c7ae49e9892bed91",
+        "visit": 0,
+        "count": 28,
+        "max_reward": 1.0,
+        "r3_score": 28.0,
+        "has_gold": false,
+        "n_variants": 28
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": false,
+        "gold_rank_r3": null,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [
+      "plan_output",
+      "plan_relation"
+    ],
+    "mechanism_hypothesis": "support_aggregation_multi_plan"
+  },
+  "758": {
+    "qid": "758",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": true,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 2,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": true,
+      "hit1_r3": true,
+      "hit1_r2": true,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 1,
+      "gold_rank_bucket": "1",
+      "selection_efficiency": 1.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "5938b5189f28ba66",
+        "visit": 0,
+        "count": 23,
+        "max_reward": 1.0,
+        "r3_score": 23.0,
+        "has_gold": false,
+        "n_variants": 23
+      },
+      {
+        "rank": 2,
+        "sig": "97e5febe5f43a5fc",
+        "visit": 0,
+        "count": 22,
+        "max_reward": 1.0,
+        "r3_score": 22.0,
+        "has_gold": true,
+        "n_variants": 22
+      },
+      {
+        "rank": 3,
+        "sig": "d64839514a9720f5",
+        "visit": 0,
+        "count": 15,
+        "max_reward": 1.0,
+        "r3_score": 15.0,
+        "has_gold": true,
+        "n_variants": 15
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "eb7de8f2f5d1aa3b",
+        "visit": 0,
+        "count": 26,
+        "max_reward": 1.0,
+        "r3_score": 26.0,
+        "has_gold": true,
+        "n_variants": 26
+      },
+      {
+        "rank": 2,
+        "sig": "97e5febe5f43a5fc",
+        "visit": 0,
+        "count": 24,
+        "max_reward": 1.0,
+        "r3_score": 24.0,
+        "has_gold": true,
+        "n_variants": 24
+      },
+      {
+        "rank": 3,
+        "sig": "9a5a9736ccf34f53",
+        "visit": 0,
+        "count": 5,
+        "max_reward": 1.0,
+        "r3_score": 5.0,
+        "has_gold": true,
+        "n_variants": 5
+      },
+      {
+        "rank": 4,
+        "sig": "5938b5189f28ba66",
+        "visit": 0,
+        "count": 4,
+        "max_reward": 0.8,
+        "r3_score": 3.2,
+        "has_gold": false,
+        "n_variants": 4
+      },
+      {
+        "rank": 5,
+        "sig": "d64839514a9720f5",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.8,
+        "r3_score": 0.8,
+        "has_gold": true,
+        "n_variants": 1
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [
+      "plan_measure",
+      "plan_output",
+      "plan_relation"
+    ],
+    "mechanism_hypothesis": "support_aggregation_multi_plan"
+  },
+  "915": {
+    "qid": "915",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 2,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": true,
+      "hit1_r3": true,
+      "hit1_r2": false,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 1,
+      "gold_rank_bucket": "1",
+      "selection_efficiency": 1.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "d88b952b8ec20078",
+        "visit": 0,
+        "count": 45,
+        "max_reward": 1.0,
+        "r3_score": 45.0,
+        "has_gold": false,
+        "n_variants": 45
+      },
+      {
+        "rank": 2,
+        "sig": "67a34dbac35f05dc",
+        "visit": 0,
+        "count": 15,
+        "max_reward": 1.0,
+        "r3_score": 15.0,
+        "has_gold": true,
+        "n_variants": 15
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "67a34dbac35f05dc",
+        "visit": 0,
+        "count": 31,
+        "max_reward": 1.0,
+        "r3_score": 31.0,
+        "has_gold": true,
+        "n_variants": 31
+      },
+      {
+        "rank": 2,
+        "sig": "d88b952b8ec20078",
+        "visit": 0,
+        "count": 19,
+        "max_reward": 1.0,
+        "r3_score": 19.0,
+        "has_gold": false,
+        "n_variants": 19
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 2,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [
+      "plan_measure",
+      "plan_output",
+      "plan_relation"
+    ],
+    "mechanism_hypothesis": "support_aggregation_multi_plan"
+  },
+  "1029": {
+    "qid": "1029",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": false,
+      "gold_match": false,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 2,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": true,
+      "hit1_r3": true,
+      "hit1_r2": true,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 1,
+      "gold_rank_bucket": "1",
+      "selection_efficiency": 1.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "4f9d0ff84e6494d8",
+        "visit": 0,
+        "count": 27,
+        "max_reward": 1.0,
+        "r3_score": 27.0,
+        "has_gold": false,
+        "n_variants": 27
+      },
+      {
+        "rank": 2,
+        "sig": "a41a2567e12026b5",
+        "visit": 0,
+        "count": 14,
+        "max_reward": 1.0,
+        "r3_score": 14.0,
+        "has_gold": true,
+        "n_variants": 14
+      },
+      {
+        "rank": 3,
+        "sig": "078b2e4615fd8942",
+        "visit": 0,
+        "count": 13,
+        "max_reward": 1.0,
+        "r3_score": 13.0,
+        "has_gold": true,
+        "n_variants": 13
+      },
+      {
+        "rank": 4,
+        "sig": "f1926ad1fe3b9325",
+        "visit": 0,
+        "count": 5,
+        "max_reward": 1.0,
+        "r3_score": 5.0,
+        "has_gold": true,
+        "n_variants": 5
+      },
+      {
+        "rank": 5,
+        "sig": "fdf975f29ad641da",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.8,
+        "r3_score": 0.8,
+        "has_gold": false,
+        "n_variants": 1
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "a41a2567e12026b5",
+        "visit": 0,
+        "count": 24,
+        "max_reward": 1.0,
+        "r3_score": 24.0,
+        "has_gold": true,
+        "n_variants": 24
+      },
+      {
+        "rank": 2,
+        "sig": "4f9d0ff84e6494d8",
+        "visit": 0,
+        "count": 18,
+        "max_reward": 1.0,
+        "r3_score": 18.0,
+        "has_gold": false,
+        "n_variants": 18
+      },
+      {
+        "rank": 3,
+        "sig": "f1926ad1fe3b9325",
+        "visit": 0,
+        "count": 14,
+        "max_reward": 1.0,
+        "r3_score": 14.0,
+        "has_gold": true,
+        "n_variants": 14
+      },
+      {
+        "rank": 4,
+        "sig": "fdf975f29ad641da",
+        "visit": 0,
+        "count": 2,
+        "max_reward": 0.4,
+        "r3_score": 0.8,
+        "has_gold": false,
+        "n_variants": 2
+      },
+      {
+        "rank": 5,
+        "sig": "03d7ff83832cda7c",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.6,
+        "r3_score": 0.6,
+        "has_gold": true,
+        "n_variants": 1
+      },
+      {
+        "rank": 6,
+        "sig": "fc1f5bc18e574e84",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.4,
+        "r3_score": 0.4,
+        "has_gold": false,
+        "n_variants": 1
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 2,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [
+      "plan_measure",
+      "plan_output",
+      "plan_relation"
+    ],
+    "mechanism_hypothesis": "support_aggregation_multi_plan"
+  },
+  "1235": {
+    "qid": "1235",
+    "e0": {
+      "recall": true,
+      "hit1_r3": false,
+      "hit1_r2": true,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 2,
+      "gold_rank_bucket": "2-3",
+      "selection_efficiency": 0.0,
+      "s7_like": true
+    },
+    "e1": {
+      "recall": true,
+      "hit1_r3": true,
+      "hit1_r2": true,
+      "gold_match": true,
+      "hit3": true,
+      "hit5": true,
+      "hit8": true,
+      "gold_cluster_rank": 1,
+      "gold_rank_bucket": "1",
+      "selection_efficiency": 1.0,
+      "s7_like": true
+    },
+    "e0_clusters": [
+      {
+        "rank": 1,
+        "sig": "31d5e506855a690f",
+        "visit": 0,
+        "count": 27,
+        "max_reward": 1.0,
+        "r3_score": 27.0,
+        "has_gold": false,
+        "n_variants": 27
+      },
+      {
+        "rank": 2,
+        "sig": "52ead7c76ee5d815",
+        "visit": 0,
+        "count": 23,
+        "max_reward": 1.0,
+        "r3_score": 23.0,
+        "has_gold": true,
+        "n_variants": 23
+      },
+      {
+        "rank": 3,
+        "sig": "a87dd4944b24d897",
+        "visit": 0,
+        "count": 5,
+        "max_reward": 1.0,
+        "r3_score": 5.0,
+        "has_gold": false,
+        "n_variants": 5
+      },
+      {
+        "rank": 4,
+        "sig": "0fa62c0e8656f479",
+        "visit": 0,
+        "count": 2,
+        "max_reward": 0.4,
+        "r3_score": 0.8,
+        "has_gold": false,
+        "n_variants": 2
+      },
+      {
+        "rank": 5,
+        "sig": "def85e0d2a9346d0",
+        "visit": 0,
+        "count": 2,
+        "max_reward": 0.4,
+        "r3_score": 0.8,
+        "has_gold": false,
+        "n_variants": 2
+      },
+      {
+        "rank": 6,
+        "sig": "cb17f52468cb1350",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.4,
+        "r3_score": 0.4,
+        "has_gold": false,
+        "n_variants": 1
+      }
+    ],
+    "e1_clusters_union": [
+      {
+        "rank": 1,
+        "sig": "52ead7c76ee5d815",
+        "visit": 0,
+        "count": 23,
+        "max_reward": 1.0,
+        "r3_score": 23.0,
+        "has_gold": true,
+        "n_variants": 23
+      },
+      {
+        "rank": 2,
+        "sig": "0fa62c0e8656f479",
+        "visit": 0,
+        "count": 22,
+        "max_reward": 1.0,
+        "r3_score": 22.0,
+        "has_gold": false,
+        "n_variants": 22
+      },
+      {
+        "rank": 3,
+        "sig": "def85e0d2a9346d0",
+        "visit": 0,
+        "count": 10,
+        "max_reward": 1.0,
+        "r3_score": 10.0,
+        "has_gold": false,
+        "n_variants": 10
+      },
+      {
+        "rank": 4,
+        "sig": "31d5e506855a690f",
+        "visit": 0,
+        "count": 4,
+        "max_reward": 0.8,
+        "r3_score": 3.2,
+        "has_gold": false,
+        "n_variants": 4
+      },
+      {
+        "rank": 5,
+        "sig": "023720c10a383013",
+        "visit": 0,
+        "count": 1,
+        "max_reward": 0.6,
+        "r3_score": 0.6,
+        "has_gold": false,
+        "n_variants": 1
+      }
+    ],
+    "e1_per_plan": {
+      "plan_measure": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 3,
+        "top1_has_gold": false,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_output": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      },
+      "plan_relation": {
+        "n_rollouts": 4,
+        "recall": true,
+        "gold_rank_r3": 1,
+        "top1_has_gold": true,
+        "top1_visit": 0,
+        "gold_visit": 0
+      }
+    },
+    "plans_with_gold_recall": [
+      "plan_measure",
+      "plan_output",
+      "plan_relation"
+    ],
+    "mechanism_hypothesis": "support_aggregation_multi_plan"
+  }
+}

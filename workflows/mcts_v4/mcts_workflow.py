@@ -33,12 +33,27 @@ from .utils.cte_processor import CTEProcessor
 from .utils.cte_error_handler import CTEErrorHandler
 from .agents.strategy import build_strategy_injection_text, GLOBAL_STRATEGY_CONFIG, StrategyMode
 import os
+import logging
 import time as _time_for_timing
+
+logger = logging.getLogger(__name__)
 
 # mcts_v4: 问题拆分 + 子问题验证
 from .agents.question_decomposer import QuestionDecomposer
 from .agents.cte_sufficient_checker import CTESufficientChecker
-from .utils.cte_diverse import diverse_prompt_enabled, diverse_n, fetch_diverse_cte_extras
+from .utils.cte_diverse import (
+    diverse_prompt_enabled,
+    diverse_n,
+    diverse_temps,
+    generate_diverse_mode_c,
+    skip_m_verify_enabled,
+)
+from .utils.plan_decomposer import (
+    PlanDecomposer,
+    build_rollout_schedule,
+    multi_plan_enabled,
+    plan_to_sub_questions,
+)
 
 
 class MCTSWorkflow:
@@ -62,15 +77,13 @@ class MCTSWorkflow:
         self.decompose_strategy = decompose_strategy
         self.db_connector = db_connector
         self.collect_stats_on_node_creation = collect_stats_on_node_creation
-        # using rollouts_per_iteration=1 to test 
-        self.rollouts_per_iteration =1  # 从6增加到10，让visit_count更好地反映节点质量
+        # Opt defaults: rollouts=8, sql_variants=5 (overridable via test_mcts / env)
+        self.rollouts_per_iteration = 8
         self.exploration_constant = 2.5  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
         # 注意：UCB1的exploration项本身就会鼓励探索访问较少的节点，增加exploration_constant即可增强探索
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 10  # 每次扩展节点时生成的CTE变体数量
-        # SQL变体数量配置：每个rollout末尾生成的SQL变体数量（用于计算sql_bucket_count）
-        # 范围：5-8个，根据rollouts_per_iteration动态调整
-        self.num_sql_variants = 3  # 每个rollout末尾生成的SQL变体数量
+        self.num_sql_variants = 5  # 每个rollout末尾生成的SQL变体数量（opt 默认 5）
 
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
@@ -151,9 +164,13 @@ class MCTSWorkflow:
 
         # mcts_v4: 问题拆分与子问题验证
         self.question_decomposer: Optional[QuestionDecomposer] = None
+        self.plan_decomposer: Optional[PlanDecomposer] = None
         self.cte_sufficient_checker: Optional[CTESufficientChecker] = None
         if use_decompose_flow:
-            self.question_decomposer = QuestionDecomposer(llm_config, strategy=decompose_strategy)
+            if multi_plan_enabled():
+                self.plan_decomposer = PlanDecomposer(llm_config)
+            else:
+                self.question_decomposer = QuestionDecomposer(llm_config, strategy=decompose_strategy)
             self.cte_sufficient_checker = CTESufficientChecker(llm_config)
         
     def solve(self, question: str, schema_info: str, additional_context: str = "", 
@@ -175,6 +192,9 @@ class MCTSWorkflow:
         for k in list(self._timing.keys()):
             self._timing[k] = 0.0 if k.endswith('_s') else 0
         self._v4_decompose_expand_traces = []
+        self._pending_diverse_expand_trace: Optional[Dict[str, Any]] = None
+        _orig_max_depth = self.max_depth
+        self._solve_max_depth_cap = _orig_max_depth
         
         # 初始化根节点
         root_node = MCTSNode(
@@ -188,12 +208,29 @@ class MCTSWorkflow:
         root_node.picked_strategy_thought = None
         self.mcts_tree.set_root(root_node)
 
+        plan_proposals: List[Dict[str, Any]] = []
+        plan_deduped: List[Dict[str, Any]] = []
+        per_plan_rollout_stats: Dict[str, List[Dict[str, Any]]] = {}
+        use_multi_plan = bool(
+            self.use_decompose_flow and self.plan_decomposer is not None
+        )
+
         # mcts_v4: 问题拆分，设 max_depth 与 root.sub_questions
-        if self.use_decompose_flow and self.question_decomposer:
+        if use_multi_plan:
+            plan_proposals, plan_deduped = self.plan_decomposer.propose_all(
+                question, schema_info, additional_context
+            )
+            for p in plan_deduped:
+                per_plan_rollout_stats[p["plan_id"]] = []
+            first_sq = plan_to_sub_questions(plan_deduped[0]) if plan_deduped else [question]
+            root_node.sub_questions = first_sq  # type: ignore
+            root_node.sub_question_index = -1
+            self.max_depth = min(len(first_sq), _orig_max_depth)
+        elif self.use_decompose_flow and self.question_decomposer:
             sub_questions = self.question_decomposer.decompose(question, schema_info, additional_context)
             root_node.sub_questions = sub_questions  # type: ignore
             root_node.sub_question_index = -1
-            self.max_depth = min(len(sub_questions), self.max_depth)
+            self.max_depth = min(len(sub_questions), _orig_max_depth)
         
         # MCTS主循环：执行多个rollout
         solve_start_ts = _time_for_timing.time()
@@ -207,14 +244,31 @@ class MCTSWorkflow:
         # 获取evidence信息（从additional_context或question中提取）
         evidence = additional_context if additional_context else ""
         
-        for rollout in range(self.rollouts_per_iteration):
-            if self.use_decompose_flow:
+        if use_multi_plan and plan_deduped:
+            schedule = build_rollout_schedule(plan_deduped, self.rollouts_per_iteration)
+            for rollout_idx, active_plan in enumerate(schedule):
+                sq = plan_to_sub_questions(active_plan)
+                self._reset_tree_for_plan(
+                    question, schema_info, additional_context, sq
+                )
                 reward, selected_sql, rollout_stats = self._execute_mcts_rollout_v4()
-            else:
-                reward, selected_sql, rollout_stats = self._execute_mcts_rollout()
-            rollout_stats['rollout_id'] = rollout + 1
-            rollout_stats['is_quick_path'] = False
-            rollout_stats_list.append(rollout_stats)
+                rollout_stats["rollout_id"] = rollout_idx + 1
+                rollout_stats["plan_id"] = active_plan.get("plan_id")
+                rollout_stats["plan_strategy"] = active_plan.get("strategy")
+                rollout_stats["plan_hash"] = active_plan.get("plan_hash")
+                rollout_stats["is_quick_path"] = False
+                rollout_stats_list.append(rollout_stats)
+                pid = active_plan.get("plan_id") or "unknown"
+                per_plan_rollout_stats.setdefault(pid, []).append(rollout_stats)
+        else:
+            for rollout in range(self.rollouts_per_iteration):
+                if self.use_decompose_flow:
+                    reward, selected_sql, rollout_stats = self._execute_mcts_rollout_v4()
+                else:
+                    reward, selected_sql, rollout_stats = self._execute_mcts_rollout()
+                rollout_stats['rollout_id'] = rollout + 1
+                rollout_stats['is_quick_path'] = False
+                rollout_stats_list.append(rollout_stats)
 
         from .query_clarifier.config import ENV_TRACE_PATH, clarify_enabled
         from .query_clarifier.integration import maybe_apply_clarify
@@ -262,7 +316,36 @@ class MCTSWorkflow:
             out['sub_questions'] = getattr(self.mcts_tree.root, 'sub_questions', [])
             if self._v4_decompose_expand_traces:
                 out['decompose_expand_traces'] = list(self._v4_decompose_expand_traces)
+        if use_multi_plan:
+            out['plan_proposals'] = plan_proposals
+            out['plan_dedup_count'] = len(plan_deduped)
+            out['per_plan_rollout_stats'] = per_plan_rollout_stats
+            out['union_rollout_stats'] = list(rollout_stats_list)
         return out
+
+    def _reset_tree_for_plan(
+        self,
+        question: str,
+        schema_info: str,
+        additional_context: str,
+        sub_questions: List[str],
+    ) -> MCTSNode:
+        """Fresh MCTS root per plan rollout (isolate visit stats across plans)."""
+        MCTSNode._global_node_counter = 0
+        root = MCTSNode(
+            question=question,
+            schema_info=schema_info,
+            additional_context=additional_context,
+            parent=None,
+        )
+        root.picked_strategy = None
+        root.picked_strategy_thought = None
+        root.sub_questions = sub_questions  # type: ignore
+        root.sub_question_index = -1
+        self.mcts_tree.set_root(root)
+        cap = getattr(self, "_solve_max_depth_cap", self.max_depth)
+        self.max_depth = min(len(sub_questions), cap)
+        return root
     
     def _select_node(self) -> MCTSNode:
         """选择节点（UCB1算法）"""
@@ -487,9 +570,7 @@ class MCTSWorkflow:
             expansion_step_id = f"{getattr(current, 'node_id', -1)}::{current.depth}"
             v2_to_cluster: Dict[str, int] = {}
 
-            _cte_t0 = _time_for_timing.time()
             cte_variants = self._generate_cte_variants(current)
-            self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
             
             # 注意：不再需要从CTE中提取策略，因为策略已经单独选择
             # 旧的策略提取逻辑已移除
@@ -1310,30 +1391,25 @@ class MCTSWorkflow:
             finally:
                 leaf.question = orig_question
 
-            if diverse_prompt_enabled():
-                preceding_for_diverse = self.cte_generator._get_preceding_cte_info(leaf)
-                used_cte_names = self.cte_generator._get_used_cte_names(leaf)
-                extras, diverse_trace = fetch_diverse_cte_extras(
-                    node=leaf,
-                    llm_config=self.llm_config,
-                    n_requested=diverse_n(),
-                    existing_temp_ctes=cte_variants,
-                    preceding_cte_info=preceding_for_diverse,
-                    used_cte_names=used_cte_names,
-                    extract_fn=self.cte_generator._extract_cte_from_response,
-                )
-                diverse_trace["sub_question_index"] = idx
-                diverse_trace["iteration"] = iteration
-                self._v4_decompose_expand_traces.append(diverse_trace)
-                if extras:
-                    cte_variants = cte_variants + extras
+            if self._pending_diverse_expand_trace is not None:
+                tr = dict(self._pending_diverse_expand_trace)
+                tr["sub_question_index"] = idx
+                tr["iteration"] = iteration
+                tr["m_verify_skipped"] = skip_m_verify_enabled()
+                self._v4_decompose_expand_traces.append(tr)
+                self._pending_diverse_expand_trace = None
 
             if not cte_variants:
                 break
+            if self.use_decompose_flow and diverse_prompt_enabled():
+                cte_pool = cte_variants
+            else:
+                cte_pool = cte_variants[: self.max_cte_nodes_per_iteration]
             unique_cte_variants, _ = self.cte_processor.deduplicate_cte_variants(
-                cte_variants[: self.max_cte_nodes_per_iteration], leaf
+                cte_pool, leaf
             )
             failed_attempts_for_gen = []
+            skip_verify = skip_m_verify_enabled()
             for info in unique_cte_variants:
                 cte_text = info.get("cte", "")
                 if cte_text == "<END>":
@@ -1347,6 +1423,11 @@ class MCTSWorkflow:
                         result_summary = f"row count {len(qr) if isinstance(qr, list) else 0}"
                     except Exception:
                         pass
+                if skip_verify:
+                    if valid_exec:
+                        sig = MCTSUtils.create_result_signature(exec_res) if exec_res else ""
+                        valid_results.append({"cte": cte_text, "exec_res": exec_res, "signature": sig})
+                    continue
                 valid, reason = self.cte_sufficient_checker.verify(
                     original_question=root.question,
                     current_sub_question=sub_q,
@@ -1549,6 +1630,13 @@ class MCTSWorkflow:
     
     def _generate_cte_variants(self, node: MCTSNode, failed_attempts_v4: Optional[List[Dict[str, Any]]] = None) -> List[str]:
         """生成多个CTE变体（根据配置选择串行或并行）。failed_attempts_v4 为 mcts_v4 节点内迭代时的 M_verify 反馈。"""
+        _cte_t0 = _time_for_timing.time()
+        try:
+            return self._generate_cte_variants_body(node, failed_attempts_v4)
+        finally:
+            self._timing['cte_gen_s'] += (_time_for_timing.time() - _cte_t0)
+
+    def _generate_cte_variants_body(self, node: MCTSNode, failed_attempts_v4: Optional[List[Dict[str, Any]]] = None) -> List[str]:
         # 获取策略相关参数
         # 从根节点获取 picked_strategy 和 picked_strategy_thought（如果已选择）
         root_node = self.mcts_tree.root if self.mcts_tree else None
@@ -1725,6 +1813,29 @@ class MCTSWorkflow:
         else:
             node._requires_full_cte_chain = False
             node._repair_reason = None
+
+        self._pending_diverse_expand_trace = None
+        if self.use_decompose_flow and diverse_prompt_enabled():
+            preceding = self.cte_generator._get_preceding_cte_info(node)
+            used = self.cte_generator._get_used_cte_names(node)
+            ctes, trace = generate_diverse_mode_c(
+                node=node,
+                llm_config=self.llm_config,
+                extract_fn=self.cte_generator._extract_cte_from_response,
+                n_per_call=diverse_n(),
+                preceding_cte_info=preceding,
+                used_cte_names=used,
+                temperatures=diverse_temps(),
+            )
+            self._pending_diverse_expand_trace = trace
+            if len(ctes) >= 2:
+                node.additional_context = original_additional_context
+                return ctes
+            trace["diverse_fallback"] = True
+            trace["diverse_fallback_reason"] = (
+                trace.get("diverse_fallback_reason") or f"revert_to_temp:too_few_ctes:{len(ctes)}"
+            )
+            logger.info("diverse_mode_c revert_to_temp: %s", trace["diverse_fallback_reason"])
            
         # generate_multiple_cte_variants 方法内部已经支持并行生成
         # 统一使用配置的CTE变体数量

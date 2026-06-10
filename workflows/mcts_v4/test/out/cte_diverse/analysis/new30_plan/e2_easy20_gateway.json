@@ -1,0 +1,611 @@
+{
+  "generated": "2026-06-09T11:46:14.099142+00:00",
+  "easy20": {
+    "n": 20,
+    "e0_hit1": 20,
+    "e2_hit1": 20,
+    "delta_hit1": 0,
+    "e0_recall": 20,
+    "e2_recall": 20,
+    "delta_recall": 0,
+    "hurt": [],
+    "saved": []
+  },
+  "combined_50q": {
+    "hard30_e0_hit": 0,
+    "hard30_e1_hit": 6,
+    "easy20_e0_hit": 20,
+    "easy20_e2_hit": 20,
+    "net_hit1": 6,
+    "net_recall": 2
+  },
+  "gates": {
+    "hit1_net_50": true,
+    "recall_net_50": true,
+    "easy_hurt": true,
+    "d_root_cause": true
+  },
+  "decision": "GO_498",
+  "per_question": [
+    {
+      "qid": "47",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": false,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "194",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "379",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "483",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "567",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "571",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": false,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "634",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "704",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "790",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "971",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "972",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "1057",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "1079",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "1209",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "1242",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "1346",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "1390",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": false,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "1426",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    },
+    {
+      "qid": "1427",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": true
+      }
+    },
+    {
+      "qid": "1483",
+      "e0": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      },
+      "e2": {
+        "recall": true,
+        "hit1_r3": true,
+        "hit1_r2": true,
+        "gold_match": true,
+        "hit3": true,
+        "hit5": true,
+        "hit8": true,
+        "gold_cluster_rank": 1,
+        "gold_rank_bucket": "1",
+        "selection_efficiency": 1.0,
+        "s7_like": false
+      }
+    }
+  ]
+}

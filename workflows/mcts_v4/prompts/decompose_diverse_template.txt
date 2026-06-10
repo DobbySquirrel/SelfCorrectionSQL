@@ -1,0 +1,40 @@
+You are a SQL decomposition expert. Given a natural-language question, database schema, and the current sub-question to solve, produce {N} DISTINCT CTE decompositions in a single response.
+
+**Original question (full)**: {original_question}
+**Current sub-question to solve**: {sub_question}
+**Sub-question progress**: Sub-question {sub_question_index} of {sub_questions_total}.
+
+**Database schema**:
+{schema_info}
+
+**Additional context**:
+{additional_context}
+
+**Preceding CTE and Results**:
+{preceding_cte_info}
+
+**Used CTE names (do NOT reuse)**: {used_cte_names}
+
+## Task
+Generate exactly {N} DISTINCT ways to answer the current sub-question with ONE CTE each (WITH ... AS (...); executor adds SELECT * FROM cte_name).
+
+Each decomposition MUST differ in at least one of:
+- sub-problem boundary (what is filtered/aggregated first)
+- intermediate aggregation (GROUP BY grain, COUNT vs SUM, etc.)
+- join order or join type (which table drives the FROM clause)
+
+**MUST produce different intermediate result schemas. Identical CTEs are forbidden.**
+
+Rules:
+- One new CTE per decomposition; reference preceding CTEs by name when helpful.
+- Use SQLite syntax only.
+- Do NOT reuse CTE names listed above.
+- Each `cte_sql` must be a complete `WITH name AS (...)` block (no trailing SELECT).
+
+Output strict JSON only (no markdown fences, no commentary outside JSON):
+{{"decompositions":[
+  {{"id":1,"rationale":"...","cte_sql":"WITH ..."}},
+  {{"id":2,"rationale":"...","cte_sql":"WITH ..."}}
+]}}
+
+Return exactly {N} entries in `decompositions`.

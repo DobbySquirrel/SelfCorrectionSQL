@@ -159,7 +159,9 @@ class CTEGenerator:
 - **CRITICAL: If execution results show "String Literal Mismatch" or "Wrong Column Selection" or "returned empty result set", you MUST generate an exploratory CTE to investigate and fix the issue. DO NOT output <END> in this case.**
 
 **Database Admin Instructions (Must Strictly Adhere):**
-1.  **SELECT Clause:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values. When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps. Do NOT drop columns that are required for later operations.
+1.  **SELECT Clause & Output Schema:** Only select columns explicitly mentioned in the question. Avoid unnecessary columns or values. When performing JOINs, you MUST retain all columns that will be needed in subsequent CTE steps. Do NOT drop columns that are required for later operations.
+   - **Multi-Metric Wide Output**: "Respectively" queries shall output one row with multiple columns (horizontal expansion via conditional aggregation), not multiple rows with one column (vertical stacking via grouping), unless the query explicitly requests listing each category as separate rows.
+   - When the final answer needs multiple metrics for multiple categories (e.g., "for SME, LAM, and KAM respectively"), the **last CTE before <END>** should use `SUM(CASE WHEN ...)` / `IIF(...)` so the result is **one row, multiple value columns**—do NOT end with `SELECT Segment, metric FROM ... GROUP BY Segment`.
 2.  **FROM Table Selection:** If filtering/ordering columns come from a specific table, use that table as the FROM driving table. This ensures the filtering/ordering conditions can be applied correctly.
 3.  **Aggregation (MAX/MIN):** Always perform JOINs before using `MAX()` or `MIN()`.
 4.  **ORDER BY with Distinct Values:** Use `GROUP BY <column>` before `ORDER BY <column> ASC|DESC` to ensure distinct values.
@@ -1109,16 +1111,23 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
         # 为了调试目的，暂时对所有问题启用监控
         return True
     
-    def generate_multiple_cte_variants(self, node, num_variants: int = 3, failed_attempts: List[str] = None) -> List[str]:
+    def generate_multiple_cte_variants(
+        self,
+        node,
+        num_variants: int = 3,
+        failed_attempts: List[str] = None,
+        temperature_groups: Optional[List[float]] = None,
+    ) -> List[str]:
         """
         生成多个CTE变体（并行生成，使用分组temperature策略）
         
-        将变体分成多个temperature组 [0.0, 0.3, 0.6, 0.9]，每组内并行调用
+        将变体分成多个temperature组 [0.3, 0.6, 0.9]，每组内并行调用
         
         Args:
             node: MCTS节点
             num_variants: 变体数量
             failed_attempts: 之前失败的CTE尝试列表（用于重试时提示）
+            temperature_groups: 可选，覆盖默认 temperature 分组（CT1-v2/CT2 实验用）
             
         Returns:
             CTE变体列表
@@ -1147,8 +1156,8 @@ Create a **Exploratory CTE with new name** to find the correct format or column.
             used_names_str = "* **Used CTE Names**: None"
         
         # 使用多个temperature值增加多样性
-        # 将变体分成多个temperature组：[0.3, 0.6, 0.9]
-        temperature_groups = [0.3, 0.6, 0.9]
+        if temperature_groups is None:
+            temperature_groups = [0.3, 0.6, 0.9]
         num_groups = len(temperature_groups)
         
         # 计算每组应该生成多少个变体
