@@ -126,9 +126,20 @@ def test_flag_off_diverse_disabled():
 
 def test_diverse_temps_default_and_env():
     with patch.dict(os.environ, {}, clear=True):
-        assert cd.diverse_temps() == [0.3, 0.6]
+        assert cd.diverse_temps() == [0.3, 0.6, 0.9]
     with patch.dict(os.environ, {cd.ENV_DIVERSE_TEMPS: "0.3,0.6,0.9"}, clear=True):
         assert cd.diverse_temps() == [0.3, 0.6, 0.9]
+
+
+def test_schema_diversity_default_follows_diverse_prompt():
+    from workflows.mcts_v4.utils import schema_diversity as sd
+
+    with patch.dict(os.environ, {cd.ENV_DIVERSE_PROMPT: "1"}, clear=True):
+        assert sd.schema_diversity_enabled() is True
+    with patch.dict(os.environ, {cd.ENV_DIVERSE_PROMPT: "1", sd.ENV_SCHEMA_DIVERSITY: "0"}, clear=True):
+        assert sd.schema_diversity_enabled() is False
+    with patch.dict(os.environ, {}, clear=True):
+        assert sd.schema_diversity_enabled() is False
 
 
 def test_skip_m_verify_flag():

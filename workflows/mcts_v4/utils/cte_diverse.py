@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from openai import OpenAI
 
 from .mcts_helpers import MCTSUtils
+from .schema_diversity import prepare_schema_for_temp, schema_diversity_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def skip_m_verify_enabled() -> bool:
 
 
 def diverse_temps(default: Optional[List[float]] = None) -> List[float]:
-    """Parse MCTS_CTE_DIVERSE_TEMPS (comma-separated floats). Default [0.3, 0.6]."""
+    """Parse MCTS_CTE_DIVERSE_TEMPS (comma-separated floats). Default [0.3, 0.6, 0.9]."""
     fallback = default if default is not None else MODE_C_TEMPERATURES
     raw = os.environ.get(ENV_DIVERSE_TEMPS, "").strip()
     if not raw:
@@ -274,6 +275,8 @@ def collect_diverse_ctes(
     temperature: float = 0.7,
     preceding_cte_info: str = "No preceding CTE",
     used_cte_names: Optional[List[str]] = None,
+    schema_info_override: Optional[str] = None,
+    schema_strategy_audit: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """
     CT1-v2/CT2: fetch N diverse CTEs in one LLM call (no dedupe vs temp children).
@@ -284,21 +287,24 @@ def collect_diverse_ctes(
     sub_question_index = getattr(node, "sub_question_index", 0)
     if sub_question_index < 0:
         sub_question_index = 0
+    schema_for_prompt = schema_info_override if schema_info_override is not None else node.schema_info
     audit: Dict[str, Any] = {
         "n_requested": n_requested,
         "temperature": temperature,
-        "n_llm_calls": 1,
+        "n_llm_calls": (schema_strategy_audit or {}).get("llm_calls_per_cte", 1),
         "sub_question": getattr(node, "sub_question", node.question),
         "parsed": [],
         "candidates": [],
     }
+    if schema_strategy_audit:
+        audit["schema_strategy"] = dict(schema_strategy_audit)
     user_prompt = render_diverse_prompt(
         n=n_requested,
         original_question=getattr(node, "_original_question", "") or node.question,
         sub_question=getattr(node, "sub_question", node.question),
         sub_question_index=sub_question_index,
         sub_questions_total=sub_questions_total,
-        schema_info=node.schema_info,
+        schema_info=schema_for_prompt,
         additional_context=node.additional_context or "",
         preceding_cte_info=preceding_cte_info,
         used_cte_names=used_cte_names,
@@ -334,7 +340,7 @@ def collect_diverse_ctes(
     return ctes, audit
 
 
-MODE_C_TEMPERATURES = [0.3, 0.6]
+MODE_C_TEMPERATURES = [0.3, 0.6, 0.9]
 
 
 def generate_diverse_mode_c(
@@ -352,8 +358,10 @@ def generate_diverse_mode_c(
     Replaces temperature sampling when MCTS_CTE_DIVERSE_PROMPT=1.
     """
     temps = temperatures if temperatures is not None else MODE_C_TEMPERATURES
+    use_schema_div = schema_diversity_enabled()
     trace: Dict[str, Any] = {
         "mode": "C",
+        "schema_diversity": use_schema_div,
         "n_llm_calls": len(temps),
         "temperatures": list(temps),
         "n_requested_per_call": n_per_call,
@@ -366,11 +374,29 @@ def generate_diverse_mode_c(
         "diverse_kept": [],
         "diverse_dropped": [],
         "call_audits": [],
+        "per_temp_schema_strategy": [],
     }
     all_ctes: List[str] = []
     meta_by_cte: Dict[str, Dict[str, Any]] = {}
+    original_schema = getattr(node, "_original_schema_info", None) or node.schema_info
+    question = getattr(node, "_original_question", "") or node.question
+    sub_question = getattr(node, "sub_question", node.question)
     try:
         for temp in temps:
+            schema_override = None
+            schema_audit = None
+            if use_schema_div:
+                schema_override, schema_audit = prepare_schema_for_temp(
+                    temperature=temp,
+                    question=question,
+                    sub_question=sub_question,
+                    schema_info=node.schema_info,
+                    preceding_cte_info=preceding_cte_info,
+                    llm_config=llm_config,
+                    original_schema_info=original_schema,
+                )
+                trace["per_temp_schema_strategy"].append(schema_audit)
+                trace["n_llm_calls"] += max(0, int(schema_audit.get("llm_calls_per_cte", 1)) - 1)
             ctes, audit = collect_diverse_ctes(
                 node=node,
                 llm_config=llm_config,
@@ -379,6 +405,8 @@ def generate_diverse_mode_c(
                 temperature=temp,
                 preceding_cte_info=preceding_cte_info,
                 used_cte_names=used_cte_names,
+                schema_info_override=schema_override,
+                schema_strategy_audit=schema_audit,
             )
             trace["call_audits"].append(audit)
             for item in audit.get("candidates") or []:

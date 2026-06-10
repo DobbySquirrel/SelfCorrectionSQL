@@ -212,7 +212,9 @@ class MCTSWorkflow:
         plan_deduped: List[Dict[str, Any]] = []
         per_plan_rollout_stats: Dict[str, List[Dict[str, Any]]] = {}
         use_multi_plan = bool(
-            self.use_decompose_flow and self.plan_decomposer is not None
+            self.use_decompose_flow
+            and self.plan_decomposer is not None
+            and multi_plan_enabled()
         )
 
         # mcts_v4: 问题拆分，设 max_depth 与 root.sub_questions

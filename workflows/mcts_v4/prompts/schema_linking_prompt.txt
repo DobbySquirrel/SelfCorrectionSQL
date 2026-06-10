@@ -1,0 +1,17 @@
+Given the question and full schema, identify the 3-5 most relevant tables for the current CTE step.
+
+Question: {question}
+
+Full Schema:
+{schema_info}
+
+Current sub-question: {sub_question}
+
+Preceding CTE context (if any):
+{preceding_cte_info}
+
+Output strict JSON only (no markdown fences):
+{{
+  "selected_tables": ["table1", "table2"],
+  "reason": "brief explanation"
+}}
