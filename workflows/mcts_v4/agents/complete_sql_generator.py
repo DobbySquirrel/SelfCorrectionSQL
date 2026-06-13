@@ -10,7 +10,24 @@ import Levenshtein
 import concurrent.futures
 import threading
 import os
+from pathlib import Path
 from openai import OpenAI
+
+_ALPHA_SQL_PREFIX_PATH = (
+    Path(__file__).resolve().parent.parent / "prompts" / "complete_sql_alpha_divide_conquer_prefix.txt"
+)
+
+
+def _alpha_divide_conquer_enabled() -> bool:
+    return os.environ.get("MCTS_ALPHA_DIVIDE_CONQUER_PROMPT", "0") == "1"
+
+
+def _alpha_divide_conquer_prefix() -> str:
+    if not _alpha_divide_conquer_enabled():
+        return ""
+    if _ALPHA_SQL_PREFIX_PATH.is_file():
+        return _ALPHA_SQL_PREFIX_PATH.read_text(encoding="utf-8").strip() + "\n\n"
+    return ""
 
 
 def _parse_temperature_list(env_key: str, default: List[float]) -> List[float]:
@@ -96,7 +113,8 @@ class CompleteSQLGenerator:
     
     def _get_sql_system_message(self) -> str:
         """获取完整SQL生成器的系统消息"""
-        return """You are a professional SQL query generator.
+        prefix = _alpha_divide_conquer_prefix()
+        return prefix + """You are a professional SQL query generator.
 
 **Task**: Based on the provided natural language question, database schema, and existing CTE, generate a complete SQL query.
 

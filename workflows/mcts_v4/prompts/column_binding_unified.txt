@@ -1,0 +1,60 @@
+Given the question and database schema, identify the columns, values, and functions needed to answer the question.
+
+## Question
+{question}
+
+## Schema
+{schema}
+
+## Additional Context
+{additional_context}
+
+## Task
+Analyze the question and identify:
+
+1. **Columns**: Which columns from the schema are mentioned or needed?
+   - Include table name if ambiguous (e.g., patients.SEX)
+   - Note if column name might be ambiguous (e.g., "First Date" vs "Description")
+
+2. **Values/Conditions**: What filtering conditions or values are needed?
+   - Exact matches (e.g., SEX='F')
+   - Date/year conditions (e.g., year=1997)
+   - Ranges or comparisons
+
+3. **Functions**: What SQL functions are needed?
+   - Date extraction (STRFTIME, year(), date(), etc.)
+   - Aggregations (COUNT, SUM, AVG, etc.)
+   - String operations (LIKE, SUBSTR, etc.)
+   - Note which column each function applies to
+
+## Output Format
+Provide your analysis in this structured format:
+
+Column: <table.column_name>
+  Condition: <value or comparison>
+  Function: <SQL function if needed, or "none">
+  Reasoning: <brief explanation>
+
+Column: <another_column>
+  ...
+
+## Example
+Question: "How many female patients had thrombosis in 1997?"
+Schema: patients (ID, SEX), diagnoses (ID, Description, "First Date")
+
+Column: patients.SEX
+  Condition: = 'F'
+  Function: none
+  Reasoning: Filter for female patients
+
+Column: diagnoses.Description
+  Condition: LIKE '%thrombosis%'
+  Function: none
+  Reasoning: Match thrombosis diagnosis
+
+Column: diagnoses.Description (date component)
+  Condition: year = '1997'
+  Function: STRFTIME('%Y', Description)
+  Reasoning: Extract year from Description column, not "First Date"
+
+Now analyze the given question:

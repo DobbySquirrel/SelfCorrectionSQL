@@ -7,10 +7,12 @@ import json
 import logging
 import os
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from openai import OpenAI
+from .openai_client_pool import get_openai_client
 
 from .mcts_helpers import MCTSUtils
 from .schema_diversity import prepare_schema_for_temp, schema_diversity_enabled
@@ -19,13 +21,25 @@ logger = logging.getLogger(__name__)
 
 ENV_DIVERSE_PROMPT = "MCTS_CTE_DIVERSE_PROMPT"
 ENV_DIVERSE_N = "MCTS_CTE_DIVERSE_N"
+ENV_DIVERSE_N_LOW = "MCTS_CTE_DIVERSE_N_LOW"
+ENV_DIVERSE_N_HINT = "MCTS_CTE_DIVERSE_N_HINT"
 ENV_DIVERSE_TEMPS = "MCTS_CTE_DIVERSE_TEMPS"
+ENV_ALPHA_DIVIDE_CONQUER = "MCTS_ALPHA_DIVIDE_CONQUER_PROMPT"
 ENV_SKIP_M_VERIFY = "MCTS_SKIP_M_VERIFY"
+ENV_TEMP_SWAP = "MCTS_CTE_TEMP_SWAP"
+ENV_PARALLEL_WORKERS = "MCTS_CTE_PARALLEL_WORKERS"
 TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_template.txt"
+ALPHA_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_alpha_divide_conquer.txt"
+)
 
 
 def diverse_prompt_enabled() -> bool:
     return os.environ.get(ENV_DIVERSE_PROMPT, "0") == "1"
+
+
+def alpha_divide_conquer_prompt_enabled() -> bool:
+    return os.environ.get(ENV_ALPHA_DIVIDE_CONQUER, "0") == "1"
 
 
 def diverse_n(default: int = 3) -> int:
@@ -35,8 +49,71 @@ def diverse_n(default: int = 3) -> int:
         return default
 
 
+def diverse_n_for_temp(temperature: float, default: int = 3) -> int:
+    """N for Mode C at this temp; low-temp branch can use MCTS_CTE_DIVERSE_N_LOW."""
+    base = diverse_n(default)
+    if float(temperature) > 0.45:
+        return base
+    raw = os.environ.get(ENV_DIVERSE_N_LOW, "").strip()
+    if not raw:
+        return base
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return base
+
+
+def diverse_n_hint(default: int = 2) -> int:
+    """N for binding-hint branch at low temp when dual mode is on."""
+    raw = os.environ.get(ENV_DIVERSE_N_HINT, "").strip()
+    if not raw:
+        return default
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return default
+
+
 def skip_m_verify_enabled() -> bool:
     return os.environ.get(ENV_SKIP_M_VERIFY, "0") == "1"
+
+
+def temp_swap_enabled() -> bool:
+    """Duplicate each Mode C call_spec with cyclically rotated temperature."""
+    return os.environ.get(ENV_TEMP_SWAP, "0") == "1"
+
+
+def mode_c_parallel_workers(n_specs: int) -> int:
+    raw = os.environ.get(ENV_PARALLEL_WORKERS, "").strip()
+    if raw:
+        try:
+            return max(1, min(int(raw), max(1, n_specs)))
+        except ValueError:
+            pass
+    default = MODE_C_PARALLEL_WORKERS * 2 if temp_swap_enabled() else MODE_C_PARALLEL_WORKERS
+    return max(1, min(default, max(1, n_specs)))
+
+
+def expand_call_specs_with_temp_swap(call_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Keep branch roles (plain/hint/binding) fixed; rerun each spec once with the next
+    spec's temperature (left rotate). 4 specs -> 8 LLM calls when enabled.
+    """
+    if not call_specs or not temp_swap_enabled():
+        return call_specs
+    rotated_temps = [float(s["temp"]) for s in call_specs[1:]] + [float(call_specs[0]["temp"])]
+    out: List[Dict[str, Any]] = []
+    for spec in call_specs:
+        tagged = dict(spec)
+        tagged.setdefault("temp_swap_round", 1)
+        out.append(tagged)
+    for spec, new_temp in zip(call_specs, rotated_temps):
+        swapped = dict(spec)
+        swapped["orig_temp"] = spec["temp"]
+        swapped["temp"] = new_temp
+        swapped["temp_swap_round"] = 2
+        out.append(swapped)
+    return out
 
 
 def diverse_temps(default: Optional[List[float]] = None) -> List[float]:
@@ -70,7 +147,8 @@ def create_structure_signature(sql: str) -> str:
 
 
 def load_template() -> str:
-    return TEMPLATE_PATH.read_text(encoding="utf-8")
+    path = ALPHA_TEMPLATE_PATH if alpha_divide_conquer_prompt_enabled() else TEMPLATE_PATH
+    return path.read_text(encoding="utf-8")
 
 
 def render_diverse_prompt(
@@ -244,11 +322,12 @@ def call_diverse_prompt(
     user_prompt: str,
     timeout_s: float = 120.0,
     temperature: float = 0.7,
+    model_config: Optional[Dict[str, Any]] = None,
 ) -> str:
-    config = llm_config.get("config_list", [{}])[0]
-    client = OpenAI(
-        base_url=config.get("base_url"),
-        api_key=config.get("api_key", "dummy-key"),
+    config = model_config or llm_config.get("config_list", [{}])[0]
+    client = get_openai_client(
+        config.get("base_url"),
+        config.get("api_key", "dummy-key"),
         timeout=timeout_s,
     )
     response = client.chat.completions.create(
@@ -277,6 +356,8 @@ def collect_diverse_ctes(
     used_cte_names: Optional[List[str]] = None,
     schema_info_override: Optional[str] = None,
     schema_strategy_audit: Optional[Dict[str, Any]] = None,
+    additional_context: Optional[str] = None,
+    model_config: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """
     CT1-v2/CT2: fetch N diverse CTEs in one LLM call (no dedupe vs temp children).
@@ -288,6 +369,11 @@ def collect_diverse_ctes(
     if sub_question_index < 0:
         sub_question_index = 0
     schema_for_prompt = schema_info_override if schema_info_override is not None else node.schema_info
+    ctx_for_prompt = (
+        additional_context
+        if additional_context is not None
+        else (node.additional_context or "")
+    )
     audit: Dict[str, Any] = {
         "n_requested": n_requested,
         "temperature": temperature,
@@ -305,7 +391,7 @@ def collect_diverse_ctes(
         sub_question_index=sub_question_index,
         sub_questions_total=sub_questions_total,
         schema_info=schema_for_prompt,
-        additional_context=node.additional_context or "",
+        additional_context=ctx_for_prompt,
         preceding_cte_info=preceding_cte_info,
         used_cte_names=used_cte_names,
     )
@@ -313,6 +399,7 @@ def collect_diverse_ctes(
         llm_config=llm_config,
         user_prompt=user_prompt,
         temperature=temperature,
+        model_config=model_config,
     )
     parsed = parse_diverse_json(raw)
     audit["parsed"] = [
@@ -341,7 +428,143 @@ def collect_diverse_ctes(
 
 
 MODE_C_TEMPERATURES = [0.3, 0.6, 0.9]
+MODE_C_PARALLEL_WORKERS = 4
 
+
+def _pick_model_config(
+    llm_config: Dict[str, Any],
+    multi_model_configs: Optional[List[Dict[str, Any]]],
+    counter: List[int],
+    lock: threading.Lock,
+) -> Dict[str, Any]:
+    if multi_model_configs:
+        with lock:
+            idx = counter[0] % len(multi_model_configs)
+            counter[0] += 1
+        return multi_model_configs[idx]
+    return llm_config.get("config_list", [{}])[0]
+
+
+def _execute_mode_c_call_spec(
+    spec: Dict[str, Any],
+    *,
+    node,
+    llm_config: Dict[str, Any],
+    multi_model_configs: Optional[List[Dict[str, Any]]],
+    model_counter: List[int],
+    model_lock: threading.Lock,
+    extract_fn,
+    preceding_cte_info: str,
+    used_cte_names: List[str],
+    orig_q: str,
+    sub_question: str,
+    sub_question_index: int,
+    question: str,
+    original_schema: str,
+    global_binding_block: Optional[str],
+    global_narrowed_schema: Optional[str],
+    global_schema_audit: Optional[Dict[str, Any]],
+    binding_cache: Optional[Dict[str, Tuple[str, Dict[str, Any]]]],
+    checker_context: Optional[Dict[str, Any]],
+    ctx_saved: str,
+    use_schema_div: bool,
+) -> Dict[str, Any]:
+    """Run one Mode C LLM branch (thread-safe; does not mutate node.additional_context)."""
+    from .column_binding_cot import augment_additional_context_for_expand
+
+    temp = spec["temp"]
+    n_req = spec["n"]
+    use_binding = spec["use_binding"]
+    binding_branch = spec.get("binding_branch")
+    schema_override = None
+    schema_audit = None
+    ctx_for_prompt = ctx_saved or ""
+    binding_audit: Optional[Dict[str, Any]] = None
+
+    if use_binding:
+        bound_ctx, expand_audit = augment_additional_context_for_expand(
+            original_question=orig_q,
+            sub_question=sub_question,
+            sub_question_index=sub_question_index,
+            preceding_cte_info=preceding_cte_info,
+            schema_info=node.schema_info,
+            additional_context=ctx_saved or "",
+            llm_config=llm_config,
+            cache=binding_cache,
+            global_binding_block=global_binding_block,
+        )
+        if expand_audit is not None:
+            binding_audit = dict(expand_audit)
+            binding_audit["temp"] = temp
+            binding_audit["binding_branch"] = binding_branch
+            ctx_for_prompt = bound_ctx
+
+    if use_schema_div:
+        schema_override, schema_audit = prepare_schema_for_temp(
+            temperature=temp,
+            question=question,
+            sub_question=sub_question,
+            schema_info=node.schema_info,
+            preceding_cte_info=preceding_cte_info,
+            llm_config=llm_config,
+            original_schema_info=original_schema,
+        )
+
+    model_config = _pick_model_config(llm_config, multi_model_configs, model_counter, model_lock)
+    endpoint = (model_config.get("base_url") or "").rstrip("/")
+    ctes, audit = collect_diverse_ctes(
+        node=node,
+        llm_config=llm_config,
+        n_requested=n_req,
+        extract_fn=extract_fn,
+        temperature=temp,
+        preceding_cte_info=preceding_cte_info,
+        used_cte_names=used_cte_names,
+        schema_info_override=schema_override,
+        schema_strategy_audit=schema_audit,
+        additional_context=ctx_for_prompt,
+        model_config=model_config,
+    )
+    if binding_branch is not None:
+        audit["binding_branch"] = binding_branch
+    if spec.get("temp_swap_round") is not None:
+        audit["temp_swap_round"] = spec.get("temp_swap_round")
+    if spec.get("orig_temp") is not None:
+        audit["orig_temp"] = spec.get("orig_temp")
+    audit["llm_endpoint"] = endpoint
+
+    checker_revision = []
+    n_checker_llm_calls = 0
+    n_checker_revised = 0
+
+    meta: List[Tuple[str, Dict[str, Any]]] = []
+    for item in audit.get("candidates") or []:
+        cte = item.get("cte")
+        if not cte:
+            continue
+        meta.append(
+            (
+                cte,
+                {
+                    "id": item.get("id"),
+                    "rationale": item.get("rationale", ""),
+                    "cte_sql_raw": item.get("cte_sql_raw", ""),
+                    "temperature": temp,
+                    "binding_branch": binding_branch,
+                },
+            )
+        )
+
+    return {
+        "ctes": ctes,
+        "audit": audit,
+        "meta": meta,
+        "binding_audit": binding_audit,
+        "schema_audit": schema_audit,
+        "checker_revision": checker_revision,
+        "n_checker_llm_calls": n_checker_llm_calls,
+        "n_checker_revised": n_checker_revised,
+    }
 
 def generate_diverse_mode_c(
     *,
@@ -352,17 +575,22 @@ def generate_diverse_mode_c(
     preceding_cte_info: str,
     used_cte_names: List[str],
     temperatures: Optional[List[float]] = None,
+    checker_context: Optional[Dict[str, Any]] = None,
+    binding_cache: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
+    binding_audits: Optional[List[Dict[str, Any]]] = None,
+    original_question: Optional[str] = None,
+    global_binding_block: Optional[str] = None,
+    global_narrowed_schema: Optional[str] = None,
+    global_schema_audit: Optional[Dict[str, Any]] = None,
+    multi_model_configs: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
-    """
-    Mode C: diverse prompt × len(temperatures) calls, N CTEs each, structure dedupe.
-    Replaces temperature sampling when MCTS_CTE_DIVERSE_PROMPT=1.
-    """
+    """Mode C: dual@0.3 plain+hint, per-temp schema diversity, parallel call specs."""
     temps = temperatures if temperatures is not None else MODE_C_TEMPERATURES
     use_schema_div = schema_diversity_enabled()
     trace: Dict[str, Any] = {
         "mode": "C",
         "schema_diversity": use_schema_div,
-        "n_llm_calls": len(temps),
+        "n_llm_calls": 0,
         "temperatures": list(temps),
         "n_requested_per_call": n_per_call,
         "sub_question": getattr(node, "sub_question", node.question),
@@ -375,51 +603,110 @@ def generate_diverse_mode_c(
         "diverse_dropped": [],
         "call_audits": [],
         "per_temp_schema_strategy": [],
+        "column_binding_per_temp": [],
+        "parallel_call_specs": True,
+        "checker_revision": [],
+        "n_checker_llm_calls": 0,
+        "n_checker_revised": 0,
     }
     all_ctes: List[str] = []
     meta_by_cte: Dict[str, Dict[str, Any]] = {}
     original_schema = getattr(node, "_original_schema_info", None) or node.schema_info
     question = getattr(node, "_original_question", "") or node.question
     sub_question = getattr(node, "sub_question", node.question)
+    sub_question_index = getattr(node, "sub_question_index", 0)
+    if sub_question_index < 0:
+        sub_question_index = 0
+    orig_q = original_question or question
     try:
+        from .column_binding_cot import (
+            column_binding_dual_at_temp,
+            column_binding_replace_at_temp,
+        )
+
+        call_specs: List[Dict[str, Any]] = []
         for temp in temps:
-            schema_override = None
-            schema_audit = None
-            if use_schema_div:
-                schema_override, schema_audit = prepare_schema_for_temp(
-                    temperature=temp,
-                    question=question,
-                    sub_question=sub_question,
-                    schema_info=node.schema_info,
-                    preceding_cte_info=preceding_cte_info,
-                    llm_config=llm_config,
-                    original_schema_info=original_schema,
+            if column_binding_dual_at_temp(temp):
+                call_specs.append(
+                    {"temp": temp, "n": diverse_n(n_per_call), "use_binding": False, "binding_branch": "plain"}
                 )
-                trace["per_temp_schema_strategy"].append(schema_audit)
-                trace["n_llm_calls"] += max(0, int(schema_audit.get("llm_calls_per_cte", 1)) - 1)
-            ctes, audit = collect_diverse_ctes(
+                call_specs.append(
+                    {"temp": temp, "n": diverse_n_hint(), "use_binding": True, "binding_branch": "hint"}
+                )
+            else:
+                use_binding = column_binding_replace_at_temp(temp)
+                call_specs.append(
+                    {
+                        "temp": temp,
+                        "n": diverse_n_for_temp(temp, default=n_per_call),
+                        "use_binding": use_binding,
+                        "binding_branch": "hint" if use_binding else None,
+                    }
+                )
+        call_specs = expand_call_specs_with_temp_swap(call_specs)
+        trace["n_llm_calls"] = len(call_specs)
+
+        ctx_saved = node.additional_context or ""
+        model_counter = [0]
+        model_lock = threading.Lock()
+        workers = mode_c_parallel_workers(len(call_specs))
+
+        def _run_spec(spec: Dict[str, Any]) -> Dict[str, Any]:
+            return _execute_mode_c_call_spec(
+                spec,
                 node=node,
                 llm_config=llm_config,
-                n_requested=n_per_call,
+                multi_model_configs=multi_model_configs,
+                model_counter=model_counter,
+                model_lock=model_lock,
                 extract_fn=extract_fn,
-                temperature=temp,
                 preceding_cte_info=preceding_cte_info,
                 used_cte_names=used_cte_names,
-                schema_info_override=schema_override,
-                schema_strategy_audit=schema_audit,
+                orig_q=orig_q,
+                sub_question=sub_question,
+                sub_question_index=sub_question_index,
+                question=question,
+                original_schema=original_schema,
+                global_binding_block=global_binding_block,
+                global_narrowed_schema=global_narrowed_schema,
+                global_schema_audit=global_schema_audit,
+                binding_cache=binding_cache,
+                checker_context=checker_context,
+                ctx_saved=ctx_saved,
+                use_schema_div=use_schema_div,
             )
+
+        spec_results: List[Dict[str, Any]] = []
+        if workers <= 1:
+            spec_results = [_run_spec(spec) for spec in call_specs]
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = [executor.submit(_run_spec, spec) for spec in call_specs]
+                for fut in as_completed(futures):
+                    spec_results.append(fut.result())
+
+        for result in spec_results:
+            audit = result["audit"]
+            binding_audit = result.get("binding_audit")
+            schema_audit = result.get("schema_audit")
+            if binding_audit is not None and binding_audits is not None:
+                binding_audits.append(binding_audit)
+                trace["column_binding_per_temp"].append(
+                    {
+                        "temp": binding_audit.get("temp"),
+                        "binding_branch": binding_audit.get("binding_branch"),
+                        "llm_calls": binding_audit.get("llm_calls"),
+                        "cache_hit": binding_audit.get("cache_hit"),
+                    }
+                )
+            if schema_audit is not None:
+                trace["per_temp_schema_strategy"].append(schema_audit)
+                trace["n_llm_calls"] += max(0, int(schema_audit.get("llm_calls_per_cte", 1)) - 1)
             trace["call_audits"].append(audit)
-            for item in audit.get("candidates") or []:
-                cte = item.get("cte")
-                if not cte:
-                    continue
+            for cte, meta in result.get("meta") or []:
                 all_ctes.append(cte)
-                meta_by_cte[cte] = {
-                    "id": item.get("id"),
-                    "rationale": item.get("rationale", ""),
-                    "cte_sql_raw": item.get("cte_sql_raw", ""),
-                    "temperature": temp,
-                }
+                meta_by_cte[cte] = meta
+
         trace["n_raw_candidates"] = len(all_ctes)
         if len(all_ctes) < 2:
             trace["diverse_fallback"] = True
@@ -438,6 +725,7 @@ def generate_diverse_mode_c(
                 "cte_sql_raw": meta_by_cte[cte].get("cte_sql_raw", ""),
                 "cte": cte,
                 "temperature": meta_by_cte[cte].get("temperature"),
+                "binding_branch": meta_by_cte[cte].get("binding_branch"),
                 "structure_sig": create_structure_signature(cte),
             }
             for cte in kept
@@ -445,7 +733,7 @@ def generate_diverse_mode_c(
         trace["diverse_dropped"] = dropped_records
         trace["n_struct_deduped_dropped"] = len(dropped_records)
         trace["n_candidates"] = len(kept)
-        trace["n_diverse_extra_added"] = len(kept)  # legacy trace field alias
+        trace["n_diverse_extra_added"] = len(kept)
         if len(kept) < 2:
             trace["diverse_fallback"] = True
             trace["diverse_fallback_reason"] = f"too_few_after_dedupe:{len(kept)}"

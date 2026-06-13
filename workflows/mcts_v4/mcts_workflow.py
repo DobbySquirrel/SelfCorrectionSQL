@@ -144,6 +144,7 @@ class MCTSWorkflow:
             'cte_gen_s': 0.0,
             'sql_gen_s': 0.0,
             'db_exec_s': 0.0,
+            'column_binding_s': 0.0,
             'rollout_count': 0,
         }
         
@@ -193,6 +194,11 @@ class MCTSWorkflow:
             self._timing[k] = 0.0 if k.endswith('_s') else 0
         self._v4_decompose_expand_traces = []
         self._pending_diverse_expand_trace: Optional[Dict[str, Any]] = None
+        column_binding_audit = None
+        self._column_binding_cache: Dict[str, Tuple[str, Dict[str, Any]]] = {}
+        self._column_binding_expand_audits: List[Dict[str, Any]] = []
+        self._global_binding_block = ""
+        self._global_binding_audit: Optional[Dict[str, Any]] = None
         _orig_max_depth = self.max_depth
         self._solve_max_depth_cap = _orig_max_depth
         
@@ -233,6 +239,41 @@ class MCTSWorkflow:
             root_node.sub_questions = sub_questions  # type: ignore
             root_node.sub_question_index = -1
             self.max_depth = min(len(sub_questions), _orig_max_depth)
+
+        if self.use_decompose_flow:
+            from .utils.column_binding_cot import (
+                augment_additional_context_with_column_binding,
+                column_binding_hint_chain_enabled,
+                column_binding_per_subq_enabled,
+                column_binding_scope_global,
+                run_column_binding_global_once,
+            )
+
+            if (
+                column_binding_per_subq_enabled()
+                and column_binding_scope_global()
+                and not column_binding_hint_chain_enabled()
+            ):
+                block, column_binding_audit = run_column_binding_global_once(
+                    question=question,
+                    schema_info=schema_info,
+                    additional_context=root_node.additional_context or additional_context,
+                    llm_config=self.llm_config,
+                )
+                self._global_binding_block = block
+                self._global_binding_audit = column_binding_audit
+                self._timing["column_binding_s"] = float(column_binding_audit.get("elapsed_s") or 0.0)
+            else:
+                augmented_ctx, column_binding_audit = augment_additional_context_with_column_binding(
+                    question=question,
+                    schema_info=schema_info,
+                    additional_context=root_node.additional_context,
+                    llm_config=self.llm_config,
+                )
+                if column_binding_audit is not None:
+                    root_node.additional_context = augmented_ctx
+                    additional_context = augmented_ctx
+                    self._timing["column_binding_s"] = float(column_binding_audit.get("elapsed_s") or 0.0)
         
         # MCTS主循环：执行多个rollout
         solve_start_ts = _time_for_timing.time()
@@ -288,7 +329,13 @@ class MCTSWorkflow:
                 schema_ddl=schema_info,
             )
 
-        optimal_sql = SQLSelector.select(rollout_stats_list)
+        optimal_sql = SQLSelector.select(
+            rollout_stats_list,
+            question=question,
+            schema_ddl=schema_info,
+            db_connector=self.db_connector,
+            llm_config=self.llm_config,
+        )
 
         # 收集所有路径的 SQL，供 test_mcts 做「任一路径对即算对」统计（每条 rollout 的 selected_sql + 各 rollout 的 all_sql_variants）
         all_sqls_with_attributes = []
@@ -318,6 +365,22 @@ class MCTSWorkflow:
             out['sub_questions'] = getattr(self.mcts_tree.root, 'sub_questions', [])
             if self._v4_decompose_expand_traces:
                 out['decompose_expand_traces'] = list(self._v4_decompose_expand_traces)
+        if column_binding_audit is not None:
+            out['column_binding_cot'] = column_binding_audit
+        if self._column_binding_expand_audits:
+            total_calls = sum(int(a.get("llm_calls") or 0) for a in self._column_binding_expand_audits)
+            total_elapsed = sum(float(a.get("elapsed_s") or 0.0) for a in self._column_binding_expand_audits)
+            if self._global_binding_audit is not None:
+                total_calls += int(self._global_binding_audit.get("llm_calls") or 0)
+                total_elapsed += float(self._global_binding_audit.get("elapsed_s") or 0.0)
+            out['column_binding_cot_per_subq'] = {
+                "mode": "per_subq",
+                "llm_calls": total_calls,
+                "elapsed_s": total_elapsed,
+                "n_expands": len(self._column_binding_expand_audits),
+                "expands": list(self._column_binding_expand_audits),
+            }
+            self._timing['column_binding_s'] = total_elapsed
         if use_multi_plan:
             out['plan_proposals'] = plan_proposals
             out['plan_dedup_count'] = len(plan_deduped)
@@ -1654,7 +1717,7 @@ class MCTSWorkflow:
             depth=depth
         )
         
-        # 临时修改节点的 additional_context（注入策略文本）
+        # 临时修改节点的 additional_context（注入策略文本；binding 在 Mode C per-temp 循环内）
         original_additional_context = node.additional_context
         if strategy_text:
             extra_blocks = []
@@ -1820,6 +1883,10 @@ class MCTSWorkflow:
         if self.use_decompose_flow and diverse_prompt_enabled():
             preceding = self.cte_generator._get_preceding_cte_info(node)
             used = self.cte_generator._get_used_cte_names(node)
+            orig_q = getattr(node, "_original_question", None) or (
+                self.mcts_tree.root.question if self.mcts_tree and self.mcts_tree.root else node.question
+            )
+            before_bind_n = len(self._column_binding_expand_audits)
             ctes, trace = generate_diverse_mode_c(
                 node=node,
                 llm_config=self.llm_config,
@@ -1828,7 +1895,13 @@ class MCTSWorkflow:
                 preceding_cte_info=preceding,
                 used_cte_names=used,
                 temperatures=diverse_temps(),
+                binding_cache=self._column_binding_cache,
+                binding_audits=self._column_binding_expand_audits,
+                original_question=orig_q,
+                global_binding_block=self._global_binding_block or None,
             )
+            for ba in self._column_binding_expand_audits[before_bind_n:]:
+                self._timing["column_binding_s"] += float(ba.get("elapsed_s") or 0.0)
             self._pending_diverse_expand_trace = trace
             if len(ctes) >= 2:
                 node.additional_context = original_additional_context
@@ -1869,6 +1942,7 @@ class MCTSWorkflow:
                 'cte_gen_s': float(self._timing.get('cte_gen_s', 0.0)),
                 'sql_gen_s': float(self._timing.get('sql_gen_s', 0.0)),
                 'db_exec_s': float(self._timing.get('db_exec_s', 0.0)),
+                'column_binding_s': float(self._timing.get('column_binding_s', 0.0)),
                 'rollout_count': int(self._timing.get('rollout_count', 0)),
             }
             tree_stats['timing'] = timing_copy

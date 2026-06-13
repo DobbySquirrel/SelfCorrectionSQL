@@ -131,6 +131,8 @@ def run_once(sample: dict, parallel_workers: int = 5, multi_base_urls: List[str]
             "plan_dedup_count",
             "per_plan_rollout_stats",
             "union_rollout_stats",
+            "column_binding_cot",
+            "column_binding_cot_per_subq",
         ):
             if res.get(k) is not None:
                 payload[k] = res[k]
@@ -217,6 +219,8 @@ def process_single_task(args_tuple):
             'plan_dedup_count',
             'per_plan_rollout_stats',
             'union_rollout_stats',
+            'column_binding_cot',
+            'column_binding_cot_per_subq',
         ):
             if result.get(k) is not None:
                 ret[k] = result[k]
@@ -685,6 +689,8 @@ def main():
                 'plan_dedup_count',
                 'per_plan_rollout_stats',
                 'union_rollout_stats',
+                'column_binding_cot',
+                'column_binding_cot_per_subq',
             ):
                 if result_dict.get(k) is not None:
                     results_with_stats[qid][k] = result_dict[k]

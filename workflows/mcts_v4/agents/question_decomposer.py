@@ -8,6 +8,7 @@
 
 import re
 import json
+import os
 import threading
 from typing import Dict, List, Any, Optional
 
@@ -15,6 +16,26 @@ import autogen
 
 # S1/S2/S3/S4/S7：S3 Evidence-Based、S4 Clause-Order 与 S1/S2/S7 一起供对比实验
 DECOMPOSE_STRATEGIES = ("S1", "S2", "S3", "S4", "S7")
+ENV_MIN_SUBQUESTIONS = "MCTS_DECOMPOSE_MIN_SUBQUESTIONS"
+
+
+def decompose_min_subquestions() -> int:
+    raw = os.environ.get(ENV_MIN_SUBQUESTIONS, "1").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 1
+
+
+def _subq_count_requirement() -> str:
+    min_n = decompose_min_subquestions()
+    if min_n <= 1:
+        return "for very simple questions return only 1 sub-question."
+    return (
+        f"Return **at least {min_n} sub-questions** unless the question is a trivial "
+        "single-table SELECT with no joins, filters, or aggregation. "
+        f"If unsure, prefer {min_n}-3 steps over a single step."
+    )
 
 
 class QuestionDecomposer:
@@ -59,58 +80,78 @@ class QuestionDecomposer:
 
     def _msg_s1(self) -> str:
         """S1 Entity-First: single-table filter/select first, then joins (aligned with mcts_v1 S1)."""
-        return """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
+        return (
+            """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
 
 **S1 Entity-First decomposition** (aligned with CTE strategy S1):
 - When introducing new conditions, do simple single-table filtering or column selection first, then any join.
 - Sub-question order: first "single-table filter/column selection" → then "table joins" → finally "aggregation/sort/top N".
 - Avoid wide multi-table joins early; keep each step simple and verifiable.
 
-Requirements: Sub-questions must have a logical order; each step should be single and verifiable; for very simple questions return only 1 sub-question. Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+Requirements: Sub-questions must have a logical order; each step should be single and verifiable; """
+            + _subq_count_requirement()
+            + """ Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+        )
 
     def _msg_s2(self) -> str:
         """S2 Relation-First: build join skeleton first, then filters, then aggregation (aligned with mcts_v1 S2)."""
-        return """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
+        return (
+            """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
 
 **S2 Relation-First decomposition** (aligned with CTE strategy S2):
 - Prioritize correct table relationships and join paths (you may use foreign keys).
 - First establish the join skeleton and relationships, then apply filters on top.
 - Sub-question order: "build joins" → "filters" → "aggregation/sort/top N".
 
-Requirements: Sub-questions must have a logical order; each step should be single and verifiable; for very simple questions return only 1 sub-question. Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+Requirements: Sub-questions must have a logical order; each step should be single and verifiable; """
+            + _subq_count_requirement()
+            + """ Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+        )
 
     def _msg_s3(self) -> str:
         """S3 Evidence-Based: decompose by evidence/constraints, each step verifiable against evidence (aligned with mcts_v1 S3)."""
-        return """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
+        return (
+            """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
 
 **S3 Evidence-Based decomposition** (aligned with CTE strategy S3):
 - If there is "additional context/evidence", sub-questions should align with verifiable points: column names, filter values, table relationships, etc.
 - Each piece of evidence or constraint should map to one sub-question, or be merged into a few steps, so each step can be checked against evidence.
 - Order sub-questions by evidence dependency or natural order; avoid contradicting evidence.
 
-Requirements: Sub-questions must have a logical order; each step should be verifiable against evidence when possible; for very simple questions return only 1 sub-question. Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+Requirements: Sub-questions must have a logical order; each step should be verifiable against evidence when possible; """
+            + _subq_count_requirement()
+            + """ Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+        )
 
     def _msg_s4(self) -> str:
         """S4 Clause-Order: decompose by SQL clause order (data source → filter → aggregation → sort/limit)."""
-        return """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
+        return (
+            """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
 
 **S4 Clause-Order decomposition** (bottom-up, following SQL clause order):
 - Sub-question order must match SQL writing order: first "data source / which tables and how to join" → then "WHERE conditions" → then "GROUP BY / aggregate functions" → finally "ORDER BY / LIMIT".
 - Each step corresponds to one clause or one type of operation, for incremental SQL construction.
 - Suited for well-structured analytical questions.
 
-Requirements: Sub-questions must have a logical order; each step should be single and verifiable; for very simple questions return only 1 sub-question. Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+Requirements: Sub-questions must have a logical order; each step should be single and verifiable; """
+            + _subq_count_requirement()
+            + """ Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+        )
 
     def _msg_s7(self) -> str:
         """S7 Grain/Key-Based: determine result grain first, then aggregate per table, then join at unified grain (aligned with mcts_v1 S7)."""
-        return """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
+        return (
+            """You are an expert in SQL and natural language question analysis. Task: Decompose the user's **original question** into an ordered list of **sub-questions**, each corresponding to one intermediate SQL/CTE.
 
 **S7 Grain/Key-Based decomposition** (aligned with CTE strategy S7):
 - First determine the result grain (key set, e.g. customer_id + year_month).
 - Sub-question order: "determine grain/keys" → "aggregate each fact table at that grain" → "dimension tables keep or align grain" → "join at unified grain for final result".
 - Suited for cases where multi-table joins cause blow-up or where aggregate-then-join is needed.
 
-Requirements: Sub-questions must have a logical order; each step should be single and verifiable; for very simple questions return only 1 sub-question. Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+Requirements: Sub-questions must have a logical order; each step should be single and verifiable; """
+            + _subq_count_requirement()
+            + """ Output only a JSON array, e.g. ["sub-question 1", "sub-question 2", ...], with no other explanation."""
+        )
 
     def decompose(
         self,
@@ -142,22 +183,39 @@ Requirements: Sub-questions must have a logical order; each step should be singl
 
 Decompose the above question into an ordered list of sub-questions. Output only a single JSON array, e.g. ["sub-question 1", "sub-question 2", ...]. Use the same language as the original question for each sub-question."""
 
-        try:
-            with self._agent_lock:
-                chat_result = self._user_proxy.initiate_chat(
-                    self._agent,
-                    message=user_msg,
-                    max_turns=1,
-                    silent=True,
-                )
-        except Exception as e:
-            print(f"[QuestionDecomposer] LLM call failed: {e}")
-            return [question]
+        min_n = decompose_min_subquestions()
 
-        text = _last_content(chat_result)
-        sub_questions = _parse_sub_questions_json(text)
-        if not sub_questions:
-            return [question]
+        def _call_decomposer(message: str) -> List[str]:
+            try:
+                with self._agent_lock:
+                    chat_result = self._user_proxy.initiate_chat(
+                        self._agent,
+                        message=message,
+                        max_turns=1,
+                        silent=True,
+                    )
+            except Exception as e:
+                print(f"[QuestionDecomposer] LLM call failed: {e}")
+                return [question]
+            text = _last_content(chat_result)
+            parsed = _parse_sub_questions_json(text)
+            return parsed if parsed else [question]
+
+        sub_questions = _call_decomposer(user_msg)
+        if len(sub_questions) < min_n:
+            retry_msg = (
+                user_msg
+                + f"\n\nIMPORTANT: You must return **at least {min_n}** sub-questions "
+                f"as a JSON array (currently too few steps)."
+            )
+            retried = _call_decomposer(retry_msg)
+            if len(retried) >= len(sub_questions):
+                sub_questions = retried
+        if len(sub_questions) < min_n:
+            print(
+                f"[QuestionDecomposer] got {len(sub_questions)} sub-questions, "
+                f"min={min_n}; keeping best effort"
+            )
         return sub_questions
 
 

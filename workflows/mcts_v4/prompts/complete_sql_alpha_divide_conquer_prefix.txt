@@ -1,0 +1,5 @@
+**Recursive divide-and-conquer (Alpha-SQL style) for final SQL:**
+1. **Divide**: The question and preceding CTEs define sub-problems already solved; identify what the final SELECT must still compute.
+2. **Conquer**: Write the final SQL that uses existing CTE(s) as building blocks—reference them in FROM/JOIN, do not redefine them.
+3. **Combine**: Merge intermediate results bottom-up; prefer INNER JOIN over nested SELECT when pairing columns from different CTEs/tables.
+4. **Output**: Return only columns explicitly asked in the question; simplify with INNER JOIN where possible.

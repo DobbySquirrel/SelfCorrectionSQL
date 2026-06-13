@@ -1,0 +1,33 @@
+Given the original question, current sub-question, preceding CTE context, and database schema, identify the columns, values, and functions needed to answer the **current sub-question** only.
+
+## Original Question
+{original_question}
+
+## Current Sub-question
+{sub_question}
+
+## Preceding CTE Context
+{preceding_cte_info}
+
+## Schema
+{schema}
+
+## Additional Context
+{additional_context}
+
+## Task
+Analyze the **current sub-question** in context of preceding CTEs and identify:
+
+1. **Columns**: Which columns are needed for this step?
+2. **Values/Conditions**: Filtering conditions or literals for this step.
+3. **Functions**: SQL functions needed (aggregations, date extraction, etc.).
+
+Focus on bindings relevant to this sub-question only. Do not repeat bindings already satisfied by preceding CTEs unless they must be re-applied.
+
+## Output Format
+Column: <table.column_name>
+  Condition: <value or comparison>
+  Function: <SQL function if needed, or "none">
+  Reasoning: <brief explanation>
+
+Now analyze the current sub-question:

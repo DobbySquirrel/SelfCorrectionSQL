@@ -23,6 +23,9 @@ _STRATEGY_ALIASES = {
     "R3": "R3",
     "R3_REWARD_X_SIZE": "R3",
     "R3_reward_x_size": "R3",
+    "R4": "R4",
+    "R4_MAJORITY_THEN_REWARD": "R4",
+    "R4_majority_then_reward": "R4",
 }
 
 
@@ -50,9 +53,27 @@ class SQLSelector:
     def select(
         rollout_stats_list: List[Dict[str, Any]],
         strategy: Optional[str] = None,
+        *,
+        question: str = "",
+        schema_ddl: str = "",
+        db_connector=None,
+        llm_config: Optional[dict] = None,
     ) -> str:
         """Final SQL pick; default R0 unless MCTS_SELECTOR_STRATEGY is set."""
         sid = SQLSelector.resolve_strategy(strategy)
+        if sid == "R4":
+            from .gated_selection import confidence_mode_enabled, gated_r4_r8_select
+
+            if confidence_mode_enabled():
+                sql, _ = gated_r4_r8_select(
+                    rollout_stats_list,
+                    question=question,
+                    schema_ddl=schema_ddl,
+                    db_connector=db_connector,
+                    llm_config=llm_config,
+                )
+                return sql
+            return SQLSelector._select_r4_majority_then_reward(rollout_stats_list)
         if sid == "R2":
             return SQLSelector._select_r2_max_cluster_visit(rollout_stats_list)
         if sid == "R3":
@@ -102,6 +123,44 @@ class SQLSelector:
             f"visit={clusters[best_sig].total_visit}"
         )
         return SQLSelector._tiebreak_pick(clusters[best_sig].variants)
+
+    @staticmethod
+    def _select_r4_majority_then_reward(rollout_stats_list: List[Dict[str, Any]]) -> str:
+        clusters = SQLSelector._build_clusters(rollout_stats_list)
+        if not clusters:
+            return SQLSelector.select_by_highest_reward(rollout_stats_list)
+
+        votes: Dict[str, int] = {}
+        for r in rollout_stats_list:
+            rb = r.get("result_buckets") or {}
+            if not rb:
+                continue
+            mc = max(rb.values())
+            for sig, cnt in rb.items():
+                if cnt == mc:
+                    votes[sig] = votes.get(sig, 0) + 1
+
+        if not votes:
+            return SQLSelector.select_by_highest_reward(rollout_stats_list)
+
+        top_v = max(votes.values())
+        tied = [sig for sig, v in votes.items() if v == top_v]
+        top_sig = tied[0][:16] if tied else "?"
+        print(
+            f"[Selection] R4: majority cluster sig={top_sig}… votes={top_v}"
+        )
+        if len(tied) == 1:
+            return SQLSelector._tiebreak_pick(clusters[tied[0]].variants)
+
+        best_r, best_sql = -1.0, ""
+        for sig in tied:
+            c = clusters.get(sig)
+            if not c:
+                continue
+            if c.max_rollout_reward > best_r:
+                best_r = c.max_rollout_reward
+                best_sql = SQLSelector._tiebreak_pick(c.variants)
+        return best_sql
 
     @staticmethod
     def _select_r3_reward_x_size(rollout_stats_list: List[Dict[str, Any]]) -> str:
