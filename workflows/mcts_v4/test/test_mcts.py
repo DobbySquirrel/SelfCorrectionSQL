@@ -224,6 +224,8 @@ def process_single_task(args_tuple):
         ):
             if result.get(k) is not None:
                 ret[k] = result[k]
+        from workflows.mcts_v4.utils.task_spill import delete_task_spill
+        delete_task_spill(qid)
         return ret
     except Exception as e:
         print(f"❌ 样本#{idx} 处理失败: {e}")
@@ -247,6 +249,111 @@ def _fast_fallback_task(task):
     fast_cfg['rollouts_per_iteration'] = 1
     fast_cfg['num_sql_variants'] = 1
     return (idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, fast_cfg, strategy_mode, collect_stats, use_decompose)
+
+
+def _annotate_all_sqls_with_gold(all_sqls, gold_sql, db_name):
+    if not gold_sql or not all_sqls:
+        return all_sqls
+    db_connector = build_db_connector(db_name)
+    try:
+        for sql_info in all_sqls:
+            sql = sql_info.get('sql', '')
+            if sql:
+                try:
+                    sql_info['is_correct'] = compare_with_gold(sql, gold_sql, db_connector=db_connector)
+                except Exception:
+                    sql_info['is_correct'] = False
+            else:
+                sql_info['is_correct'] = False
+    finally:
+        db_connector.disconnect()
+    return all_sqls
+
+
+def _build_task_result_from_spill(task, spill: dict, timeout_s: int) -> Optional[dict]:
+    """Re-select from spilled partial rollouts (R4/gated); gold only for eval labels."""
+    from workflows.mcts_v4.utils.task_spill import (
+        collect_all_sqls,
+        select_sql_from_spill,
+        spill_has_selectable_candidates,
+    )
+
+    idx, sample = task[0], task[1]
+    gold_sqls = task[3]
+    multi_base_urls = task[5]
+    qid = str(sample.get('question_id', idx))
+    rss = spill.get('rollout_stats') or []
+    if not spill_has_selectable_candidates(rss):
+        return None
+
+    llm_config = None
+    if multi_base_urls and len(multi_base_urls) > 0:
+        api_key = os.environ.get("VLLM_API_KEY", "dummy-key")
+        config_list = []
+        for base_url in multi_base_urls:
+            try:
+                model = pick_model(base_url, api_key)
+            except Exception:
+                model = os.environ.get("VLLM_MODEL", "unknown")
+            config_list.append({"model": model, "api_key": api_key, "base_url": base_url})
+        llm_config = {"config_list": config_list, "temperature": 0.2}
+    else:
+        try:
+            llm_config = get_llm_config(temperature=0.2, auto_select=True)
+        except Exception:
+            llm_config = None
+
+    db_connector = build_db_connector(sample['db'])
+    try:
+        predicted_sql = select_sql_from_spill(
+            spill, db_connector=db_connector, llm_config=llm_config
+        )
+    finally:
+        db_connector.disconnect()
+
+    if not (predicted_sql or "").strip():
+        return None
+
+    all_sqls = collect_all_sqls(rss)
+    gold_sql = gold_sqls.get(qid) if gold_sqls else None
+    if gold_sql:
+        all_sqls = _annotate_all_sqls_with_gold(all_sqls, gold_sql, sample['db'])
+
+    gold_match = None
+    if gold_sql:
+        db_connector = build_db_connector(sample['db'])
+        try:
+            gold_match = compare_with_gold(predicted_sql, gold_sql, db_connector=db_connector)
+        finally:
+            db_connector.disconnect()
+
+    spill_stats = dict(spill.get('stats') or {})
+    stats_obj = {
+        'timeout_spill': True,
+        'original_task_timeout_s': timeout_s,
+        'rollout_count': len(rss),
+    }
+    if spill_stats.get('timing'):
+        stats_obj['timing'] = spill_stats['timing']
+    if gold_sqls and qid in gold_sqls:
+        stats_obj['gold_match'] = gold_match
+        stats_obj['gold_sql'] = gold_sqls[qid]
+
+    print(f"  ↳ qid={qid} 使用 task spill（{len(rss)} rollout 候选）+ selector 重选")
+    ret = {
+        'idx': idx,
+        'qid': qid,
+        'sql': predicted_sql,
+        'stats': stats_obj,
+        'gold_match': gold_match,
+        'all_sqls_with_attributes': all_sqls,
+        'rollout_stats': rss,
+        'sub_questions': spill.get('sub_questions') or [],
+    }
+    traces = spill.get('decompose_expand_traces') or []
+    if traces:
+        ret['decompose_expand_traces'] = traces
+    return ret
 
 
 def _empty_timeout_result(task, timeout_s: int, fallback_failed: bool = False) -> dict:
@@ -282,7 +389,17 @@ def _run_task_in_subprocess(task, timeout_s: int):
 
 
 def _resolve_task_after_timeout(task, timeout_s: int, fallback_timeout_s: int):
-    """On timeout: run a 1-rollout fallback, else persist an empty timed-out record."""
+    """On timeout: partial spill + selector, else 1-rollout fallback, else empty record."""
+    from workflows.mcts_v4.utils.task_spill import read_task_spill, task_spill_enabled
+
+    qid = str(task[1].get('question_id', task[0]))
+    if task_spill_enabled():
+        spill = read_task_spill(qid)
+        if spill:
+            spilled = _build_task_result_from_spill(task, spill, timeout_s)
+            if spilled and spilled.get('sql'):
+                return spilled
+
     fb = _run_task_in_subprocess(_fast_fallback_task(task), fallback_timeout_s)
     if fb and fb.get('sql'):
         fb.setdefault('stats', {})
@@ -497,13 +614,17 @@ def main():
     parser.add_argument("--max_cte_nodes", type=int, default=5, help="每次扩展节点时生成的CTE变体数量（默认3）")
     parser.add_argument("--max_depth", type=int, default=None, help="MCTS树最大深度/CTE最大步数（默认8，如果提供则覆盖）")
     parser.add_argument("--rollouts_per_iteration", type=int, default=8, help="每次迭代的rollout数量（默认8）")
-    parser.add_argument("--num_sql_variants", type=int, default=5, help="每个rollout末尾生成的SQL变体数量（默认5）")
+    parser.add_argument("--num_sql_variants", type=int, default=6, help="每个rollout末尾生成的SQL变体数量（默认6）")
     parser.add_argument("--strategy_mode", type=str, default=None, 
                        help="策略模式：FORCE_S1/S2/S3/S4/S5, NONE, LLM_PICK_ONCE（默认None，使用全局配置FORCE_S4）")
     parser.add_argument("--task_timeout", type=int, default=600,
                        help="单个任务的最大超时时间（秒），默认600秒（10分钟）。超时后尝试 1-rollout fallback")
     parser.add_argument("--timeout_fallback_secs", type=int, default=180,
                        help="主任务硬超时后的 fast fallback 时限（秒），默认180")
+    parser.add_argument("--task_spill_interval", type=int, default=90,
+                       help="task spill 心跳写盘间隔（秒），默认90；设 0 则仅每 rollout 写")
+    parser.add_argument("--no_task_spill", action="store_true",
+                       help="禁用 .task_spill 部分 rollout 超时恢复")
     parser.add_argument("--skip_processed", action="store_true",
                        help="跳过已处理的问题（检查JSON输出文件中是否已有结果）")
     parser.add_argument("--collect_stats", action="store_true", default=True,
@@ -523,6 +644,18 @@ def main():
 
     random.seed(args.random_seed)
     np.random.seed(args.random_seed)
+
+    if args.json_out and not args.no_task_spill:
+        from workflows.mcts_v4.utils.task_spill import spill_dir_from_json_out
+
+        spill_dir = spill_dir_from_json_out(args.json_out)
+        spill_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["MCTS_TASK_SPILL_DIR"] = str(spill_dir)
+        os.environ["MCTS_TASK_SPILL"] = "1"
+        if args.task_spill_interval > 0:
+            os.environ["MCTS_TASK_SPILL_INTERVAL_S"] = str(args.task_spill_interval)
+    elif args.no_task_spill:
+        os.environ["MCTS_TASK_SPILL"] = "0"
 
     if args.qids_file:
         with open(args.qids_file, "r", encoding="utf-8") as f:

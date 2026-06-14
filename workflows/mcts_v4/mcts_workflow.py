@@ -313,37 +313,47 @@ class MCTSWorkflow:
         
         # 串行执行 rollout，收集每个rollout的统计信息
         rollout_stats_list = []
+        self._partial_rollout_stats_list = rollout_stats_list
+        self._solve_qid = qid
+        self._solve_question = question
+        self._solve_schema_info = schema_info
+        spill_stop = self._start_task_spill_heartbeat()
         
         # 获取evidence信息（从additional_context或question中提取）
         evidence = additional_context if additional_context else ""
         
-        if use_multi_plan and plan_deduped:
-            schedule = build_rollout_schedule(plan_deduped, self.rollouts_per_iteration)
-            for rollout_idx, active_plan in enumerate(schedule):
-                sq = plan_to_sub_questions(active_plan)
-                self._reset_tree_for_plan(
-                    question, schema_info, additional_context, sq
-                )
-                reward, selected_sql, rollout_stats = self._execute_mcts_rollout_v4()
-                rollout_stats["rollout_id"] = rollout_idx + 1
-                rollout_stats["plan_id"] = active_plan.get("plan_id")
-                rollout_stats["plan_strategy"] = active_plan.get("strategy")
-                rollout_stats["plan_hash"] = active_plan.get("plan_hash")
-                rollout_stats["is_quick_path"] = False
-                rollout_stats_list.append(rollout_stats)
-                pid = active_plan.get("plan_id") or "unknown"
-                per_plan_rollout_stats.setdefault(pid, []).append(rollout_stats)
-                self._accumulate_prior_rollout_sqls(rollout_stats)
-        else:
-            for rollout in range(self.rollouts_per_iteration):
-                if self.use_decompose_flow:
+        try:
+            if use_multi_plan and plan_deduped:
+                schedule = build_rollout_schedule(plan_deduped, self.rollouts_per_iteration)
+                for rollout_idx, active_plan in enumerate(schedule):
+                    sq = plan_to_sub_questions(active_plan)
+                    self._reset_tree_for_plan(
+                        question, schema_info, additional_context, sq
+                    )
                     reward, selected_sql, rollout_stats = self._execute_mcts_rollout_v4()
-                else:
-                    reward, selected_sql, rollout_stats = self._execute_mcts_rollout()
-                rollout_stats['rollout_id'] = rollout + 1
-                rollout_stats['is_quick_path'] = False
-                rollout_stats_list.append(rollout_stats)
-                self._accumulate_prior_rollout_sqls(rollout_stats)
+                    rollout_stats["rollout_id"] = rollout_idx + 1
+                    rollout_stats["plan_id"] = active_plan.get("plan_id")
+                    rollout_stats["plan_strategy"] = active_plan.get("strategy")
+                    rollout_stats["plan_hash"] = active_plan.get("plan_hash")
+                    rollout_stats["is_quick_path"] = False
+                    rollout_stats_list.append(rollout_stats)
+                    pid = active_plan.get("plan_id") or "unknown"
+                    per_plan_rollout_stats.setdefault(pid, []).append(rollout_stats)
+                    self._accumulate_prior_rollout_sqls(rollout_stats)
+                    self._write_task_spill_partial()
+            else:
+                for rollout in range(self.rollouts_per_iteration):
+                    if self.use_decompose_flow:
+                        reward, selected_sql, rollout_stats = self._execute_mcts_rollout_v4()
+                    else:
+                        reward, selected_sql, rollout_stats = self._execute_mcts_rollout()
+                    rollout_stats['rollout_id'] = rollout + 1
+                    rollout_stats['is_quick_path'] = False
+                    rollout_stats_list.append(rollout_stats)
+                    self._accumulate_prior_rollout_sqls(rollout_stats)
+                    self._write_task_spill_partial()
+        finally:
+            self._stop_task_spill_heartbeat(spill_stop)
 
         from .query_clarifier.config import ENV_TRACE_PATH, clarify_enabled
         from .query_clarifier.integration import maybe_apply_clarify
@@ -1962,6 +1972,57 @@ class MCTSWorkflow:
         
         return result
     
+    def _write_task_spill_partial(self) -> None:
+        """Persist partial rollout_stats for timeout recovery (no gold labels)."""
+        from .utils.task_spill import build_spill_payload, task_spill_enabled, write_task_spill
+
+        if not task_spill_enabled():
+            return
+        rss = list(getattr(self, "_partial_rollout_stats_list", []) or [])
+        sub_qs: List[Any] = []
+        if self.mcts_tree.root is not None:
+            sub_qs = getattr(self.mcts_tree.root, "sub_questions", []) or []
+        payload = build_spill_payload(
+            qid=str(getattr(self, "_solve_qid", 0)),
+            idx=int(getattr(self, "_solve_qid", 0) or 0),
+            question=getattr(self, "_solve_question", "") or "",
+            schema_info=getattr(self, "_solve_schema_info", "") or "",
+            rollout_stats_list=rss,
+            bootstrap_sql=getattr(self, "_bootstrap_direct_sql", None),
+            sub_questions=sub_qs,
+            decompose_expand_traces=list(getattr(self, "_v4_decompose_expand_traces", []) or []),
+            timing=dict(getattr(self, "_timing", {}) or {}),
+        )
+        write_task_spill(payload)
+
+    def _start_task_spill_heartbeat(self):
+        from .utils.task_spill import spill_interval_s, task_spill_enabled
+
+        if not task_spill_enabled():
+            return None
+        if spill_interval_s() <= 0:
+            return None
+        import threading
+
+        stop = threading.Event()
+        interval = spill_interval_s()
+
+        def _loop() -> None:
+            while not stop.wait(interval):
+                try:
+                    self._write_task_spill_partial()
+                except Exception:
+                    pass
+
+        t = threading.Thread(target=_loop, name="task-spill-heartbeat", daemon=True)
+        t.start()
+        return stop
+
+    @staticmethod
+    def _stop_task_spill_heartbeat(stop) -> None:
+        if stop is not None:
+            stop.set()
+
     def _accumulate_prior_rollout_sqls(self, rollout_stats: Dict[str, Any]) -> None:
         """Collect SQL from completed rollouts for reversed schema linking on later rollouts."""
         seen = set(self._prior_rollout_sqls)

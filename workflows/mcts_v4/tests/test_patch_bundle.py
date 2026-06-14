@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from workflows.mcts_v4.utils.schema_diversity import (
@@ -177,6 +178,98 @@ class TestExecTimeTiebreak(unittest.TestCase):
         self.assertEqual(picked.upper(), "SELECT 1")
         os.environ.pop("MCTS_EXEC_TIME_TIEBREAK", None)
         clear_execution_time_cache()
+
+
+class TestTaskSpill(unittest.TestCase):
+    def setUp(self):
+        self._old_env = os.environ.get("MCTS_TASK_SPILL_DIR")
+        self._tmpdir = Path(os.environ.get("TMPDIR", "/tmp")) / "task_spill_test"
+        self._tmpdir.mkdir(parents=True, exist_ok=True)
+        os.environ["MCTS_TASK_SPILL_DIR"] = str(self._tmpdir)
+        os.environ["MCTS_TASK_SPILL"] = "1"
+
+    def tearDown(self):
+        if self._old_env is None:
+            os.environ.pop("MCTS_TASK_SPILL_DIR", None)
+        else:
+            os.environ["MCTS_TASK_SPILL_DIR"] = self._old_env
+        for p in self._tmpdir.glob("*.json"):
+            p.unlink(missing_ok=True)
+
+    def test_write_read_and_select(self):
+        from workflows.mcts_v4.utils.task_spill import (
+            build_spill_payload,
+            read_task_spill,
+            select_sql_from_spill,
+            spill_has_selectable_candidates,
+            write_task_spill,
+        )
+
+        rss = [
+            {
+                "rollout_id": 1,
+                "selected_sql": "SELECT 1",
+                "reward": 1.0,
+                "result_buckets": {"sig_a": 2},
+                "all_sql_variants": [
+                    {
+                        "sql": "SELECT 1",
+                        "reward": 1.0,
+                        "result_signature": "sig_a",
+                        "valid": True,
+                        "result_row_count": 1,
+                    }
+                ],
+            },
+            {
+                "rollout_id": 2,
+                "selected_sql": "SELECT 2",
+                "reward": 0.5,
+                "result_buckets": {"sig_b": 1},
+                "all_sql_variants": [
+                    {
+                        "sql": "SELECT 2",
+                        "reward": 0.5,
+                        "result_signature": "sig_b",
+                        "valid": True,
+                        "result_row_count": 1,
+                    }
+                ],
+            },
+        ]
+        payload = build_spill_payload(
+            qid="99",
+            idx=99,
+            question="q",
+            schema_info="schema",
+            rollout_stats_list=rss,
+        )
+        self.assertTrue(spill_has_selectable_candidates(payload["rollout_stats"]))
+        write_task_spill(payload)
+        loaded = read_task_spill("99")
+        self.assertIsNotNone(loaded)
+        self.assertEqual(len(loaded["rollout_stats"]), 2)
+        os.environ["MCTS_SELECTOR_STRATEGY"] = "R4"
+        sql = select_sql_from_spill(loaded, db_connector=None, llm_config=None)
+        self.assertIn(sql.upper(), ("SELECT 1", "SELECT 2"))
+        os.environ.pop("MCTS_SELECTOR_STRATEGY", None)
+
+    def test_bootstrap_merged_when_no_rollouts(self):
+        from workflows.mcts_v4.utils.task_spill import (
+            build_spill_payload,
+            spill_has_selectable_candidates,
+        )
+
+        payload = build_spill_payload(
+            qid="100",
+            idx=100,
+            question="q",
+            schema_info="schema",
+            rollout_stats_list=[],
+            bootstrap_sql="SELECT bootstrap",
+        )
+        self.assertTrue(spill_has_selectable_candidates(payload["rollout_stats"]))
+        self.assertEqual(payload["rollout_stats"][0]["source"], "bootstrap_direct_sql")
 
 
 if __name__ == "__main__":
