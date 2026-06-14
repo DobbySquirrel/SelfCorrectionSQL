@@ -5,7 +5,7 @@
 """
 
 import autogen
-from typing import Dict, List, Any
+from typing import Any, Dict, List, Optional
 import Levenshtein
 import concurrent.futures
 import threading
@@ -310,6 +310,81 @@ class CompleteSQLGenerator:
         
         return "\n".join(formatted_info)
     
+    def generate_single_bootstrap_sql(
+        self,
+        node,
+        *,
+        global_binding_block: str = "",
+        temperature: float = 0.3,
+        model_counter: Optional[List[int]] = None,
+        model_lock: Optional[threading.Lock] = None,
+    ) -> tuple:
+        """
+        One-shot complete SQL for rollout-1 reversed schema bootstrap.
+        Uses global binding hint in additional_context; no preceding CTE required.
+        Returns (sql, audit_dict).
+        """
+        import time
+
+        audit: Dict[str, Any] = {
+            "strategy": "bootstrap_direct_sql",
+            "llm_calls": 0,
+            "ok": False,
+            "elapsed_s": 0.0,
+            "temperature": temperature,
+        }
+        t0 = time.time()
+        ctx = node.additional_context or ""
+        block = (global_binding_block or "").strip()
+        if block:
+            ctx = f"{ctx.strip()}\n\n{block}" if ctx.strip() else block
+
+        preceding_cte_info = self._get_preceding_cte_info(node)
+        user_input = f"""
+**Natural language question**: {node.question}
+**Database schema**: {node.schema_info}
+**Additional context**: {ctx}
+
+**Existing CTE and Results (Quick verification with LIMIT {self.cte_probe_limit})**: 
+{preceding_cte_info}/no_think
+"""
+        config = self.llm_config.get("config_list", [{}])[0]
+        model = config.get("model")
+        base_url = config.get("base_url")
+        api_key = config.get("api_key")
+        if self.multi_model_configs and model_counter is not None and model_lock is not None:
+            with model_lock:
+                idx = model_counter[0] % len(self.multi_model_configs)
+                model_counter[0] += 1
+            picked = self.multi_model_configs[idx]
+            model = picked.get("model", model)
+            base_url = picked.get("base_url", base_url)
+            api_key = picked.get("api_key", api_key)
+
+        system_message = self._get_sql_system_message()
+        try:
+            client = OpenAI(base_url=base_url, api_key=api_key, timeout=120.0)
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_input},
+                ],
+                temperature=temperature,
+                n=1,
+            )
+            audit["llm_calls"] = 1
+            content = response.choices[0].message.content or ""
+            sql = self._extract_sql_from_response(content)
+            audit["ok"] = bool(sql)
+            audit["elapsed_s"] = time.time() - t0
+            audit["llm_endpoint"] = (base_url or "").rstrip("/")
+            return sql or "", audit
+        except Exception as exc:
+            audit["error"] = f"{type(exc).__name__}: {exc}"
+            audit["elapsed_s"] = time.time() - t0
+            return "", audit
+
     def generate_multiple_complete_sqls_parallel(self, node, num_variants: int = 3, max_workers: int = 3) -> List[str]:
         """
         使用OpenAI的n参数一次性生成多个完整SQL变体（不需要并行调用）

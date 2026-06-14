@@ -168,6 +168,7 @@ def gated_r4_r8_select(
         top_k=min(top_k, len(gate_sqls)),
         vote_samples=vote_samples,
         llm_call=llm_call,
+        db_connector=db_connector,
     )
     mode = f"r8_{sel.mode}"
     meta.update(

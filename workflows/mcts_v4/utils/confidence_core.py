@@ -52,16 +52,24 @@ def _result_hash(sig: str) -> str:
     return str(int(hashlib.md5(sig.encode("utf-8")).hexdigest()[:16], 16))
 
 
-def _tiebreak_pick(rows: List[Tuple[str, int]]) -> str:
+def _tiebreak_pick(
+    rows: List[Tuple[str, int]],
+    *,
+    db_connector=None,
+) -> str:
     if not rows:
         return ""
-    sql, row_count = min(rows, key=lambda x: (x[1] if x[1] else 0, len(x[0] or "")))
-    return (sql or "").strip()
+    from .execution_tiebreak import tiebreak_pick_variants
+
+    variants = [(sql, 0.0, row_count) for sql, row_count in rows]
+    return tiebreak_pick_variants(variants, db_connector=db_connector)
 
 
 def _cluster_executed(
     sqls: List[str],
     execute_fn: Callable[[str], Tuple[Optional[pd.DataFrame], Optional[str]]],
+    *,
+    db_connector=None,
 ) -> List[dict]:
     by_sig: Dict[str, dict] = {}
     for sql in sqls:
@@ -81,7 +89,7 @@ def _cluster_executed(
         c["size"] += 1
     clusters = sorted(by_sig.values(), key=lambda x: (-x["size"], x["hash"]))
     for c in clusters:
-        c["rep_sql"] = _tiebreak_pick(c["variants"])
+        c["rep_sql"] = _tiebreak_pick(c["variants"], db_connector=db_connector)
         c["consistency"] = c["size"] / max(1, len([x for x in sqls if (x or "").strip()]))
     return clusters
 
@@ -227,6 +235,7 @@ def confidence_aware_selection(
     top_k: int = 3,
     vote_samples: int = 3,
     llm_call: Optional[Callable[[str], str]] = None,
+    db_connector=None,
 ) -> ConfidenceSelection:
     uniq = list(dict.fromkeys((s or "").strip() for s in sqls if (s or "").strip()))
     if not uniq:
@@ -234,7 +243,7 @@ def confidence_aware_selection(
     if len(uniq) == 1:
         return ConfidenceSelection(sql=uniq[0], mode="single", pairwise_calls=0, top_confidence=1.0)
 
-    clusters = _cluster_executed(uniq, execute_fn)
+    clusters = _cluster_executed(uniq, execute_fn, db_connector=db_connector)
     if not clusters:
         return ConfidenceSelection(sql=uniq[0], mode="no_exec", pairwise_calls=0, top_confidence=0.0)
 

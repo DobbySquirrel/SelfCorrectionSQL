@@ -77,13 +77,13 @@ class MCTSWorkflow:
         self.decompose_strategy = decompose_strategy
         self.db_connector = db_connector
         self.collect_stats_on_node_creation = collect_stats_on_node_creation
-        # Opt defaults: rollouts=8, sql_variants=5 (overridable via test_mcts / env)
+        # Opt defaults: rollouts=8, sql_variants=6 (overridable via test_mcts / env)
         self.rollouts_per_iteration = 8
         self.exploration_constant = 2.5  # 增加探索常数，从1.414增加到2.0，鼓励更多探索
         # 注意：UCB1的exploration项本身就会鼓励探索访问较少的节点，增加exploration_constant即可增强探索
         self.max_depth = 8  # MCTS树最大深度（对于有CTE的节点，depth = CTE路径长度）
         self.max_cte_nodes_per_iteration = 10  # 每次扩展节点时生成的CTE变体数量
-        self.num_sql_variants = 5  # 每个rollout末尾生成的SQL变体数量（opt 默认 5）
+        self.num_sql_variants = 6  # 每个rollout末尾生成的SQL变体数量
 
         # 统一 SQL 超时配置（秒）
         self.sql_timeout_s = 40
@@ -199,6 +199,12 @@ class MCTSWorkflow:
         self._column_binding_expand_audits: List[Dict[str, Any]] = []
         self._global_binding_block = ""
         self._global_binding_audit: Optional[Dict[str, Any]] = None
+        self._prior_rollout_sqls: List[str] = []
+        self._bootstrap_direct_sql: Optional[str] = None
+        self._bootstrap_direct_sql_audit: Optional[Dict[str, Any]] = None
+        from .utils.execution_tiebreak import clear_execution_time_cache
+
+        clear_execution_time_cache()
         _orig_max_depth = self.max_depth
         self._solve_max_depth_cap = _orig_max_depth
         
@@ -274,6 +280,30 @@ class MCTSWorkflow:
                     root_node.additional_context = augmented_ctx
                     additional_context = augmented_ctx
                     self._timing["column_binding_s"] = float(column_binding_audit.get("elapsed_s") or 0.0)
+
+            from .utils.cte_diverse import (
+                bootstrap_once_per_question_enabled,
+                reversed_bootstrap_direct_sql_enabled,
+                run_bootstrap_direct_sql_once,
+            )
+            from .utils.schema_diversity import reversed_schema_linking_enabled
+
+            if (
+                reversed_schema_linking_enabled()
+                and reversed_bootstrap_direct_sql_enabled()
+                and bootstrap_once_per_question_enabled()
+            ):
+                bsql, baudit = run_bootstrap_direct_sql_once(
+                    question=question,
+                    schema_info=schema_info,
+                    additional_context=root_node.additional_context or additional_context or "",
+                    global_binding_block=self._global_binding_block or "",
+                    llm_config=self.llm_config,
+                    multi_model_configs=getattr(self.complete_sql_generator, "multi_model_configs", None),
+                )
+                self._bootstrap_direct_sql = bsql or None
+                self._bootstrap_direct_sql_audit = baudit
+                self._timing["bootstrap_direct_sql_s"] = float(baudit.get("elapsed_s") or 0.0)
         
         # MCTS主循环：执行多个rollout
         solve_start_ts = _time_for_timing.time()
@@ -303,6 +333,7 @@ class MCTSWorkflow:
                 rollout_stats_list.append(rollout_stats)
                 pid = active_plan.get("plan_id") or "unknown"
                 per_plan_rollout_stats.setdefault(pid, []).append(rollout_stats)
+                self._accumulate_prior_rollout_sqls(rollout_stats)
         else:
             for rollout in range(self.rollouts_per_iteration):
                 if self.use_decompose_flow:
@@ -312,6 +343,7 @@ class MCTSWorkflow:
                 rollout_stats['rollout_id'] = rollout + 1
                 rollout_stats['is_quick_path'] = False
                 rollout_stats_list.append(rollout_stats)
+                self._accumulate_prior_rollout_sqls(rollout_stats)
 
         from .query_clarifier.config import ENV_TRACE_PATH, clarify_enabled
         from .query_clarifier.integration import maybe_apply_clarify
@@ -1899,6 +1931,9 @@ class MCTSWorkflow:
                 binding_audits=self._column_binding_expand_audits,
                 original_question=orig_q,
                 global_binding_block=self._global_binding_block or None,
+                prior_rollout_sqls=list(self._prior_rollout_sqls),
+                bootstrap_sql=self._bootstrap_direct_sql,
+                bootstrap_audit=self._bootstrap_direct_sql_audit,
             )
             for ba in self._column_binding_expand_audits[before_bind_n:]:
                 self._timing["column_binding_s"] += float(ba.get("elapsed_s") or 0.0)
@@ -1926,6 +1961,22 @@ class MCTSWorkflow:
         node.additional_context = original_additional_context
         
         return result
+    
+    def _accumulate_prior_rollout_sqls(self, rollout_stats: Dict[str, Any]) -> None:
+        """Collect SQL from completed rollouts for reversed schema linking on later rollouts."""
+        seen = set(self._prior_rollout_sqls)
+        candidates: List[str] = []
+        sel = (rollout_stats.get("selected_sql") or "").strip()
+        if sel:
+            candidates.append(sel)
+        for info in rollout_stats.get("all_sql_variants") or []:
+            s = (info.get("sql") or "").strip()
+            if s:
+                candidates.append(s)
+        for sql in candidates:
+            if sql not in seen:
+                seen.add(sql)
+                self._prior_rollout_sqls.append(sql)
     
    
     

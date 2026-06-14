@@ -1,0 +1,269 @@
+{
+  "created": "2026-06-14T02:41:16.035644+00:00",
+  "description": "30q cohort: Alpha/global recall ahead of min2 (headroom for recall patches)",
+  "qids": [
+    72,
+    640,
+    1359,
+    212,
+    1094,
+    77,
+    145,
+    955,
+    1187,
+    1270,
+    17,
+    25,
+    169,
+    201,
+    263,
+    694,
+    772,
+    1002,
+    1169,
+    1267,
+    1389,
+    1531,
+    197,
+    407,
+    518,
+    685,
+    31,
+    62,
+    149,
+    159
+  ],
+  "meta": {
+    "72": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "global_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "640": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "global_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1359": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "global_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "212": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1094": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "77": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "145": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "955": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1187": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1270": {
+      "reasons": [
+        "alpha_recall_min2_miss",
+        "alpha_hit1_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "17": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "25": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "169": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "201": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "263": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "694": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "772": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1002": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1169": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1267": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1389": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "1531": {
+      "reasons": [
+        "alpha_recall_min2_miss"
+      ],
+      "alpha_any": true,
+      "min2_recall": false
+    },
+    "197": {
+      "reasons": [
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": false,
+      "min2_recall": false
+    },
+    "407": {
+      "reasons": [
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": false,
+      "min2_recall": false
+    },
+    "518": {
+      "reasons": [
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": false,
+      "min2_recall": false
+    },
+    "685": {
+      "reasons": [
+        "global_recall_min2_miss"
+      ],
+      "alpha_any": false,
+      "min2_recall": false
+    },
+    "31": {
+      "reasons": [
+        "alpha_hit1_min2_miss",
+        "alpha_ahead_selection"
+      ],
+      "alpha_any": true,
+      "min2_recall": true
+    },
+    "62": {
+      "reasons": [
+        "alpha_hit1_min2_miss",
+        "alpha_ahead_selection"
+      ],
+      "alpha_any": true,
+      "min2_recall": true
+    },
+    "149": {
+      "reasons": [
+        "alpha_hit1_min2_miss",
+        "alpha_ahead_selection"
+      ],
+      "alpha_any": true,
+      "min2_recall": true
+    },
+    "159": {
+      "reasons": [
+        "alpha_hit1_min2_miss",
+        "alpha_ahead_selection"
+      ],
+      "alpha_any": true,
+      "min2_recall": true
+    }
+  },
+  "counts": {
+    "alpha_recall_min2_miss": 22,
+    "global_recall_min2_miss": 9
+  }
+}

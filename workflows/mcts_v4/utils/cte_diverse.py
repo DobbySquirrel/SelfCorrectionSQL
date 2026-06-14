@@ -28,6 +28,9 @@ ENV_ALPHA_DIVIDE_CONQUER = "MCTS_ALPHA_DIVIDE_CONQUER_PROMPT"
 ENV_SKIP_M_VERIFY = "MCTS_SKIP_M_VERIFY"
 ENV_TEMP_SWAP = "MCTS_CTE_TEMP_SWAP"
 ENV_PARALLEL_WORKERS = "MCTS_CTE_PARALLEL_WORKERS"
+ENV_DEDUP_BEFORE_REVISE = "MCTS_DEDUP_BEFORE_REVISE"
+ENV_REVERSED_BOOTSTRAP_DIRECT_SQL = "MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL"
+ENV_BOOTSTRAP_ONCE_PER_QUESTION = "MCTS_BOOTSTRAP_ONCE_PER_QUESTION"
 TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_template.txt"
 ALPHA_TEMPLATE_PATH = (
     Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_alpha_divide_conquer.txt"
@@ -83,15 +86,94 @@ def temp_swap_enabled() -> bool:
     return os.environ.get(ENV_TEMP_SWAP, "0") == "1"
 
 
-def mode_c_parallel_workers(n_specs: int) -> int:
+def dedup_before_revise_enabled() -> bool:
+    return os.environ.get(ENV_DEDUP_BEFORE_REVISE, "0") == "1"
+
+
+def reversed_bootstrap_direct_sql_enabled() -> bool:
+    """Rollout-1: parallel direct complete SQL + global hint to seed reversed schema."""
+    raw = os.environ.get(ENV_REVERSED_BOOTSTRAP_DIRECT_SQL, "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def bootstrap_once_per_question_enabled() -> bool:
+    """When bootstrap is on: 1 = one LLM call per question (v2); 0 = per expand (legacy E6)."""
+    raw = os.environ.get(ENV_BOOTSTRAP_ONCE_PER_QUESTION, "1").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def run_bootstrap_direct_sql_once(
+    *,
+    question: str,
+    schema_info: str,
+    additional_context: str = "",
+    global_binding_block: str = "",
+    llm_config: Dict[str, Any],
+    multi_model_configs: Optional[List[Dict[str, Any]]] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    """One LLM complete SQL per question (global hint); reused for all Rollout1 expands."""
+    from ..agents.complete_sql_generator import CompleteSQLGenerator
+
+    class _Node:
+        def __init__(self) -> None:
+            self.question = question
+            self.schema_info = schema_info
+            self.additional_context = additional_context
+            self.parent = None
+            self.cte = ""
+            self.execution_results: Dict[str, Any] = {}
+
+    gen = CompleteSQLGenerator(llm_config, multi_model_configs=multi_model_configs or [])
+    sql, audit = gen.generate_single_bootstrap_sql(
+        _Node(),
+        global_binding_block=global_binding_block,
+    )
+    audit = dict(audit or {})
+    audit["scope"] = "question_once"
+    return sql or "", audit
+
+
+def _normalize_sql_key(sql: str) -> str:
+    return " ".join((sql or "").split()).strip().lower()
+
+
+def dedupe_candidates_before_revise(
+    candidates: List[str],
+    meta_by_cte: Dict[str, Dict[str, Any]],
+) -> Tuple[List[str], int]:
+    """Drop byte-identical SQL (whitespace-normalized) before checker/revise passes."""
+    if not dedup_before_revise_enabled():
+        return candidates, 0
+    kept: List[str] = []
+    seen: set = set()
+    dropped = 0
+    for cte in candidates:
+        key = _normalize_sql_key(cte)
+        if not key:
+            dropped += 1
+            continue
+        if key in seen:
+            dropped += 1
+            continue
+        seen.add(key)
+        kept.append(cte)
+    # meta_by_cte keys are full cte strings; prune stale entries
+    stale = [k for k in meta_by_cte if _normalize_sql_key(k) not in seen]
+    for k in stale:
+        meta_by_cte.pop(k, None)
+    return kept, dropped
+
+
+def mode_c_parallel_workers(n_specs: int, *, extra: int = 0) -> int:
+    total = max(1, n_specs + extra)
     raw = os.environ.get(ENV_PARALLEL_WORKERS, "").strip()
     if raw:
         try:
-            return max(1, min(int(raw), max(1, n_specs)))
+            return max(1, min(int(raw), total))
         except ValueError:
             pass
     default = MODE_C_PARALLEL_WORKERS * 2 if temp_swap_enabled() else MODE_C_PARALLEL_WORKERS
-    return max(1, min(default, max(1, n_specs)))
+    return max(1, min(default, total))
 
 
 def expand_call_specs_with_temp_swap(call_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -468,18 +550,22 @@ def _execute_mode_c_call_spec(
     checker_context: Optional[Dict[str, Any]],
     ctx_saved: str,
     use_schema_div: bool,
+    prior_rollout_sqls: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Run one Mode C LLM branch (thread-safe; does not mutate node.additional_context)."""
     from .column_binding_cot import augment_additional_context_for_expand
+    from .schema_diversity import prepare_schema_for_temp, reversed_schema_linking_enabled
 
     temp = spec["temp"]
     n_req = spec["n"]
     use_binding = spec["use_binding"]
     binding_branch = spec.get("binding_branch")
+    schema_strategy = spec.get("schema_strategy")
     schema_override = None
     schema_audit = None
     ctx_for_prompt = ctx_saved or ""
     binding_audit: Optional[Dict[str, Any]] = None
+    effective_prior = list(prior_rollout_sqls or [])
 
     if use_binding:
         bound_ctx, expand_audit = augment_additional_context_for_expand(
@@ -500,15 +586,40 @@ def _execute_mode_c_call_spec(
             ctx_for_prompt = bound_ctx
 
     if use_schema_div:
-        schema_override, schema_audit = prepare_schema_for_temp(
-            temperature=temp,
-            question=question,
-            sub_question=sub_question,
-            schema_info=node.schema_info,
-            preceding_cte_info=preceding_cte_info,
-            llm_config=llm_config,
-            original_schema_info=original_schema,
-        )
+        if schema_strategy == "reversed_prior_rollout":
+            if not (effective_prior and reversed_schema_linking_enabled()):
+                return {
+                    "ctes": [],
+                    "audit": {"skipped": True, "reason": "no_prior_rollout_sql"},
+                    "meta": [],
+                    "binding_audit": None,
+                    "schema_audit": None,
+                    "checker_revision": [],
+                    "n_checker_llm_calls": 0,
+                    "n_checker_revised": 0,
+                }
+            schema_override, schema_audit = prepare_schema_for_temp(
+                temperature=temp,
+                question=question,
+                sub_question=sub_question,
+                schema_info=node.schema_info,
+                preceding_cte_info=preceding_cte_info,
+                llm_config=llm_config,
+                original_schema_info=original_schema,
+                prior_rollout_sqls=effective_prior,
+                schema_strategy_override="reversed_prior_rollout",
+            )
+        else:
+            schema_override, schema_audit = prepare_schema_for_temp(
+                temperature=temp,
+                question=question,
+                sub_question=sub_question,
+                schema_info=node.schema_info,
+                preceding_cte_info=preceding_cte_info,
+                llm_config=llm_config,
+                original_schema_info=original_schema,
+                prior_rollout_sqls=prior_rollout_sqls,
+            )
 
     model_config = _pick_model_config(llm_config, multi_model_configs, model_counter, model_lock)
     endpoint = (model_config.get("base_url") or "").rstrip("/")
@@ -583,6 +694,9 @@ def generate_diverse_mode_c(
     global_narrowed_schema: Optional[str] = None,
     global_schema_audit: Optional[Dict[str, Any]] = None,
     multi_model_configs: Optional[List[Dict[str, Any]]] = None,
+    prior_rollout_sqls: Optional[List[str]] = None,
+    bootstrap_sql: Optional[str] = None,
+    bootstrap_audit: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """Mode C: dual@0.3 plain+hint, per-temp schema diversity, parallel call specs."""
     temps = temperatures if temperatures is not None else MODE_C_TEMPERATURES
@@ -608,6 +722,11 @@ def generate_diverse_mode_c(
         "checker_revision": [],
         "n_checker_llm_calls": 0,
         "n_checker_revised": 0,
+        "dedup_before_revise": dedup_before_revise_enabled(),
+        "reversed_schema_linking": False,
+        "reversed_bootstrap_direct_sql": False,
+        "bootstrap_direct_sql": None,
+        "prior_rollout_sql_count": len(prior_rollout_sqls or []),
     }
     all_ctes: List[str] = []
     meta_by_cte: Dict[str, Dict[str, Any]] = {}
@@ -623,6 +742,31 @@ def generate_diverse_mode_c(
             column_binding_dual_at_temp,
             column_binding_replace_at_temp,
         )
+        from .schema_diversity import reversed_schema_linking_enabled
+
+        rollout1 = not (prior_rollout_sqls or [])
+        bootstrap_for_reversed = ""
+        bootstrap_audit_local: Optional[Dict[str, Any]] = None
+        if rollout1 and reversed_bootstrap_direct_sql_enabled():
+            if bootstrap_once_per_question_enabled():
+                bootstrap_for_reversed = (bootstrap_sql or "").strip()
+                bootstrap_audit_local = bootstrap_audit
+            else:
+                bsql, baudit = run_bootstrap_direct_sql_once(
+                    question=question,
+                    schema_info=node.schema_info,
+                    additional_context=node.additional_context or "",
+                    global_binding_block=global_binding_block or "",
+                    llm_config=llm_config,
+                    multi_model_configs=multi_model_configs,
+                )
+                bootstrap_for_reversed = (bsql or "").strip()
+                bootstrap_audit_local = {**(baudit or {}), "reused": False, "scope": "per_expand"}
+        effective_prior = list(prior_rollout_sqls or [])
+        if not effective_prior and bootstrap_for_reversed:
+            effective_prior = [bootstrap_for_reversed]
+
+        use_reversed = reversed_schema_linking_enabled() and bool(effective_prior)
 
         call_specs: List[Dict[str, Any]] = []
         for temp in temps:
@@ -643,6 +787,20 @@ def generate_diverse_mode_c(
                         "binding_branch": "hint" if use_binding else None,
                     }
                 )
+        if use_reversed:
+            call_specs.append(
+                {
+                    "temp": 0.9,
+                    "n": diverse_n_for_temp(0.9, default=n_per_call),
+                    "use_binding": False,
+                    "binding_branch": "reversed",
+                    "schema_strategy": "reversed_prior_rollout",
+                }
+            )
+            trace["reversed_schema_linking"] = True
+            trace["reversed_bootstrap_direct_sql"] = bool(rollout1 and bootstrap_for_reversed)
+            if rollout1 and bootstrap_audit_local:
+                trace["bootstrap_direct_sql"] = {**bootstrap_audit_local, "reused": bootstrap_once_per_question_enabled()}
         call_specs = expand_call_specs_with_temp_swap(call_specs)
         trace["n_llm_calls"] = len(call_specs)
 
@@ -674,6 +832,7 @@ def generate_diverse_mode_c(
                 checker_context=checker_context,
                 ctx_saved=ctx_saved,
                 use_schema_div=use_schema_div,
+                prior_rollout_sqls=effective_prior,
             )
 
         spec_results: List[Dict[str, Any]] = []
@@ -708,6 +867,8 @@ def generate_diverse_mode_c(
                 meta_by_cte[cte] = meta
 
         trace["n_raw_candidates"] = len(all_ctes)
+        all_ctes, n_norm_deduped = dedupe_candidates_before_revise(all_ctes, meta_by_cte)
+        trace["n_norm_deduped_dropped"] = n_norm_deduped
         if len(all_ctes) < 2:
             trace["diverse_fallback"] = True
             trace["diverse_fallback_reason"] = f"too_few_raw_ctes:{len(all_ctes)}"

@@ -73,19 +73,28 @@ class SQLSelector:
                     llm_config=llm_config,
                 )
                 return sql
-            return SQLSelector._select_r4_majority_then_reward(rollout_stats_list)
+            return SQLSelector._select_r4_majority_then_reward(
+                rollout_stats_list, db_connector=db_connector
+            )
         if sid == "R2":
-            return SQLSelector._select_r2_max_cluster_visit(rollout_stats_list)
+            return SQLSelector._select_r2_max_cluster_visit(
+                rollout_stats_list, db_connector=db_connector
+            )
         if sid == "R3":
-            return SQLSelector._select_r3_reward_x_size(rollout_stats_list)
+            return SQLSelector._select_r3_reward_x_size(
+                rollout_stats_list, db_connector=db_connector
+            )
         return SQLSelector.select_by_highest_reward(rollout_stats_list)
 
     @staticmethod
-    def _tiebreak_pick(variants: List[Tuple[str, float, int]]) -> str:
-        if not variants:
-            return ""
-        best = min(variants, key=lambda x: (x[2] if x[2] else 0, len(x[0] or "")))
-        return (best[0] or "").strip()
+    def _tiebreak_pick(
+        variants: List[Tuple[str, float, int]],
+        *,
+        db_connector=None,
+    ) -> str:
+        from .execution_tiebreak import tiebreak_pick_variants
+
+        return tiebreak_pick_variants(variants, db_connector=db_connector)
 
     @staticmethod
     def _build_clusters(rss: List[Dict[str, Any]]) -> Dict[str, _Cluster]:
@@ -113,7 +122,11 @@ class SQLSelector:
         return clusters
 
     @staticmethod
-    def _select_r2_max_cluster_visit(rollout_stats_list: List[Dict[str, Any]]) -> str:
+    def _select_r2_max_cluster_visit(
+        rollout_stats_list: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> str:
         clusters = SQLSelector._build_clusters(rollout_stats_list)
         if not clusters:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
@@ -122,10 +135,14 @@ class SQLSelector:
             f"[Selection] R2: max total_visit cluster sig={best_sig[:16]}… "
             f"visit={clusters[best_sig].total_visit}"
         )
-        return SQLSelector._tiebreak_pick(clusters[best_sig].variants)
+        return SQLSelector._tiebreak_pick(clusters[best_sig].variants, db_connector=db_connector)
 
     @staticmethod
-    def _select_r4_majority_then_reward(rollout_stats_list: List[Dict[str, Any]]) -> str:
+    def _select_r4_majority_then_reward(
+        rollout_stats_list: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> str:
         clusters = SQLSelector._build_clusters(rollout_stats_list)
         if not clusters:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
@@ -150,7 +167,7 @@ class SQLSelector:
             f"[Selection] R4: majority cluster sig={top_sig}… votes={top_v}"
         )
         if len(tied) == 1:
-            return SQLSelector._tiebreak_pick(clusters[tied[0]].variants)
+            return SQLSelector._tiebreak_pick(clusters[tied[0]].variants, db_connector=db_connector)
 
         best_r, best_sql = -1.0, ""
         for sig in tied:
@@ -159,11 +176,15 @@ class SQLSelector:
                 continue
             if c.max_rollout_reward > best_r:
                 best_r = c.max_rollout_reward
-                best_sql = SQLSelector._tiebreak_pick(c.variants)
+                best_sql = SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
         return best_sql
 
     @staticmethod
-    def _select_r3_reward_x_size(rollout_stats_list: List[Dict[str, Any]]) -> str:
+    def _select_r3_reward_x_size(
+        rollout_stats_list: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> str:
         clusters = SQLSelector._build_clusters(rollout_stats_list)
         if not clusters:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
@@ -175,7 +196,7 @@ class SQLSelector:
             f"[Selection] R3: max reward×size cluster sig={best_sig[:16]}… "
             f"score={clusters[best_sig].max_rollout_reward * max(1, clusters[best_sig].total_count):.4f}"
         )
-        return SQLSelector._tiebreak_pick(clusters[best_sig].variants)
+        return SQLSelector._tiebreak_pick(clusters[best_sig].variants, db_connector=db_connector)
 
     @staticmethod
     def select_by_highest_reward(rollout_stats_list: List[Dict[str, Any]]) -> str:

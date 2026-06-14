@@ -25,6 +25,8 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 ENV_SCHEMA_DIVERSITY = "MCTS_SCHEMA_DIVERSITY"
+ENV_FK_PK_CLOSURE = "MCTS_FK_PK_CLOSURE"
+ENV_REVERSED_SCHEMA_LINKING = "MCTS_REVERSED_SCHEMA_LINKING"
 LINKING_PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "schema_linking_prompt.txt"
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+TABLE\s+`?([^`\s(]+)`?\s*\(",
@@ -44,6 +46,16 @@ def schema_diversity_enabled() -> bool:
     from .cte_diverse import diverse_prompt_enabled
 
     return diverse_prompt_enabled()
+
+
+def fk_pk_closure_enabled() -> bool:
+    raw = os.environ.get(ENV_FK_PK_CLOSURE, "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def reversed_schema_linking_enabled() -> bool:
+    raw = os.environ.get(ENV_REVERSED_SCHEMA_LINKING, "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
 
 
 def _split_schema_parts(schema_info: str) -> Tuple[str, str, str]:
@@ -123,17 +135,85 @@ def _parse_fk_tables(fk_tail: str) -> Set[str]:
     return tables
 
 
+def _parse_pk_tables(ddl_body: str) -> Dict[str, Set[str]]:
+    """Map table_name -> set of PK column names (lower) from CREATE TABLE blocks."""
+    out: Dict[str, Set[str]] = {}
+    for name, ddl in parse_table_blocks(ddl_body):
+        pk_cols: Set[str] = set()
+        m = re.search(r"PRIMARY\s+KEY\s*\(([^)]+)\)", ddl, re.IGNORECASE)
+        if m:
+            for part in m.group(1).split(","):
+                col = part.strip().strip("`\"'[]")
+                if col:
+                    pk_cols.add(col.lower())
+        if pk_cols:
+            out[name] = pk_cols
+    return out
+
+
+def extract_tables_from_sql(sql: str) -> List[str]:
+    """Extract referenced table names from SQL (sqlglot if available, else regex)."""
+    s = (sql or "").strip()
+    if not s:
+        return []
+    try:
+        from sqlglot import parse_one, exp
+
+        ast = parse_one(s, dialect="sqlite", error_level="ignore")
+        names = {t.name.lower() for t in ast.find_all(exp.Table) if t.name}
+        return sorted(names)
+    except Exception:
+        pass
+    found: Set[str] = set()
+    for m in re.finditer(
+        r"\b(?:FROM|JOIN|INTO|UPDATE)\s+`?([A-Za-z_][\w]*)`?",
+        s,
+        re.IGNORECASE,
+    ):
+        found.add(m.group(1).lower())
+    return sorted(found)
+
+
+def extract_tables_from_sqls(sqls: List[str]) -> List[str]:
+    seen: Set[str] = set()
+    out: List[str] = []
+    for sql in sqls or []:
+        for t in extract_tables_from_sql(sql):
+            if t not in seen:
+                seen.add(t)
+                out.append(t)
+    return out
+
+
 def enforce_fk_closure(
     selected: List[str],
     schema_info: str,
     *,
     max_tables: int = 12,
+    fk_pk_enhanced: Optional[bool] = None,
 ) -> Tuple[List[str], List[str]]:
-    """Add FK-neighbor tables until closure (bounded)."""
+    """Add FK-neighbor tables until closure (bounded).
+
+    fk_pk_enhanced: None = follow MCTS_FK_PK_CLOSURE env; False = basic one-hop FK only.
+    """
     blocks = {n: d for n, d in parse_table_blocks(schema_info)}
     sel = {s.strip().lower() for s in selected if s}
-    _, _, fk_tail = _split_schema_parts(schema_info)
-    fk_tables = _parse_fk_tables(fk_tail)
+    _, ddl_body, fk_tail = _split_schema_parts(schema_info)
+
+    use_enhanced = fk_pk_closure_enabled() if fk_pk_enhanced is None else fk_pk_enhanced
+    if use_enhanced:
+        pk_map = _parse_pk_tables(ddl_body)
+        for t in list(sel):
+            if t in pk_map:
+                sel.add(t)
+        for name, ddl in blocks.items():
+            for m in re.finditer(r"REFERENCES\s+`?(\w+)`?", ddl, re.IGNORECASE):
+                ref = m.group(1).lower()
+                if name in sel:
+                    sel.add(ref)
+                elif ref in sel:
+                    sel.add(name)
+
     # also parse inline FOREIGN KEY in DDL
     for name, ddl in blocks.items():
         for m in re.finditer(r"REFERENCES\s+`?(\w+)`?", ddl, re.IGNORECASE):
@@ -153,6 +233,42 @@ def enforce_fk_closure(
         ordered = ordered[:max_tables]
     added = [t for t in ordered if t not in {s.strip().lower() for s in selected}]
     return ordered, added
+
+
+def prepare_schema_reversed_from_sqls(
+    *,
+    prior_sqls: List[str],
+    schema_info: str,
+    question: str = "",
+    sub_question: str = "",
+) -> Tuple[str, Dict[str, Any]]:
+    """
+    Build reduced schema by extracting tables from prior rollout SQLs + FK/PK closure.
+    Zero LLM cost (DeepEye ReversedLinker-style, without few-shot SQL gen).
+    """
+    audit: Dict[str, Any] = {
+        "strategy": "reversed_prior_rollout",
+        "llm_calls_per_cte": 0,
+        "prior_sql_count": len(prior_sqls or []),
+        "fk_pk_closure": False,
+    }
+    extracted = extract_tables_from_sqls(prior_sqls)
+    audit["extracted_tables"] = extracted
+    if not extracted:
+        audit["linking_ok"] = False
+        audit["linking_reason"] = "no_prior_sql"
+        return schema_info, audit
+
+    closed, added = enforce_fk_closure(extracted, schema_info, fk_pk_enhanced=False)
+    audit["linking_ok"] = True
+    audit["linking_reason"] = "reversed_from_prior_rollout"
+    audit["selected_tables"] = extracted
+    audit["closed_tables"] = closed
+    audit["fk_closure_added"] = added
+    audit["n_tables_after_closure"] = len(closed)
+    reduced = filter_schema_tables(schema_info, closed)
+    audit["n_tables"] = len(closed)
+    return reduced, audit
 
 
 def filter_schema_tables(schema_info: str, table_names: List[str]) -> str:
@@ -237,11 +353,21 @@ def prepare_schema_for_temp(
     preceding_cte_info: str,
     llm_config: Dict[str, Any],
     original_schema_info: str,
+    prior_rollout_sqls: Optional[List[str]] = None,
+    schema_strategy_override: Optional[str] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Return (schema_for_prompt, per_temp_audit_record).
     For 0.9: performs linking LLM call; no fallback to full schema on failure.
     """
+    if schema_strategy_override == "reversed_prior_rollout":
+        return prepare_schema_reversed_from_sqls(
+            prior_sqls=prior_rollout_sqls or [],
+            schema_info=original_schema_info or schema_info,
+            question=question,
+            sub_question=sub_question,
+        )
+
     strat = strategy_for_temperature(temperature)
     n_tables = len(parse_table_blocks(schema_info))
     audit: Dict[str, Any] = {
@@ -282,9 +408,15 @@ def prepare_schema_for_temp(
         return empty or schema_info[:200], audit
 
     selected = [str(t) for t in linking_obj["selected_tables"] if str(t).strip()]
+    if prior_rollout_sqls and reversed_schema_linking_enabled():
+        rev_tables = extract_tables_from_sqls(prior_rollout_sqls)
+        merged = list(dict.fromkeys([*selected, *rev_tables]))
+        audit["reversed_merged_tables"] = rev_tables
+        selected = merged
     closed, added = enforce_fk_closure(selected, original_schema_info or schema_info)
     audit["linking_ok"] = True
     audit["linking_reason"] = str(linking_obj.get("reason") or "")
+    audit["fk_pk_closure"] = fk_pk_closure_enabled()
     audit["selected_tables"] = selected
     audit["closed_tables"] = closed
     audit["fk_closure_added"] = added
