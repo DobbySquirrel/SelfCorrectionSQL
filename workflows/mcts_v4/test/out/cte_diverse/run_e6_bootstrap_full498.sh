@@ -49,7 +49,7 @@ export TASK_TIMEOUT="${TASK_TIMEOUT:-900}"
 export RESUME="${RESUME:-0}"
 export SKIP_VLLM_WAIT=1
 export POST_ANALYSIS=0
-export N_SHARDS="${N_SHARDS:-2}"
+export N_SHARDS="${N_SHARDS:-3}"
 export BASE_PORT="${BASE_PORT:-8000}"
 export PORT_STRIDE=100
 export MULTI_BASE_URLS="${MULTI_BASE_URLS:-http://127.0.0.1:8000/v1,http://127.0.0.1:8100/v1}"
@@ -186,6 +186,28 @@ _wait_shards_done() {
   done
 }
 
+cmd_merge_run468() {
+  python3 -u - <<PY
+import json
+from pathlib import Path
+
+out_dir = Path("${OUT_DIR}")
+shard_base = "${SHARD_BASENAME}"
+merged_path = Path("${JSON_OUT}")
+
+by_qid = {}
+for path in sorted(out_dir.glob(f"{shard_base}_w*.json")):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    by_qid.update({str(k): v for k, v in data.items()})
+    print(f"[merge] {path.name}: {len(data)} qids")
+
+merged = {k: by_qid[k] for k in sorted(by_qid, key=lambda x: int(x))}
+merged_path.parent.mkdir(parents=True, exist_ok=True)
+merged_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+print(f"[merge] total {len(merged)} qids -> {merged_path}")
+PY
+}
+
 cmd_merge_full498() {
   python3 -u - <<PY
 import json
@@ -206,7 +228,7 @@ cmd_full() {
     echo "[E6-full468] start $(date -Iseconds)"
     cmd_start
     _wait_shards_done
-    "${SCRIPT}" merge-shards
+    cmd_merge_run468
     echo "[E6-full468] shard merge -> ${JSON_OUT} $(date -Iseconds)"
     cmd_merge_full498
     cmd_report
@@ -214,7 +236,7 @@ cmd_full() {
 }
 
 cmd_merge() {
-  "${SCRIPT}" merge-shards
+  cmd_merge_run468
   cmd_merge_full498
 }
 
@@ -235,11 +257,21 @@ run468 = json.loads(Path(os.environ["RUN468_JSON"]).read_text()) if Path(os.envi
 final_p = Path(os.environ["FINAL_JSON"])
 final_d = json.loads(final_p.read_text()) if final_p.exists() else {}
 
+def _recall(rec):
+    if any(a.get("is_correct") for a in (rec.get("all_sqls_with_attributes") or [])):
+        return True
+    return False
+
+def _acc(rec):
+    if (rec.get("stats") or {}).get("timeout_fallback_failed"):
+        return False
+    return bool((rec.get("stats") or {}).get("gold_match"))
+
 def met(data, qs):
-    done = [q for q in qs if q in data and not data[q].get("error")]
-    r = sum(any(a.get("is_correct") for a in (data[q].get("all_sqls_with_attributes") or [])) for q in done)
-    h = sum(bool((data[q].get("stats") or {}).get("gold_match")) for q in done)
-    return len(done), r, h
+    n = len(qs)
+    r = sum(_recall(data.get(q, {})) for q in qs)
+    h = sum(_acc(data.get(q, {})) for q in qs)
+    return n, r, h
 
 print("=== E6 per-expand bootstrap full498 ===")
 print(f"gap30 reuse: {len(gap30)}  run468: {len(run468)}  merged: {len(final_d)}")
@@ -260,9 +292,9 @@ PY
 cmd_status() {
   local target n=0
   target="$(python3 -c "import json; print(len(json.load(open('${MANIFEST}'))['qids']))" 2>/dev/null || echo 468)"
-  for ((i = 0; i < N_SHARDS; i++)); do
-    local p="${OUT_DIR}/${SHARD_BASENAME}_w${i}.json"
-    [[ -f "${p}" ]] && n=$((n + $(python3 -c "import json; print(len(json.load(open('${p}'))))" 2>/dev/null || echo 0)))
+  for p in "${OUT_DIR}/${SHARD_BASENAME}"_w*.json; do
+    [[ -f "${p}" ]] || continue
+    n=$((n + $(python3 -c "import json; print(len(json.load(open('${p}'))))" 2>/dev/null || echo 0)))
   done
   [[ -f "${JSON_OUT}" ]] && n=$(python3 -c "import json; print(len(json.load(open('${JSON_OUT}'))))")
   local merged=0
