@@ -21,6 +21,8 @@ ARMS = {
     "E7 bootstrap+fk_pk": OUT / "v4_colbind_v2_dual03_min2sq_abl5_e7_bootstrap_fkpk_gap30_r12.json",
     "E8 v2 bootstrap+fk_link": OUT / "v4_colbind_v2_dual03_min2sq_abl5_e8_v2_bootstrap_fkpk_gap30_r12.json",
     "E9 bootstrap once": OUT / "v4_colbind_v2_dual03_min2sq_abl5_e9_bootstrap_once_gap30_r12.json",
+    "E10 combined 6path": OUT / "v4_colbind_v2_dual03_min2sq_abl5_e10_combined_6path_gap30_r12.json",
+    "E11 rev@0.6 p6": OUT / "v4_colbind_v2_dual03_min2sq_abl5_e11_rev06_p6_combined_gap30_r12.json",
 }
 
 

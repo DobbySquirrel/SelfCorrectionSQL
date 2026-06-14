@@ -510,7 +510,8 @@ def collect_diverse_ctes(
 
 
 MODE_C_TEMPERATURES = [0.3, 0.6, 0.9]
-MODE_C_PARALLEL_WORKERS = 4
+MODE_C_PARALLEL_WORKERS = 6
+MODE_C_REVERSED_PATH_TEMP = 0.6
 
 
 def _pick_model_config(
@@ -551,10 +552,11 @@ def _execute_mode_c_call_spec(
     ctx_saved: str,
     use_schema_div: bool,
     prior_rollout_sqls: Optional[List[str]] = None,
+    cached_narrow_linking: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Run one Mode C LLM branch (thread-safe; does not mutate node.additional_context)."""
     from .column_binding_cot import augment_additional_context_for_expand
-    from .schema_diversity import prepare_schema_for_temp, reversed_schema_linking_enabled
+    from .schema_diversity import prepare_schema_for_temp, reversed_schema_linking_enabled, combined_schema_linking_enabled
 
     temp = spec["temp"]
     n_req = spec["n"]
@@ -609,6 +611,30 @@ def _execute_mode_c_call_spec(
                 prior_rollout_sqls=effective_prior,
                 schema_strategy_override="reversed_prior_rollout",
             )
+        elif schema_strategy == "combined_narrow_reversed":
+            if not (effective_prior and combined_schema_linking_enabled()):
+                return {
+                    "ctes": [],
+                    "audit": {"skipped": True, "reason": "combined_schema_disabled"},
+                    "meta": [],
+                    "binding_audit": None,
+                    "schema_audit": None,
+                    "checker_revision": [],
+                    "n_checker_llm_calls": 0,
+                    "n_checker_revised": 0,
+                }
+            schema_override, schema_audit = prepare_schema_for_temp(
+                temperature=temp,
+                question=question,
+                sub_question=sub_question,
+                schema_info=node.schema_info,
+                preceding_cte_info=preceding_cte_info,
+                llm_config=llm_config,
+                original_schema_info=original_schema,
+                prior_rollout_sqls=effective_prior,
+                schema_strategy_override="combined_narrow_reversed",
+                cached_narrow_linking=cached_narrow_linking,
+            )
         else:
             schema_override, schema_audit = prepare_schema_for_temp(
                 temperature=temp,
@@ -619,6 +645,7 @@ def _execute_mode_c_call_spec(
                 llm_config=llm_config,
                 original_schema_info=original_schema,
                 prior_rollout_sqls=prior_rollout_sqls,
+                cached_narrow_linking=cached_narrow_linking,
             )
 
     model_config = _pick_model_config(llm_config, multi_model_configs, model_counter, model_lock)
@@ -724,6 +751,7 @@ def generate_diverse_mode_c(
         "n_checker_revised": 0,
         "dedup_before_revise": dedup_before_revise_enabled(),
         "reversed_schema_linking": False,
+        "combined_schema_linking": False,
         "reversed_bootstrap_direct_sql": False,
         "bootstrap_direct_sql": None,
         "prior_rollout_sql_count": len(prior_rollout_sqls or []),
@@ -742,7 +770,11 @@ def generate_diverse_mode_c(
             column_binding_dual_at_temp,
             column_binding_replace_at_temp,
         )
-        from .schema_diversity import reversed_schema_linking_enabled
+        from .schema_diversity import (
+            combined_schema_linking_enabled,
+            precompute_narrow_linking_cache,
+            reversed_schema_linking_enabled,
+        )
 
         rollout1 = not (prior_rollout_sqls or [])
         bootstrap_for_reversed = ""
@@ -788,10 +820,11 @@ def generate_diverse_mode_c(
                     }
                 )
         if use_reversed:
+            reversed_temp = MODE_C_REVERSED_PATH_TEMP
             call_specs.append(
                 {
-                    "temp": 0.9,
-                    "n": diverse_n_for_temp(0.9, default=n_per_call),
+                    "temp": reversed_temp,
+                    "n": diverse_n_for_temp(reversed_temp, default=n_per_call),
                     "use_binding": False,
                     "binding_branch": "reversed",
                     "schema_strategy": "reversed_prior_rollout",
@@ -801,8 +834,38 @@ def generate_diverse_mode_c(
             trace["reversed_bootstrap_direct_sql"] = bool(rollout1 and bootstrap_for_reversed)
             if rollout1 and bootstrap_audit_local:
                 trace["bootstrap_direct_sql"] = {**bootstrap_audit_local, "reused": bootstrap_once_per_question_enabled()}
+        if use_reversed and combined_schema_linking_enabled():
+            call_specs.append(
+                {
+                    "temp": 0.9,
+                    "n": diverse_n_for_temp(0.9, default=n_per_call),
+                    "use_binding": False,
+                    "binding_branch": "combined",
+                    "schema_strategy": "combined_narrow_reversed",
+                }
+            )
+            trace["combined_schema_linking"] = True
         call_specs = expand_call_specs_with_temp_swap(call_specs)
         trace["n_llm_calls"] = len(call_specs)
+
+        cached_narrow_linking: Optional[Dict[str, Any]] = None
+        if use_schema_div:
+            needs_narrow_linking = any(
+                spec.get("schema_strategy") is None and spec["temp"] > 0.75 for spec in call_specs
+            ) or trace.get("combined_schema_linking")
+            if needs_narrow_linking:
+                cached_narrow_linking = precompute_narrow_linking_cache(
+                    question=question,
+                    sub_question=sub_question,
+                    schema_info=original_schema,
+                    preceding_cte_info=preceding_cte_info,
+                    llm_config=llm_config,
+                )
+                trace["narrow_linking_cache"] = {
+                    "narrow_tables": cached_narrow_linking.get("narrow_tables"),
+                    "reused": False,
+                    "narrow_linking_ok": bool(cached_narrow_linking.get("narrow_tables")),
+                }
 
         ctx_saved = node.additional_context or ""
         model_counter = [0]
@@ -833,6 +896,7 @@ def generate_diverse_mode_c(
                 ctx_saved=ctx_saved,
                 use_schema_div=use_schema_div,
                 prior_rollout_sqls=effective_prior,
+                cached_narrow_linking=cached_narrow_linking,
             )
 
         spec_results: List[Dict[str, Any]] = []

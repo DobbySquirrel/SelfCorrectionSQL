@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 ENV_SCHEMA_DIVERSITY = "MCTS_SCHEMA_DIVERSITY"
 ENV_FK_PK_CLOSURE = "MCTS_FK_PK_CLOSURE"
 ENV_REVERSED_SCHEMA_LINKING = "MCTS_REVERSED_SCHEMA_LINKING"
+ENV_COMBINED_SCHEMA_LINKING = "MCTS_COMBINED_SCHEMA_LINKING"
 LINKING_PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "schema_linking_prompt.txt"
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+TABLE\s+`?([^`\s(]+)`?\s*\(",
@@ -55,6 +56,12 @@ def fk_pk_closure_enabled() -> bool:
 
 def reversed_schema_linking_enabled() -> bool:
     raw = os.environ.get(ENV_REVERSED_SCHEMA_LINKING, "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def combined_schema_linking_enabled() -> bool:
+    """6th Mode C branch: union narrow-linking schema + reversed prior-SQL schema."""
+    raw = os.environ.get(ENV_COMBINED_SCHEMA_LINKING, "0").strip().lower()
     return raw in ("1", "true", "yes", "on")
 
 
@@ -271,6 +278,128 @@ def prepare_schema_reversed_from_sqls(
     return reduced, audit
 
 
+def fetch_narrow_linking(
+    *,
+    question: str,
+    sub_question: str,
+    schema_info: str,
+    preceding_cte_info: str,
+    llm_config: Dict[str, Any],
+    cache: Optional[Dict[str, Any]] = None,
+) -> Tuple[Optional[Dict[str, Any]], str, List[str], Dict[str, Any]]:
+    """Resolve narrow schema-linking tables; reuse expand-level cache when provided."""
+    meta: Dict[str, Any] = {"reused": False}
+    if cache is not None:
+        meta["reused"] = True
+        obj = cache.get("linking_obj")
+        raw = str(cache.get("linking_raw") or "")
+        tables = [str(t) for t in (cache.get("narrow_tables") or []) if str(t).strip()]
+        return obj, raw, tables, meta
+
+    linking_obj, linking_raw = call_schema_linking(
+        llm_config=llm_config,
+        question=question,
+        sub_question=sub_question,
+        schema_info=schema_info,
+        preceding_cte_info=preceding_cte_info,
+        temperature=0.3,
+    )
+    narrow_tables: List[str] = []
+    if linking_obj and isinstance(linking_obj.get("selected_tables"), list):
+        narrow_tables = [str(t) for t in linking_obj["selected_tables"] if str(t).strip()]
+    return linking_obj, linking_raw, narrow_tables, meta
+
+
+def precompute_narrow_linking_cache(
+    *,
+    question: str,
+    sub_question: str,
+    schema_info: str,
+    preceding_cte_info: str,
+    llm_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """One LLM linking call per expand; shared by 0.9 two-step and combined paths."""
+    linking_obj, linking_raw, narrow_tables, meta = fetch_narrow_linking(
+        question=question,
+        sub_question=sub_question,
+        schema_info=schema_info,
+        preceding_cte_info=preceding_cte_info,
+        llm_config=llm_config,
+    )
+    return {
+        "linking_obj": linking_obj,
+        "linking_raw": linking_raw,
+        "narrow_tables": narrow_tables,
+        **meta,
+    }
+
+
+def prepare_schema_combined_narrow_reversed(
+    *,
+    question: str,
+    sub_question: str,
+    schema_info: str,
+    preceding_cte_info: str,
+    llm_config: Dict[str, Any],
+    original_schema_info: str,
+    prior_rollout_sqls: List[str],
+    cached_narrow_linking: Optional[Dict[str, Any]] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    """
+    6th path: merge path-3 narrow linking tables with path-5 reversed prior-SQL tables.
+    """
+    base_schema = original_schema_info or schema_info
+    reused = cached_narrow_linking is not None
+    audit: Dict[str, Any] = {
+        "strategy": "combined_narrow_reversed",
+        "llm_calls_per_cte": 1 if reused else 2,
+        "prior_sql_count": len(prior_rollout_sqls or []),
+        "narrow_linking_reused": reused,
+    }
+    _, linking_raw, narrow_tables, link_meta = fetch_narrow_linking(
+        llm_config=llm_config,
+        question=question,
+        sub_question=sub_question,
+        schema_info=base_schema,
+        preceding_cte_info=preceding_cte_info,
+        cache=cached_narrow_linking,
+    )
+    audit["narrow_linking_reused"] = bool(link_meta.get("reused"))
+    audit["linking_raw"] = linking_raw[:2000] if linking_raw else ""
+    audit["narrow_selected_tables"] = narrow_tables
+    audit["narrow_linking_ok"] = bool(narrow_tables)
+
+    reversed_tables = extract_tables_from_sqls(prior_rollout_sqls or [])
+    audit["reversed_extracted_tables"] = reversed_tables
+    if reversed_tables:
+        reversed_closed, reversed_added = enforce_fk_closure(
+            reversed_tables, base_schema, fk_pk_enhanced=False
+        )
+    else:
+        reversed_closed, reversed_added = [], []
+    audit["reversed_closed_tables"] = reversed_closed
+    audit["reversed_fk_closure_added"] = reversed_added
+
+    merged = list(dict.fromkeys([*narrow_tables, *reversed_closed]))
+    audit["merged_tables_before_closure"] = merged
+    if not merged:
+        audit["linking_ok"] = False
+        audit["linking_reason"] = "empty_narrow_and_reversed"
+        header, _, fk_tail = _split_schema_parts(base_schema)
+        empty = f"{header}{fk_tail}".strip() if header or fk_tail else ""
+        return empty or base_schema[:200], audit
+
+    closed, added = enforce_fk_closure(merged, base_schema, fk_pk_enhanced=False)
+    audit["linking_ok"] = True
+    audit["linking_reason"] = "combined_narrow_plus_reversed"
+    audit["closed_tables"] = closed
+    audit["fk_closure_added"] = added
+    audit["n_tables_after_closure"] = len(closed)
+    reduced = filter_schema_tables(base_schema, closed)
+    audit["n_tables"] = len(closed)
+    return reduced, audit
+
+
 def filter_schema_tables(schema_info: str, table_names: List[str]) -> str:
     header, _, fk_tail = _split_schema_parts(schema_info)
     want = {t.strip().lower() for t in table_names}
@@ -355,6 +484,7 @@ def prepare_schema_for_temp(
     original_schema_info: str,
     prior_rollout_sqls: Optional[List[str]] = None,
     schema_strategy_override: Optional[str] = None,
+    cached_narrow_linking: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Return (schema_for_prompt, per_temp_audit_record).
@@ -366,6 +496,17 @@ def prepare_schema_for_temp(
             schema_info=original_schema_info or schema_info,
             question=question,
             sub_question=sub_question,
+        )
+    if schema_strategy_override == "combined_narrow_reversed":
+        return prepare_schema_combined_narrow_reversed(
+            question=question,
+            sub_question=sub_question,
+            schema_info=schema_info,
+            preceding_cte_info=preceding_cte_info,
+            llm_config=llm_config,
+            original_schema_info=original_schema_info or schema_info,
+            prior_rollout_sqls=prior_rollout_sqls or [],
+            cached_narrow_linking=cached_narrow_linking,
         )
 
     strat = strategy_for_temperature(temperature)
@@ -388,16 +529,17 @@ def prepare_schema_for_temp(
 
     # two_step_linking @ 0.9
     audit["llm_calls_per_cte"] = 2
-    linking_obj, linking_raw = call_schema_linking(
+    linking_obj, linking_raw, narrow_tables, link_meta = fetch_narrow_linking(
         llm_config=llm_config,
         question=question,
         sub_question=sub_question,
         schema_info=original_schema_info or schema_info,
         preceding_cte_info=preceding_cte_info,
-        temperature=0.3,
+        cache=cached_narrow_linking,
     )
+    audit["narrow_linking_reused"] = bool(link_meta.get("reused"))
     audit["linking_raw"] = linking_raw[:2000] if linking_raw else ""
-    if not linking_obj or not isinstance(linking_obj.get("selected_tables"), list):
+    if not linking_obj or not narrow_tables:
         audit["linking_ok"] = False
         audit["linking_reason"] = "parse_failed"
         audit["selected_tables"] = []
@@ -407,7 +549,7 @@ def prepare_schema_for_temp(
         empty = f"{header}{fk_tail}".strip() if header or fk_tail else ""
         return empty or schema_info[:200], audit
 
-    selected = [str(t) for t in linking_obj["selected_tables"] if str(t).strip()]
+    selected = list(narrow_tables)
     if prior_rollout_sqls and reversed_schema_linking_enabled():
         rev_tables = extract_tables_from_sqls(prior_rollout_sqls)
         merged = list(dict.fromkeys([*selected, *rev_tables]))

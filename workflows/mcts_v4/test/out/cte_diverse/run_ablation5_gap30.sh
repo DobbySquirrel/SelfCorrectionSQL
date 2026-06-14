@@ -121,6 +121,18 @@ arm_env() {
       export MCTS_REVERSED_SCHEMA_LINKING=1
       export MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL=1
       ;;
+    e10|combined|six_path|combined_6path)
+      export MCTS_REVERSED_SCHEMA_LINKING=1
+      export MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL=1
+      export MCTS_BOOTSTRAP_ONCE_PER_QUESTION=0
+      export MCTS_COMBINED_SCHEMA_LINKING=1
+      ;;
+    e11|e10_tune|rev06_p6)
+      export MCTS_REVERSED_SCHEMA_LINKING=1
+      export MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL=1
+      export MCTS_BOOTSTRAP_ONCE_PER_QUESTION=0
+      export MCTS_COMBINED_SCHEMA_LINKING=1
+      ;;
     *)
       echo "unknown arm: ${arm}" >&2
       exit 1
@@ -139,6 +151,8 @@ arm_tag() {
     e7|bootstrap_fkpk|full_combo) echo "abl5_e7_bootstrap_fkpk" ;;
     e8|v2|bootstrap_once_fkpk) echo "abl5_e8_v2_bootstrap_fkpk" ;;
     e9|bootstrap_once|e6_v2) echo "abl5_e9_bootstrap_once" ;;
+    e10|combined|six_path|combined_6path) echo "abl5_e10_combined_6path" ;;
+    e11|e10_tune|rev06_p6) echo "abl5_e11_rev06_p6_combined" ;;
     *) echo "abl5_${1}" ;;
   esac
 }
@@ -165,7 +179,7 @@ run_arm() {
   export SQL_OUT="${JSON_OUT%.json}.txt"
   export LOG="${JSON_OUT%.json}.log"
   export ORCH_LOG="${OUT_DIR}/run_${MODEL_TAG}_gap30.log"
-  echo "[${tag}] flags: exec=${MCTS_EXEC_TIME_TIEBREAK} dedup=${MCTS_DEDUP_BEFORE_REVISE} rev=${MCTS_REVERSED_SCHEMA_LINKING} fk=${MCTS_FK_PK_CLOSURE} bootstrap=${MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL:-0}"
+  echo "[${tag}] flags: exec=${MCTS_EXEC_TIME_TIEBREAK} dedup=${MCTS_DEDUP_BEFORE_REVISE} rev=${MCTS_REVERSED_SCHEMA_LINKING} fk=${MCTS_FK_PK_CLOSURE} bootstrap=${MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL:-0} combined=${MCTS_COMBINED_SCHEMA_LINKING:-0}"
   "${SCRIPT}" prepare-shards
   "${SCRIPT}" start-sharded
 }
@@ -236,6 +250,8 @@ arms = [
     ("E7 bootstrap+fk_pk", "abl5_e7_bootstrap_fkpk", "v4_colbind_v2_dual03_min2sq_abl5_e7_bootstrap_fkpk_gap30_r12"),
     ("E8 v2 bootstrap+fk_link", "abl5_e8_v2_bootstrap_fkpk", "v4_colbind_v2_dual03_min2sq_abl5_e8_v2_bootstrap_fkpk_gap30_r12"),
     ("E9 bootstrap once", "abl5_e9_bootstrap_once", "v4_colbind_v2_dual03_min2sq_abl5_e9_bootstrap_once_gap30_r12"),
+    ("E10 combined 6path", "abl5_e10_combined_6path", "v4_colbind_v2_dual03_min2sq_abl5_e10_combined_6path_gap30_r12"),
+    ("E11 rev@0.6 p6", "abl5_e11_rev06_p6_combined", "v4_colbind_v2_dual03_min2sq_abl5_e11_rev06_p6_combined_gap30_r12"),
 ]
 for label, tag, base in arms:
     if base.endswith(".json"):
@@ -315,6 +331,28 @@ cmd_start_e9_screen() {
   cmd_status_screen
 }
 
+cmd_start_e10_screen() {
+  have_screen || { echo "screen not installed" >&2; exit 1; }
+  [[ -f "${MANIFEST}" ]] || cmd_manifest
+  local tag inner
+  tag="$(arm_tag e10)"
+  inner="bash '${SELF}' start e10 2>&1 | tee '${OUT_DIR}/run_abl5_${tag}_orch.log'; echo '[${tag} done]' \$(date -Iseconds)"
+  screen_launch "abl5_${tag}_orch" "${inner}"
+  echo "[E10] E6 + 6th path combined narrow+reversed schema; flags: rev=1 bootstrap=per_expand combined=1"
+  cmd_status_screen
+}
+
+cmd_start_e11_screen() {
+  have_screen || { echo "screen not installed" >&2; exit 1; }
+  [[ -f "${MANIFEST}" ]] || cmd_manifest
+  local tag inner
+  tag="$(arm_tag e11)"
+  inner="bash '${SELF}' start e11 2>&1 | tee '${OUT_DIR}/run_abl5_${tag}_orch.log'; echo '[${tag} done]' \$(date -Iseconds)"
+  screen_launch "abl5_${tag}_orch" "${inner}"
+  echo "[E11] E10 + path5 reversed temp=0.6 + parallel_workers=6 + narrow cache"
+  cmd_status_screen
+}
+
 cmd_report() {
   python3 -u "${PLAN_DIR}/report_ablation5_gap30.py"
 }
@@ -330,10 +368,12 @@ case "${1:-}" in
   start-e7-screen) cmd_start_e7_screen ;;
   start-e8-screen) cmd_start_e8_screen ;;
   start-e9-screen) cmd_start_e9_screen ;;
+  start-e10-screen) cmd_start_e10_screen ;;
+  start-e11-screen) cmd_start_e11_screen ;;
   status-screen|status) cmd_status_screen ;;
   report) cmd_report ;;
   *)
-    echo "usage: $0 {manifest|p0-offline|start [e1|e2|e3|e4|e5|e6|e7|e8|e9]|start-all|start-all-screen|start-e5-screen|start-e6-screen|start-e7-screen|start-e8-screen|start-e9-screen|status-screen|report}" >&2
+    echo "usage: $0 {manifest|p0-offline|start [e1|..|e11]|start-all|start-all-screen|start-e5-screen|start-e6-screen|start-e7-screen|start-e8-screen|start-e9-screen|start-e10-screen|start-e11-screen|status-screen|report}" >&2
     exit 1
     ;;
 esac

@@ -10,7 +10,9 @@ from workflows.mcts_v4.utils.schema_diversity import (
     extract_tables_from_sql,
     enforce_fk_closure,
     prepare_schema_reversed_from_sqls,
+    prepare_schema_combined_narrow_reversed,
     fk_pk_closure_enabled,
+    combined_schema_linking_enabled,
 )
 from workflows.mcts_v4.utils.cte_diverse import (
     dedupe_candidates_before_revise,
@@ -85,6 +87,62 @@ class TestReversedSchema(unittest.TestCase):
         os.environ["MCTS_BOOTSTRAP_ONCE_PER_QUESTION"] = "1"
         self.assertTrue(bootstrap_once_per_question_enabled())
         os.environ.pop("MCTS_BOOTSTRAP_ONCE_PER_QUESTION", None)
+
+    def test_combined_schema_linking_flag(self):
+        os.environ["MCTS_COMBINED_SCHEMA_LINKING"] = "1"
+        self.assertTrue(combined_schema_linking_enabled())
+        os.environ.pop("MCTS_COMBINED_SCHEMA_LINKING", None)
+
+    def test_prepare_schema_combined_narrow_reversed(self):
+        from unittest.mock import patch
+
+        sql = "SELECT * FROM satscores"
+        with patch("workflows.mcts_v4.utils.schema_diversity.call_schema_linking") as mock_link:
+            mock_link.return_value = ({"selected_tables": ["frpm"]}, "{}")
+            reduced, audit = prepare_schema_combined_narrow_reversed(
+                question="q",
+                sub_question="sq",
+                schema_info=SCHEMA,
+                preceding_cte_info="",
+                llm_config={"config_list": [{}]},
+                original_schema_info=SCHEMA,
+                prior_rollout_sqls=[sql],
+            )
+        self.assertTrue(audit["linking_ok"])
+        self.assertEqual(audit["strategy"], "combined_narrow_reversed")
+        self.assertFalse(audit.get("narrow_linking_reused"))
+        self.assertEqual(audit["llm_calls_per_cte"], 2)
+        self.assertIn("frpm", reduced.lower())
+        self.assertIn("satscores", reduced.lower())
+        mock_link.assert_called_once()
+
+    def test_prepare_schema_combined_reuses_narrow_cache(self):
+        from unittest.mock import patch
+
+        sql = "SELECT * FROM satscores"
+        cache = {
+            "linking_obj": {"selected_tables": ["frpm"]},
+            "linking_raw": "{}",
+            "narrow_tables": ["frpm"],
+            "reused": False,
+        }
+        with patch("workflows.mcts_v4.utils.schema_diversity.call_schema_linking") as mock_link:
+            reduced, audit = prepare_schema_combined_narrow_reversed(
+                question="q",
+                sub_question="sq",
+                schema_info=SCHEMA,
+                preceding_cte_info="",
+                llm_config={"config_list": [{}]},
+                original_schema_info=SCHEMA,
+                prior_rollout_sqls=[sql],
+                cached_narrow_linking=cache,
+            )
+        self.assertTrue(audit["linking_ok"])
+        self.assertTrue(audit["narrow_linking_reused"])
+        self.assertEqual(audit["llm_calls_per_cte"], 1)
+        self.assertIn("frpm", reduced.lower())
+        self.assertIn("satscores", reduced.lower())
+        mock_link.assert_not_called()
 
 
 class TestDedupBeforeRevise(unittest.TestCase):
