@@ -147,20 +147,14 @@ class SQLSelector:
         if not clusters:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
 
-        votes: Dict[str, int] = {}
-        for r in rollout_stats_list:
-            rb = r.get("result_buckets") or {}
-            if not rb:
-                continue
-            mc = max(rb.values())
-            for sig, cnt in rb.items():
-                if cnt == mc:
-                    votes[sig] = votes.get(sig, 0) + 1
+        from .r4_vote import collect_r4_cluster_votes
+
+        votes = collect_r4_cluster_votes(rollout_stats_list)
 
         if not votes:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
 
-        top_v = max(votes.values())
+        top_v = votes.most_common(1)[0][1]
         tied = [sig for sig, v in votes.items() if v == top_v]
         top_sig = tied[0][:16] if tied else "?"
         print(

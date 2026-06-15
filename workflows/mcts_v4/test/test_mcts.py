@@ -251,7 +251,11 @@ def _fast_fallback_task(task):
     return (idx, sample, parallel_workers, gold_sqls, ppls, multi_base_urls, fast_cfg, strategy_mode, collect_stats, use_decompose)
 
 
-def _annotate_all_sqls_with_gold(all_sqls, gold_sql, db_name):
+# Spill recovery: match MCTS rollout SQL exec cap (single_workflow.sql_timeout_s)
+SPILL_GOLD_COMPARE_TIMEOUT_S = float(os.environ.get("MCTS_SPILL_GOLD_COMPARE_TIMEOUT_S", "40"))
+
+
+def _annotate_all_sqls_with_gold(all_sqls, gold_sql, db_name, *, timeout_s: Optional[float] = None):
     if not gold_sql or not all_sqls:
         return all_sqls
     db_connector = build_db_connector(db_name)
@@ -260,7 +264,9 @@ def _annotate_all_sqls_with_gold(all_sqls, gold_sql, db_name):
             sql = sql_info.get('sql', '')
             if sql:
                 try:
-                    sql_info['is_correct'] = compare_with_gold(sql, gold_sql, db_connector=db_connector)
+                    sql_info['is_correct'] = compare_with_gold(
+                        sql, gold_sql, db_connector=db_connector, timeout_s=timeout_s
+                    )
                 except Exception:
                     sql_info['is_correct'] = False
             else:
@@ -316,14 +322,19 @@ def _build_task_result_from_spill(task, spill: dict, timeout_s: int) -> Optional
 
     all_sqls = collect_all_sqls(rss)
     gold_sql = gold_sqls.get(qid) if gold_sqls else None
+    spill_cmp_timeout = SPILL_GOLD_COMPARE_TIMEOUT_S
     if gold_sql:
-        all_sqls = _annotate_all_sqls_with_gold(all_sqls, gold_sql, sample['db'])
+        all_sqls = _annotate_all_sqls_with_gold(
+            all_sqls, gold_sql, sample['db'], timeout_s=spill_cmp_timeout
+        )
 
     gold_match = None
     if gold_sql:
         db_connector = build_db_connector(sample['db'])
         try:
-            gold_match = compare_with_gold(predicted_sql, gold_sql, db_connector=db_connector)
+            gold_match = compare_with_gold(
+                predicted_sql, gold_sql, db_connector=db_connector, timeout_s=spill_cmp_timeout
+            )
         finally:
             db_connector.disconnect()
 
@@ -502,7 +513,13 @@ def load_gold_sqls(gold_file: str) -> dict:
 
 
 
-def compare_with_gold(predicted_sql: str, gold_sql: str, db_connector: DatabaseConnector = None) -> bool:
+def compare_with_gold(
+    predicted_sql: str,
+    gold_sql: str,
+    db_connector: DatabaseConnector = None,
+    *,
+    timeout_s: Optional[float] = None,
+) -> bool:
     """
     比较预测SQL和gold SQL的执行结果是否相同
     
@@ -510,6 +527,7 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_connector: DatabaseC
         predicted_sql: 预测的SQL
         gold_sql: 标准答案SQL
         db_connector: 数据库连接器（如果提供，则执行SQL比较结果；否则回退到字符串比较）
+        timeout_s: 单条 SQL 执行超时（秒）；None 表示不限制
     
     Returns:
         bool: 如果结果匹配则为True，否则为False
@@ -518,9 +536,11 @@ def compare_with_gold(predicted_sql: str, gold_sql: str, db_connector: DatabaseC
     if db_connector is not None:
         try:
             # 执行gold SQL - execute_query返回(DataFrame, error)或(None, error)
-            gold_result, gold_error = db_connector.execute_query(gold_sql)
+            gold_result, gold_error = db_connector.execute_query(gold_sql, timeout_s=timeout_s)
             # 执行predicted SQL
-            predicted_result, predicted_error = db_connector.execute_query(predicted_sql)
+            predicted_result, predicted_error = db_connector.execute_query(
+                predicted_sql, timeout_s=timeout_s
+            )
             
             if gold_error is not None or predicted_error is not None or gold_result is None or predicted_result is None:
                 return False

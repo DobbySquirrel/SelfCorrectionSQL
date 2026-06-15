@@ -228,6 +228,43 @@ class TestClusterSignatureAndTiebreak(unittest.TestCase):
         self.assertFalse(variants_have_row_collision(variants))
         self.assertEqual(tiebreak_pick_variants(variants), "SELECT short")
 
+    def test_r4_all_buckets_votes_every_sig_in_rollout(self):
+        from workflows.mcts_v4.utils.r4_vote import ENV_CLUSTER_VOTE_MODE, collect_r4_cluster_votes
+
+        rss = [{"result_buckets": {"sig_a": 3, "sig_b": 1}}]
+        prev = os.environ.get(ENV_CLUSTER_VOTE_MODE)
+        try:
+            os.environ[ENV_CLUSTER_VOTE_MODE] = "mc"
+            self.assertEqual(dict(collect_r4_cluster_votes(rss)), {"sig_a": 1})
+            os.environ[ENV_CLUSTER_VOTE_MODE] = "all_buckets"
+            self.assertEqual(dict(collect_r4_cluster_votes(rss)), {"sig_a": 1, "sig_b": 1})
+        finally:
+            if prev is None:
+                os.environ.pop(ENV_CLUSTER_VOTE_MODE, None)
+            else:
+                os.environ[ENV_CLUSTER_VOTE_MODE] = prev
+
+    def test_vote_tie_gate_includes_all_tied_sigs(self):
+        from workflows.mcts_v4.utils.gated_selection import _analyze_r4_gate
+
+        rss = [
+            {
+                "reward": 1.0,
+                "leaf_visit_count": 1,
+                "result_buckets": {"sig_a": 1, "sig_b": 1, "sig_c": 1, "sig_d": 1},
+                "all_sql_variants": [
+                    {"sql": "SELECT 1", "valid": True, "result_signature": "sig_a", "result_row_count": 1},
+                    {"sql": "SELECT 2", "valid": True, "result_signature": "sig_b", "result_row_count": 1},
+                    {"sql": "SELECT 3", "valid": True, "result_signature": "sig_c", "result_row_count": 1},
+                    {"sql": "SELECT 4", "valid": True, "result_signature": "sig_d", "result_row_count": 1},
+                ],
+            }
+        ]
+        r4 = _analyze_r4_gate(rss, 0.7)
+        self.assertTrue(r4.ambiguous)
+        self.assertEqual(r4.gate_reason, "vote_tie")
+        self.assertEqual(set(r4.gate_sigs), {"sig_a", "sig_b", "sig_c", "sig_d"})
+
 
 class TestTaskSpill(unittest.TestCase):
     def setUp(self):

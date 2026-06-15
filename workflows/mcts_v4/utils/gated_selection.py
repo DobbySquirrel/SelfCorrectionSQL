@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -40,16 +39,10 @@ def confidence_mode_enabled(mode: Optional[str] = None) -> bool:
 
 
 def _analyze_r4_gate(rss: List[Dict[str, Any]], vote_margin: float) -> R4GateAnalysis:
+    from .r4_vote import collect_r4_cluster_votes
+
     clusters = SQLSelector._build_clusters(rss)
-    votes: Counter = Counter()
-    for r in rss:
-        rb = r.get("result_buckets") or {}
-        if not rb:
-            continue
-        mc = max(rb.values())
-        for sig, cnt in rb.items():
-            if cnt == mc:
-                votes[sig] += 1
+    votes = collect_r4_cluster_votes(rss)
 
     ranked = votes.most_common()
     if not ranked:
@@ -65,7 +58,7 @@ def _analyze_r4_gate(rss: List[Dict[str, Any]], vote_margin: float) -> R4GateAna
             ambiguous=True,
             gate_reason="vote_tie",
             ranked_votes=ranked,
-            gate_sigs=tied_top[:3],
+            gate_sigs=tied_top,
         )
 
     if len(ranked) >= 2 and ranked[1][1] >= vote_margin * top_v:

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 ENV_TIMEOUT_VOTE_MODE = "MCTS_R4_TIMEOUT_VOTE_MODE"
 ENV_TIMEOUT_VOTE_WEIGHT = "MCTS_R4_TIMEOUT_VOTE_WEIGHT"
 ENV_TIEBREAK = "MCTS_R4_TIEBREAK"
+ENV_CLUSTER_VOTE_MODE = "MCTS_R4_VOTE_MODE"
 
 
 def _norm_sql(sql: str) -> str:
@@ -29,6 +30,30 @@ def timeout_vote_weight() -> float:
 
 def tiebreak_mode() -> str:
     return os.environ.get(ENV_TIEBREAK, "rows").strip().lower()
+
+
+def cluster_vote_mode() -> str:
+    """mc: per-rollout vote only max-count bucket sigs; all_buckets: every sig in buckets +1."""
+    return os.environ.get(ENV_CLUSTER_VOTE_MODE, "all_buckets").strip().lower()
+
+
+def collect_r4_cluster_votes(rollout_stats_list: List[Dict[str, Any]]) -> Counter:
+    votes: Counter = Counter()
+    vm = cluster_vote_mode()
+    for r in rollout_stats_list or []:
+        rb = r.get("result_buckets") or {}
+        if not rb:
+            continue
+        if vm == "all_buckets":
+            for sig in rb:
+                if sig:
+                    votes[sig] += 1
+            continue
+        mc = max(rb.values())
+        for sig, cnt in rb.items():
+            if cnt == mc:
+                votes[sig] += 1
+    return votes
 
 
 def timeout_sql_norms(rollout_stats_list: List[Dict[str, Any]]) -> Set[str]:
@@ -82,25 +107,19 @@ def collect_r4_votes(
     timeout_sqls = timeout_sql_norms(rollout_stats_list) if mode != "off" else set()
     timeout_sigs = timeout_signatures(rollout_stats_list) if mode != "off" else set()
 
+    cluster_votes = collect_r4_cluster_votes(rollout_stats_list)
     votes: Counter = Counter()
-    for r in rollout_stats_list or []:
-        rb = r.get("result_buckets") or {}
-        if not rb:
+    for sig, base_w in cluster_votes.items():
+        penalty = cluster_timeout_penalty(sig, clusters, timeout_sqls)
+        if mode == "exclude" and (sig in timeout_sigs or penalty >= 1.0):
             continue
-        mc = max(rb.values())
-        for sig, _cnt in rb.items():
-            if _cnt != mc:
-                continue
-            penalty = cluster_timeout_penalty(sig, clusters, timeout_sqls)
-            if mode == "exclude" and (sig in timeout_sigs or penalty >= 1.0):
-                continue
-            w = 1.0
-            if mode == "downweight":
-                if sig in timeout_sigs:
-                    w = dw
-                elif penalty > 0:
-                    w = dw + (1.0 - dw) * (1.0 - penalty)
-            votes[sig] += w
+        w = base_w
+        if mode == "downweight":
+            if sig in timeout_sigs:
+                w = base_w * dw
+            elif penalty > 0:
+                w = base_w * (dw + (1.0 - dw) * (1.0 - penalty))
+        votes[sig] += w
     return votes, timeout_sqls
 
 

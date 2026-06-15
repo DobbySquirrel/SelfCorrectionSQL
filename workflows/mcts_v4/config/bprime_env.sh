@@ -41,3 +41,5 @@ export MAX_CTE_NODES="${MAX_CTE_NODES:-5}"
 # off | downweight | exclude
 export MCTS_R4_TIMEOUT_VOTE_MODE="${MCTS_R4_TIMEOUT_VOTE_MODE:-off}"
 export MCTS_R4_TIMEOUT_VOTE_WEIGHT="${MCTS_R4_TIMEOUT_VOTE_WEIGHT:-0.5}"
+# mc: per-rollout vote max-count bucket only; all_buckets: every sig in result_buckets +1
+export MCTS_R4_VOTE_MODE="${MCTS_R4_VOTE_MODE:-all_buckets}"

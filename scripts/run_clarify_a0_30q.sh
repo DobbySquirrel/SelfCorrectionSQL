@@ -8,6 +8,8 @@
 #   ./scripts/run_clarify_a0_30q.sh start-mcts     # 仅 MCTS（screen）
 #   ./scripts/run_clarify_a0_30q.sh start-both     # rollout8 → rollout20 串行（QwenCoder）
 #   ./scripts/run_clarify_a0_30q.sh start-sharded # 4 shard 并行，每 shard 独占 1 个 vLLM
+#   SHARD_MULTI_VLLM=1 MULTI_BASE_URLS="http://127.0.0.1:8000/v1,http://127.0.0.1:8100/v1" \
+#     N_SHARDS=4 ./scripts/run_clarify_a0_30q.sh start-sharded  # 每 shard 轮询 8000+8100
 #   ./scripts/run_clarify_a0_30q.sh start-sharded-both  # rollout8/20 各 4 shard + merge
 #   ./scripts/run_clarify_a0_30q.sh prepare-shards
 #   ./scripts/run_clarify_a0_30q.sh migrate-shards  # 合并 json → 各 shard json（续跑用）
@@ -60,6 +62,7 @@ cd "$ROOT_DIR"
 : "${PORT_STRIDE:=100}"
 : "${MULTI_BASE_URLS:=http://127.0.0.1:8000/v1,http://127.0.0.1:8100/v1,http://127.0.0.1:8200/v1,http://127.0.0.1:8300/v1}"
 : "${SHARD_MODE:=0}"
+: "${SHARD_MULTI_VLLM:=0}"
 : "${SHARD_BASENAME:=}"
 
 OUT_DIR="${OUT_DIR:-workflows/mcts_v4/test/out/clarify_a0_a2_${MODEL_TAG}}"
@@ -171,7 +174,7 @@ _mcts_py_invocation() {
   if [[ "${RESUME}" == "1" ]]; then
     cmd+=(--skip_processed)
   fi
-  if [[ -n "${MULTI_BASE_URLS}" && "${SHARD_MODE}" != "1" ]]; then
+  if [[ -n "${MULTI_BASE_URLS}" && ( "${SHARD_MODE}" != "1" || "${SHARD_MULTI_VLLM}" == "1" ) ]]; then
     cmd+=(--multi_base_urls "${MULTI_BASE_URLS}")
   fi
   if [[ "${MCTS_USE_DECOMPOSE_FLOW:-0}" == "1" ]]; then
@@ -404,13 +407,24 @@ cmd_start_sharded() {
       echo "[skip] ${screen_name} already running"
       continue
     fi
-    echo "[shard] w${i} port=${port} qids=${qids_file}"
+    if [[ "${SHARD_MULTI_VLLM}" == "1" ]]; then
+      echo "[shard] w${i} multi=${MULTI_BASE_URLS} qids=${qids_file}"
+    else
+      echo "[shard] w${i} port=${port} qids=${qids_file}"
+    fi
     local inner
     inner=$(cat <<EOF
 set -euo pipefail
 export RUN_INLINE=1
 export SHARD_MODE=1
-export MULTI_BASE_URLS=
+export SHARD_MULTI_VLLM='${SHARD_MULTI_VLLM}'
+if [[ "\${SHARD_MULTI_VLLM}" == "1" ]]; then
+  export MULTI_BASE_URLS='${MULTI_BASE_URLS}'
+else
+  export MULTI_BASE_URLS=
+  export VLLM_HOST='127.0.0.1'
+  export VLLM_PORT='${port}'
+fi
 export MCTS_USE_SIGNATURE_V2='${MCTS_USE_SIGNATURE_V2:-0}'
 export MCTS_SELECTOR_STRATEGY='${MCTS_SELECTOR_STRATEGY:-}'
 export MCTS_REWARD_CALIBRATED='${MCTS_REWARD_CALIBRATED:-0}'
@@ -434,8 +448,6 @@ export SHARD_BASENAME='${SHARD_BASENAME:-}'
 export ROOT_DIR='${ROOT_DIR}'
 export CONDA_BASE='${CONDA_BASE}'
 export CONDA_ENV='${CONDA_ENV}'
-export VLLM_HOST='127.0.0.1'
-export VLLM_PORT='${port}'
 export MODEL_TAG='${MODEL_TAG}'
 export ROLL_OUTS='${ROLL_OUTS}'
 export NUM_SQL_VARIANTS='${NUM_SQL_VARIANTS:-6}'
@@ -457,7 +469,11 @@ EOF
     screen_cmd "${screen_name}" "$inner"
     sleep 1
   done
-  echo "[started] ${N_SHARDS} shard workers (rollouts=${ROLL_OUTS}, 1 vLLM each)"
+  if [[ "${SHARD_MULTI_VLLM}" == "1" ]]; then
+    echo "[started] ${N_SHARDS} shard workers (rollouts=${ROLL_OUTS}, each shard: ${MULTI_BASE_URLS})"
+  else
+    echo "[started] ${N_SHARDS} shard workers (rollouts=${ROLL_OUTS}, 1 vLLM each)"
+  fi
   echo "  merge when done: $0 merge-shards ROLL_OUTS=${ROLL_OUTS}"
 }
 

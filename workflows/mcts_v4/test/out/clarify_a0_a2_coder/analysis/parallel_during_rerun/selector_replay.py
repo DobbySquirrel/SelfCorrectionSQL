@@ -113,15 +113,9 @@ def pick_r3(clusters: Dict[str, Cluster]) -> str:
 
 
 def pick_r4(rss: List[dict], clusters: Dict[str, Cluster]) -> str:
-    votes: Counter = Counter()
-    for r in rss:
-        rb = r.get("result_buckets") or {}
-        if not rb:
-            continue
-        mc = max(rb.values())
-        for sig, c in rb.items():
-            if c == mc:
-                votes[sig] += 1
+    from workflows.mcts_v4.utils.r4_vote import collect_r4_cluster_votes
+
+    votes = collect_r4_cluster_votes(rss)
     if not votes:
         return pick_r0(rss)
     top_v = votes.most_common(1)[0][1]
