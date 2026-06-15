@@ -1311,7 +1311,7 @@ class MCTSWorkflow:
             # 从本次 execution_results 里找与 best_key 匹配的那条结果
             for res in execution_results:
                 if res.get('valid', False):
-                    if MCTSUtils.create_result_signature(res) == best_key:
+                    if MCTSUtils.cluster_signature(res) == best_key:
                         best_result = res.get('query_result', None)
                         break
 
@@ -1532,7 +1532,7 @@ class MCTSWorkflow:
                         pass
                 if skip_verify:
                     if valid_exec:
-                        sig = MCTSUtils.create_result_signature(exec_res) if exec_res else ""
+                        sig = MCTSUtils.cluster_signature(exec_res) if exec_res else ""
                         valid_results.append({"cte": cte_text, "exec_res": exec_res, "signature": sig})
                     continue
                 valid, reason = self.cte_sufficient_checker.verify(
@@ -1544,7 +1544,7 @@ class MCTSWorkflow:
                     execution_valid=valid_exec,
                 )
                 if valid:
-                    sig = MCTSUtils.create_result_signature(exec_res) if exec_res else ""
+                    sig = MCTSUtils.cluster_signature(exec_res) if exec_res else ""
                     valid_results.append({"cte": cte_text, "exec_res": exec_res, "signature": sig})
                 else:
                     # 对齐 Alpha-SQL refine：传入执行结果摘要与预览，便于模型根据「跑出了什么」修正
@@ -1568,7 +1568,7 @@ class MCTSWorkflow:
                     continue
                 exec_res = info.get("execution_result") or {}
                 if exec_res.get("valid", False):
-                    sig = MCTSUtils.create_result_signature(exec_res) if exec_res else ""
+                    sig = MCTSUtils.cluster_signature(exec_res) if exec_res else ""
                     valid_results.append({"cte": cte_text, "exec_res": exec_res, "signature": sig})
                     break
 

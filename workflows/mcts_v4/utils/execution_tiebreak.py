@@ -29,6 +29,33 @@ def _norm_sql(sql: str) -> str:
     return " ".join((sql or "").split()).strip().lower()
 
 
+def variants_have_row_collision(variants: List[Tuple[str, float, int]]) -> bool:
+    """True when legacy signature collision mixes different row counts in one cluster."""
+    rows = {int(x[2] or 0) for x in variants}
+    return len(rows) > 1
+
+
+def _default_tiebreak_key(item: Tuple[str, float, int]) -> Tuple[int, int]:
+    sql, _reward, rows = item
+    return (rows if rows else 0, len(sql or ""))
+
+
+def _collision_tiebreak_key(item: Tuple[str, float, int]) -> Tuple[float, int]:
+    sql, reward, _rows = item
+    return (-float(reward or 0.0), len(sql or ""))
+
+
+def pick_representative_variant(
+    variants: List[Tuple[str, float, int]],
+) -> Tuple[str, float, int]:
+    """Pick one (sql, reward, rows) tuple from a cluster."""
+    if not variants:
+        return "", 0.0, 0
+    if variants_have_row_collision(variants):
+        return min(variants, key=_collision_tiebreak_key)
+    return min(variants, key=_default_tiebreak_key)
+
+
 def measure_sql_execution_time(db_connector: Any, sql: str, *, repeats: Optional[int] = None) -> float:
     """Return mean execution seconds; cache per normalized SQL within a solve."""
     s = (sql or "").strip()
@@ -63,12 +90,17 @@ def tiebreak_pick_variants(
     """
     Pick representative SQL from cluster variants.
     Default: min row_count, then shortest SQL.
+    Legacy signature collision (mixed row counts): max reward, then shortest SQL.
     With MCTS_EXEC_TIME_TIEBREAK=1: among min-row ties, pick fastest execution.
     """
     if not variants:
         return ""
+    if variants_have_row_collision(variants):
+        sql, _rw, _rows = pick_representative_variant(variants)
+        return (sql or "").strip()
+
     if not exec_time_tiebreak_enabled() or db_connector is None:
-        sql, _rows = min(variants, key=lambda x: (x[2] if x[2] else 0, len(x[0] or "")))[:2]
+        sql, _rw, _rows = pick_representative_variant(variants)
         return (sql or "").strip()
 
     scored: List[Tuple[str, int, float, int]] = []

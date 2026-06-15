@@ -192,6 +192,11 @@ class MCTSUtils:
         return v2 if USE_SIGNATURE_V2_FOR_SEARCH else legacy
 
     @staticmethod
+    def cluster_signature(result: Dict[str, Any]) -> str:
+        """Bucketing / clustering / stored variant key (honours MCTS_USE_SIGNATURE_V2)."""
+        return MCTSUtils.bucket_key_for_search(result)
+
+    @staticmethod
     def build_instrumented_bucket_list(
         unique_cte_variants: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
@@ -334,7 +339,7 @@ class MCTSUtils:
                     query_result = []
             if not query_result:
                 continue
-            key = MCTSUtils.create_result_signature(res)
+            key = MCTSUtils.cluster_signature(res)
             buckets[key] += 1
         best_key = max(buckets, key=buckets.get) if buckets else ""
         return dict(buckets), best_key

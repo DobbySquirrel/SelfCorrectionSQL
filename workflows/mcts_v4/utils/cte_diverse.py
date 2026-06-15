@@ -317,7 +317,7 @@ def _structure_sig_for_cte(
 ) -> str:
     exec_results = exec_results or {}
     if cte in exec_results and exec_results[cte].get("valid"):
-        return MCTSUtils.create_result_signature(exec_results[cte])
+        return MCTSUtils.cluster_signature(exec_results[cte])
     return create_structure_signature(cte)
 
 

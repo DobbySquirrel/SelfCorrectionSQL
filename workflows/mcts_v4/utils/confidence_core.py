@@ -43,7 +43,7 @@ def _result_signature(df: pd.DataFrame, err: Optional[str]) -> str:
         "query_result": _rows_from_df(df),
         "error": err,
     }
-    return MCTSUtils.create_result_signature(result) or ""
+    return MCTSUtils.cluster_signature(result) or ""
 
 
 def _result_hash(sig: str) -> str:

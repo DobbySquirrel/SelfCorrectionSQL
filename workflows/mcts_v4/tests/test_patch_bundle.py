@@ -25,7 +25,10 @@ from workflows.mcts_v4.utils.execution_tiebreak import (
     tiebreak_pick_variants,
     exec_time_tiebreak_enabled,
     clear_execution_time_cache,
+    variants_have_row_collision,
+    pick_representative_variant,
 )
+from workflows.mcts_v4.utils.mcts_helpers import MCTSUtils
 
 
 SCHEMA = """db_name: test
@@ -178,6 +181,52 @@ class TestExecTimeTiebreak(unittest.TestCase):
         self.assertEqual(picked.upper(), "SELECT 1")
         os.environ.pop("MCTS_EXEC_TIME_TIEBREAK", None)
         clear_execution_time_cache()
+
+
+class TestClusterSignatureAndTiebreak(unittest.TestCase):
+    def test_bucketize_uses_v2_when_env_set(self):
+        shared = [{"x": i, "y": i * 10} for i in range(5)]
+        extra = [{"x": 99, "y": 990}]
+        r_short = {"valid": True, "query_result": shared}
+        r_long = {"valid": True, "query_result": shared + extra}
+        os.environ["MCTS_USE_SIGNATURE_V2"] = "1"
+        try:
+            import workflows.mcts_v4.utils.mcts_helpers as mh
+
+            mh.USE_SIGNATURE_V2_FOR_SEARCH = True
+            buckets, _ = MCTSUtils.bucketize_valid_nonempty([r_short, r_long])
+            self.assertEqual(len(buckets), 2)
+            sig_short = MCTSUtils.cluster_signature(r_short)
+            sig_long = MCTSUtils.cluster_signature(r_long)
+            self.assertNotEqual(sig_short, sig_long)
+            self.assertEqual(buckets[sig_short], 1)
+            self.assertEqual(buckets[sig_long], 1)
+        finally:
+            os.environ.pop("MCTS_USE_SIGNATURE_V2", None)
+            import workflows.mcts_v4.utils.mcts_helpers as mh
+
+            mh.USE_SIGNATURE_V2_FOR_SEARCH = mh.os.environ.get("MCTS_USE_SIGNATURE_V2", "0") == "1"
+
+    def test_tiebreak_collision_prefers_reward_over_min_rows(self):
+        variants = [
+            ("SELECT long wrong query", 0.5, 49),
+            ("SELECT correct", 1.0, 57),
+            ("SELECT medium wrong", 1.0, 99),
+        ]
+        self.assertTrue(variants_have_row_collision(variants))
+        sql, reward, rows = pick_representative_variant(variants)
+        self.assertEqual(reward, 1.0)
+        self.assertIn(rows, (57, 99))
+        picked = tiebreak_pick_variants(variants)
+        self.assertIn(picked, ("SELECT correct", "SELECT medium wrong"))
+
+    def test_tiebreak_uniform_rows_still_picks_min_rows(self):
+        variants = [
+            ("SELECT longer text here", 0.5, 3),
+            ("SELECT short", 0.5, 3),
+        ]
+        self.assertFalse(variants_have_row_collision(variants))
+        self.assertEqual(tiebreak_pick_variants(variants), "SELECT short")
 
 
 class TestTaskSpill(unittest.TestCase):

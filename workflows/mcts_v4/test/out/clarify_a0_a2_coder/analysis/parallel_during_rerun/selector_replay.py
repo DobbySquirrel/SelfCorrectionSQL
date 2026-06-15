@@ -36,10 +36,9 @@ class Cluster:
 
 
 def _tiebreak_pick(variants: List[Tuple[str, float, int]]) -> str:
-    if not variants:
-        return ""
-    best = min(variants, key=lambda x: (x[2] if x[2] else 0, len(x[0] or "")))
-    return (best[0] or "").strip()
+    from workflows.mcts_v4.utils.execution_tiebreak import tiebreak_pick_variants
+
+    return tiebreak_pick_variants(variants)
 
 
 def build_clusters(rss: List[dict]) -> Dict[str, Cluster]:
