@@ -11,6 +11,8 @@ import re
 
 # A3: set MCTS_USE_SIGNATURE_V2=1 to bucket/search with v2; default legacy for search.
 USE_SIGNATURE_V2_FOR_SEARCH = os.environ.get("MCTS_USE_SIGNATURE_V2", "0") == "1"
+# Scheme A: CTE/search legacy + final SQL v2 when MCTS_FINAL_SIGNATURE_V2=1.
+USE_FINAL_SIGNATURE_V2 = os.environ.get("MCTS_FINAL_SIGNATURE_V2", "0") == "1"
 
 
 class MCTSUtils:
@@ -132,43 +134,93 @@ class MCTSUtils:
         return preview
 
     @staticmethod
+    def _normalize_signature_cell(value: Any) -> Any:
+        """Normalize one cell for result signatures (legacy + v2 shared)."""
+        if value is None:
+            return None
+        try:
+            import pandas as pd
+
+            if pd.isna(value):
+                return None
+        except Exception:
+            pass
+        if isinstance(value, (int, float)):
+            return float(value) if isinstance(value, float) else int(value)
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
+
+    @staticmethod
+    def _signature_value_rows_from_tuples(
+        rows: List[tuple],
+        *,
+        topk: Optional[int] = None,
+    ) -> List[tuple]:
+        """Column-name-blind value rows: sort within row, then sort rows."""
+        value_rows: List[tuple] = []
+        for row in rows:
+            row_values = [MCTSUtils._normalize_signature_cell(v) for v in row]
+            row_values.sort(
+                key=lambda x: (
+                    0 if x is None else 1,
+                    str(type(x).__name__),
+                    str(x) if x is not None else "",
+                )
+            )
+            value_rows.append(tuple(row_values))
+        value_rows.sort(
+            key=lambda r: tuple(str(x) if x is not None else "" for x in r)
+        )
+        if topk is not None:
+            value_rows = value_rows[:topk]
+        return value_rows
+
+    @staticmethod
     def create_result_signature_v2(
         rows: List[tuple],
         columns: List[str],
         *,
-        use_columns: bool = True,
+        use_columns: bool = False,
         topk: Optional[int] = None,
         normalize: bool = True,
     ) -> str:
-        """Row-order-invariant signature using full rows (optional topk)."""
+        """Row-order-invariant md5 hex signature.
+
+        Default (use_columns=False): ignore column names, keep original numeric
+        precision — same cell semantics as legacy, but hashes all rows (not top-5).
+        """
+        import json
+
         if not rows and not columns:
             return "empty_result"
 
         if use_columns and columns:
             order = sorted(range(len(columns)), key=lambda i: columns[i])
             cols = [columns[i] for i in order]
-            rows = [tuple(r[i] for i in order) for r in rows]
-        else:
-            cols = []
+            aligned = [tuple(r[i] for i in order) for r in rows]
+            if normalize:
 
-        if normalize:
+                def norm(v: Any) -> str:
+                    if v is None:
+                        return "\x00NULL"
+                    if isinstance(v, float):
+                        return f"{v:.6f}"
+                    return str(v)
 
-            def norm(v: Any) -> str:
-                if v is None:
-                    return "\x00NULL"
-                if isinstance(v, float):
-                    return f"{v:.6f}"
-                return str(v)
+                aligned = [tuple(norm(c) for c in r) for r in aligned]
+            else:
+                aligned = [tuple(c for c in r) for r in aligned]
+            aligned = sorted(aligned)
+            if topk is not None:
+                aligned = aligned[:topk]
+            payload = "|".join(cols) + "||" + "\n".join("\t".join(str(c) for c in r) for r in aligned)
+            return hashlib.md5(payload.encode()).hexdigest()
 
-            rows = [tuple(norm(c) for c in r) for r in rows]
-        else:
-            rows = [tuple(c for c in r) for r in rows]
-
-        rows = sorted(rows)
-        if topk is not None:
-            rows = rows[:topk]
-        payload = "|".join(cols) + "||" + "\n".join("\t".join(r) for r in rows)
-        return hashlib.md5(payload.encode()).hexdigest()
+        del columns, normalize  # value-only path uses _normalize_signature_cell
+        value_rows = MCTSUtils._signature_value_rows_from_tuples(rows, topk=topk)
+        data_str = json.dumps(value_rows, sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.md5(data_str.encode("utf-8")).hexdigest()
 
     @staticmethod
     def dual_signatures_from_execution(result: Dict[str, Any]) -> Tuple[str, str]:
@@ -181,20 +233,37 @@ class MCTSUtils:
         else:
             rows, cols = MCTSUtils.execution_result_to_rows_columns(result)
             v2 = MCTSUtils.create_result_signature_v2(
-                rows, cols, use_columns=True, topk=None, normalize=True
+                rows, cols, use_columns=False, topk=None
             )
         return legacy, v2
 
     @staticmethod
     def bucket_key_for_search(result: Dict[str, Any]) -> str:
-        """Search-time bucket key: legacy unless MCTS_USE_SIGNATURE_V2=1."""
+        """Search-time bucket key (CTE expansion): legacy unless MCTS_USE_SIGNATURE_V2=1."""
         legacy, v2 = MCTSUtils.dual_signatures_from_execution(result)
         return v2 if USE_SIGNATURE_V2_FOR_SEARCH else legacy
 
     @staticmethod
-    def cluster_signature(result: Dict[str, Any]) -> str:
-        """Bucketing / clustering / stored variant key (honours MCTS_USE_SIGNATURE_V2)."""
+    def bucket_key_for_final(result: Dict[str, Any]) -> str:
+        """Final SQL bucket key (result_buckets, variant result_signature, R4/gated vote).
+
+        Uses full-row v2 hash when MCTS_FINAL_SIGNATURE_V2=1 so execution-identical SQLs
+        share a cluster; legacy top-5 collisions split into separate vote buckets.
+        """
+        legacy, v2 = MCTSUtils.dual_signatures_from_execution(result)
+        if USE_FINAL_SIGNATURE_V2:
+            return v2
         return MCTSUtils.bucket_key_for_search(result)
+
+    @staticmethod
+    def cluster_signature(result: Dict[str, Any]) -> str:
+        """CTE / search-time clustering (honours MCTS_USE_SIGNATURE_V2)."""
+        return MCTSUtils.bucket_key_for_search(result)
+
+    @staticmethod
+    def final_cluster_signature(result: Dict[str, Any]) -> str:
+        """Final SQL clustering / stored variant key (honours MCTS_FINAL_SIGNATURE_V2)."""
+        return MCTSUtils.bucket_key_for_final(result)
 
     @staticmethod
     def build_instrumented_bucket_list(
@@ -339,7 +408,7 @@ class MCTSUtils:
                     query_result = []
             if not query_result:
                 continue
-            key = MCTSUtils.cluster_signature(res)
+            key = MCTSUtils.bucket_key_for_final(res)
             buckets[key] += 1
         best_key = max(buckets, key=buckets.get) if buckets else ""
         return dict(buckets), best_key

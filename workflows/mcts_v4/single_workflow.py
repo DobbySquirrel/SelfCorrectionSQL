@@ -845,7 +845,7 @@ class SimpleRolloutWorkflow:
                         query_result = []
                 
                 if query_result and len(query_result) > 0:
-                    key = MCTSUtils.create_result_signature(res)
+                    key = MCTSUtils.bucket_key_for_final(res)
                     sql_with_signatures.append((sql, key))
                     
                     # 提取列顺序
@@ -944,7 +944,7 @@ class SimpleRolloutWorkflow:
                     except Exception:
                         query_result = []
                 if query_result and len(query_result) > 0:
-                    sql_info['result_signature'] = MCTSUtils.create_result_signature(res)
+                    sql_info['result_signature'] = MCTSUtils.bucket_key_for_final(res)
                     sql_info['result_row_count'] = len(query_result)
             all_sql_variants.append(sql_info)
         

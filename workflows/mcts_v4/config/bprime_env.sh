@@ -10,9 +10,13 @@
 #
 # Disable schema diversity for ablation: MCTS_SCHEMA_DIVERSITY=0
 
-export MCTS_USE_SIGNATURE_V2="${MCTS_USE_SIGNATURE_V2:-1}"
+# Scheme A (production): CTE/search legacy + final SQL v2 strict buckets (R4/gated vote).
+# Avoids legacy top-5 collision: same family, different execution → separate final clusters.
+export MCTS_USE_SIGNATURE_V2="${MCTS_USE_SIGNATURE_V2:-0}"
+export MCTS_FINAL_SIGNATURE_V2="${MCTS_FINAL_SIGNATURE_V2:-1}"
 export MCTS_SELECTOR_STRATEGY="${MCTS_SELECTOR_STRATEGY:-R4}"
-export MCTS_CONFIDENCE_MODE="${MCTS_CONFIDENCE_MODE:-gated}"
+# Pure R4 final pick; set gated only for gated22 patch cohort (offline: 380 vs 377 Hit@1).
+export MCTS_CONFIDENCE_MODE="${MCTS_CONFIDENCE_MODE:-0}"
 export MCTS_R4_GATE_MARGIN="${MCTS_R4_GATE_MARGIN:-0.7}"
 export MCTS_CONFIDENCE_THRESHOLD="${MCTS_CONFIDENCE_THRESHOLD:-0.7}"
 export MCTS_CONFIDENCE_TOP_K="${MCTS_CONFIDENCE_TOP_K:-3}"

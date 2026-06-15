@@ -25,7 +25,6 @@ def test_row_order_invariant_v2_may_differ_legacy():
     r1 = {"valid": True, "query_result": base}
     r2 = {"valid": True, "query_result": rev}
     assert _v2(r1) == _v2(r2)
-    # legacy uses top-5 sorted rows — also order-invariant within sample
     assert _legacy(r1) == _legacy(r2)
 
 
@@ -35,18 +34,35 @@ def test_top5_same_tail_differs_v2_splits_legacy_may_merge():
     r_short = {"valid": True, "query_result": shared}
     r_long = {"valid": True, "query_result": shared + extra}
     assert _v2(r_short) != _v2(r_long)
-    # legacy only hashes first 5 rows
     assert _legacy(r_short) == _legacy(r_long)
 
 
-def test_null_and_float_normalization_stable():
-    r1 = {
-        "valid": True,
-        "query_result": [{"v": None, "n": 1.2345671}],
-    }
-    r2 = {
-        "valid": True,
-        "query_result": [{"v": None, "n": 1.2345674}],
-    }
+def test_column_names_ignored_v2():
+    r1 = {"valid": True, "query_result": [{"answer": 5}]}
+    r2 = {"valid": True, "query_result": [{"count": 5}]}
     assert _v2(r1) == _v2(r2)
-    # legacy keeps full float precision in value sort — only v2 normalizes to 6 decimals
+
+
+def test_float_keeps_original_precision_v2():
+    r1 = {"valid": True, "query_result": [{"v": None, "n": 1.2345671}]}
+    r2 = {"valid": True, "query_result": [{"v": None, "n": 1.2345674}]}
+    assert _v2(r1) != _v2(r2)
+
+
+def test_scheme_a_dual_search_legacy_final_v2(monkeypatch):
+    import workflows.mcts_v4.utils.mcts_helpers as mh
+
+    shared = [{"x": i} for i in range(5)]
+    r_short = {"valid": True, "query_result": shared}
+    r_long = {"valid": True, "query_result": shared + [{"x": 99}]}
+
+    monkeypatch.setenv("MCTS_USE_SIGNATURE_V2", "0")
+    monkeypatch.setenv("MCTS_FINAL_SIGNATURE_V2", "1")
+    mh.USE_SIGNATURE_V2_FOR_SEARCH = False
+    mh.USE_FINAL_SIGNATURE_V2 = True
+
+    assert mh.MCTSUtils.bucket_key_for_search(r_short) == mh.MCTSUtils.bucket_key_for_search(r_long)
+    assert mh.MCTSUtils.bucket_key_for_final(r_short) != mh.MCTSUtils.bucket_key_for_final(r_long)
+
+    buckets, _ = mh.MCTSUtils.bucketize_valid_nonempty([r_short, r_long])
+    assert len(buckets) == 2

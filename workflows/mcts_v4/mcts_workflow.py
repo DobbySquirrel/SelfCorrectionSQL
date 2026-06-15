@@ -1311,7 +1311,7 @@ class MCTSWorkflow:
             # 从本次 execution_results 里找与 best_key 匹配的那条结果
             for res in execution_results:
                 if res.get('valid', False):
-                    if MCTSUtils.cluster_signature(res) == best_key:
+                    if MCTSUtils.bucket_key_for_final(res) == best_key:
                         best_result = res.get('query_result', None)
                         break
 
