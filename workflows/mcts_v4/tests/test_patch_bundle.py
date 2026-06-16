@@ -286,6 +286,52 @@ class TestClusterSignatureAndTiebreak(unittest.TestCase):
         self.assertEqual(r4.gate_reason, "vote_tie")
         self.assertEqual(set(r4.gate_sigs), {"sig_a", "sig_b", "sig_c", "sig_d"})
 
+    def test_mul_purity_default_score_mode(self):
+        script = Path(__file__).resolve().parents[1] / "config" / "bprime_env.sh"
+        text = script.read_text(encoding="utf-8")
+        self.assertIn('MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-mul_purity}"', text)
+        self.assertIn('MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-ambig_purity}"', text)
+
+    def test_topk_bootstrap_skips_clear_gate(self):
+        from workflows.mcts_v4.utils.sql_selector import SQLSelector
+
+        rss = [
+            {
+                "reward": 1.0,
+                "leaf_visit_count": 3,
+                "result_buckets": {"sig_a": 10},
+                "all_sql_variants": [
+                    {
+                        "sql": "SELECT 1",
+                        "valid": True,
+                        "result_signature": "sig_a",
+                        "result_signature_v2": "v2_a",
+                        "result_row_count": 1,
+                    },
+                ],
+            },
+        ]
+        prev = {
+            k: os.environ.get(k)
+            for k in (
+                "MCTS_R4_SCORE_MODE",
+                "MCTS_R4_TOPK_BOOTSTRAP",
+                "MCTS_R4_WITH_BIAS",
+            )
+        }
+        try:
+            os.environ["MCTS_R4_SCORE_MODE"] = "votes"
+            os.environ["MCTS_R4_TOPK_BOOTSTRAP"] = "0"
+            os.environ["MCTS_R4_WITH_BIAS"] = "0"
+            sql = SQLSelector._select_r4_majority_then_reward(rss, db_connector=object())
+            self.assertEqual(sql, "SELECT 1")
+        finally:
+            for k, v in prev.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
 
 class TestTaskSpill(unittest.TestCase):
     def setUp(self):

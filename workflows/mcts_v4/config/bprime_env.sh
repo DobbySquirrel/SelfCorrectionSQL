@@ -53,12 +53,15 @@ export MCTS_R4_VOTE_MODE="${MCTS_R4_VOTE_MODE:-all_buckets}"
 # Online clustering ablations (gap30):
 #   MCTS_CTE_JACCARD_MERGE=1 + MCTS_CTE_JACCARD_THRESHOLD=0.85  — CTE probe row-set merge
 #   MCTS_FINAL_JACCARD_MERGE=1 + MCTS_FINAL_JACCARD_THRESHOLD=0.85 — final SQL merge at R4
-#   MCTS_R4_SCORE_MODE=mul_purity — legacy votes × v2 purity (needs legacy final sig)
-#   MCTS_R4_WITH_BIAS=1 — prefer WITH-cluster on close R4 margin
+# R4 cluster score: mul_purity = votes(legacy) × v2 purity within cluster (+1 Hit@1 on full498).
+# MCTS_R4_WITH_BIAS=1 — prefer WITH-cluster on close R4 margin
+# MCTS_R4_TOPK_BOOTSTRAP=ambig_purity — on ambiguous gate, prefer higher v2-purity among top-2 clusters
 export MCTS_CTE_JACCARD_MERGE="${MCTS_CTE_JACCARD_MERGE:-0}"
 export MCTS_CTE_JACCARD_THRESHOLD="${MCTS_CTE_JACCARD_THRESHOLD:-0.85}"
 export MCTS_FINAL_JACCARD_MERGE="${MCTS_FINAL_JACCARD_MERGE:-0}"
 export MCTS_FINAL_JACCARD_THRESHOLD="${MCTS_FINAL_JACCARD_THRESHOLD:-0.85}"
-export MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-votes}"
+export MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-mul_purity}"
 export MCTS_R4_WITH_BIAS="${MCTS_R4_WITH_BIAS:-0}"
 export MCTS_R4_WITH_BIAS_MARGIN="${MCTS_R4_WITH_BIAS_MARGIN:-1.5}"
+export MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-ambig_purity}"
+export MCTS_R4_TOPK="${MCTS_R4_TOPK:-3}"

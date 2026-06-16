@@ -15,6 +15,8 @@ STRATEGY_ENV = "MCTS_SELECTOR_STRATEGY"
 SCORE_MODE_ENV = "MCTS_R4_SCORE_MODE"
 WITH_BIAS_ENV = "MCTS_R4_WITH_BIAS"
 WITH_BIAS_MARGIN_ENV = "MCTS_R4_WITH_BIAS_MARGIN"
+TOPK_BOOTSTRAP_ENV = "MCTS_R4_TOPK_BOOTSTRAP"
+TOPK_ENV = "MCTS_R4_TOPK"
 
 _STRATEGY_ALIASES = {
     "R0": "R0",
@@ -63,6 +65,23 @@ class SQLSelector:
             return float(raw)
         except ValueError:
             return 1.5
+
+    @staticmethod
+    def _topk_bootstrap_enabled() -> bool:
+        raw = os.environ.get(TOPK_BOOTSTRAP_ENV, "0").strip().lower()
+        return raw not in ("0", "false", "no", "off", "")
+
+    @staticmethod
+    def _topk_bootstrap_mode() -> str:
+        return os.environ.get(TOPK_BOOTSTRAP_ENV, "0").strip().lower()
+
+    @staticmethod
+    def _topk_clusters() -> int:
+        raw = os.environ.get(TOPK_ENV, "3").strip()
+        try:
+            return max(2, int(raw))
+        except ValueError:
+            return 3
 
     @staticmethod
     def _norm_sql(sql: str) -> str:
@@ -186,6 +205,208 @@ class SQLSelector:
         return SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
 
     @staticmethod
+    def _sig_v2_purity(
+        rollout_stats_list: List[Dict[str, Any]],
+        sig: str,
+        clusters: Dict[str, _Cluster],
+    ) -> float:
+        from collections import Counter
+
+        c = clusters.get(sig)
+        if not c:
+            return 1.0
+        v2c: Counter = Counter()
+        for variant in c.variants:
+            sql = variant[0]
+            v2 = ""
+            for rs in rollout_stats_list or []:
+                for item in rs.get("all_sql_variants") or []:
+                    if SQLSelector._norm_sql(item.get("sql", "")) == SQLSelector._norm_sql(sql):
+                        v2 = (item.get("result_signature_v2") or "").strip()
+                        break
+                if v2:
+                    break
+            if v2:
+                v2c[v2] += 1
+        if not v2c:
+            return 1.0
+        return max(v2c.values()) / max(sum(v2c.values()), 1)
+
+    @staticmethod
+    def _ranked_r4_cluster_sigs(
+        rollout_stats_list: List[Dict[str, Any]],
+        clusters: Dict[str, _Cluster],
+        votes,
+    ) -> List[str]:
+        scored: List[Tuple[str, float, int]] = []
+        for sig, v in votes.items():
+            purity = (
+                SQLSelector._sig_v2_purity(rollout_stats_list, sig, clusters)
+                if SQLSelector._r4_score_mode() == "mul_purity"
+                else 1.0
+            )
+            c = clusters.get(sig)
+            reward = c.max_rollout_reward if c else 0.0
+            scored.append((sig, float(v) * purity, int(v)))
+        scored.sort(key=lambda x: (-x[1], -x[2], -clusters[x[0]].max_rollout_reward if x[0] in clusters else 0))
+        return [s for s, _, _ in scored]
+
+    @staticmethod
+    def _sqls_for_cluster_sigs(clusters: Dict[str, _Cluster], sigs: List[str]) -> List[str]:
+        seen: set = set()
+        out: List[str] = []
+        for sig in sigs:
+            c = clusters.get(sig)
+            if not c:
+                continue
+            for sql, _, _ in c.variants:
+                s = (sql or "").strip()
+                if s and s not in seen:
+                    seen.add(s)
+                    out.append(s)
+        return out
+
+    @staticmethod
+    def _pick_r4_cluster_sql(
+        rollout_stats_list: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> str:
+        """R4 cluster pick only (mul_purity / votes / with_bias); no top-K bootstrap."""
+        rss = SQLSelector._maybe_final_jaccard_rollouts(
+            rollout_stats_list, db_connector=db_connector
+        )
+        return SQLSelector._pick_r4_cluster_sql_from_rss(rss, db_connector=db_connector)
+
+    @staticmethod
+    def _pick_r4_cluster_sql_from_rss(
+        rss: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> str:
+        clusters = SQLSelector._build_clusters(rss)
+        if not clusters:
+            return SQLSelector.select_by_highest_reward(rss)
+
+        from .r4_vote import collect_r4_cluster_votes
+
+        votes = collect_r4_cluster_votes(rss)
+        if not votes:
+            return SQLSelector.select_by_highest_reward(rss)
+
+        if SQLSelector._r4_score_mode() == "mul_purity":
+            return SQLSelector._mul_purity_pick(
+                rss, clusters, votes, db_connector=db_connector
+            )
+        if SQLSelector._with_bias_enabled():
+            return SQLSelector._struct_with_bias_pick(
+                rss, clusters, votes, db_connector=db_connector
+            )
+
+        top_v = votes.most_common(1)[0][1]
+        tied = [sig for sig, v in votes.items() if v == top_v]
+        top_sig = tied[0][:16] if tied else "?"
+        print(
+            f"[Selection] R4: majority cluster sig={top_sig}… votes={top_v}"
+        )
+        if len(tied) == 1:
+            return SQLSelector._tiebreak_pick(clusters[tied[0]].variants, db_connector=db_connector)
+
+        best_r, best_sql = -1.0, ""
+        for sig in tied:
+            c = clusters.get(sig)
+            if not c:
+                continue
+            if c.max_rollout_reward > best_r:
+                best_r = c.max_rollout_reward
+                best_sql = SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
+        return best_sql
+
+    @staticmethod
+    def _maybe_topk_bootstrap_pick(
+        rollout_stats_list: List[Dict[str, Any]],
+        clusters: Dict[str, _Cluster],
+        votes,
+        fallback_sql: str,
+        *,
+        question: str = "",
+        schema_ddl: str = "",
+        db_connector=None,
+    ) -> str:
+        """Oracle-free ambiguous tiebreak among top vote clusters (no gold, no LLM)."""
+        if not SQLSelector._topk_bootstrap_enabled():
+            return fallback_sql
+
+        from .gated_selection import _analyze_r4_gate
+        from .confidence_core import confidence_aware_selection, env_float, env_int
+
+        rss = rollout_stats_list or []
+        gate = _analyze_r4_gate(rss, env_float("MCTS_R4_GATE_MARGIN", 0.7))
+        if not gate.ambiguous:
+            return fallback_sql
+
+        ranked = SQLSelector._ranked_r4_cluster_sigs(rss, clusters, votes)
+        mode = SQLSelector._topk_bootstrap_mode()
+        if mode == "ambig_purity" and len(ranked) >= 2:
+            sig_a, sig_b = ranked[0], ranked[1]
+            pa = SQLSelector._sig_v2_purity(rss, sig_a, clusters)
+            pb = SQLSelector._sig_v2_purity(rss, sig_b, clusters)
+            va, vb = votes.get(sig_a, 0), votes.get(sig_b, 0)
+            pick_sig = sig_a
+            if pb > pa and vb >= va * env_float("MCTS_R4_GATE_MARGIN", 0.7):
+                pick_sig = sig_b
+            elif pb > pa + 0.1 and pb >= pa:
+                pick_sig = sig_b
+            if pick_sig != sig_a:
+                c = clusters.get(pick_sig)
+                if c:
+                    alt = SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
+                    if alt:
+                        print(
+                            f"[Selection] R4 ambig_purity: pick sig={pick_sig[:16]}… "
+                            f"purity={pb:.2f}>{pa:.2f} gate={gate.gate_reason}"
+                        )
+                        return alt
+            return fallback_sql
+
+        if mode not in ("1", "true", "yes", "on", "bootstrap"):
+            return fallback_sql
+
+        if db_connector is None:
+            return fallback_sql
+
+        top_k = min(SQLSelector._topk_clusters(), len(ranked))
+        if top_k < 2:
+            return fallback_sql
+
+        pool = SQLSelector._sqls_for_cluster_sigs(clusters, ranked[:top_k])
+        if len(pool) <= 1:
+            return fallback_sql
+
+        def exec_fn(sql: str):
+            df, err = db_connector.execute_query(sql)
+            return df, err
+
+        sel = confidence_aware_selection(
+            pool,
+            question=question,
+            schema=schema_ddl,
+            execute_fn=exec_fn,
+            threshold=env_float("MCTS_CONFIDENCE_THRESHOLD", 0.7),
+            top_k=min(env_int("MCTS_CONFIDENCE_TOP_K", 3), len(pool)),
+            vote_samples=env_int("MCTS_CONFIDENCE_VOTE_SAMPLES", 3),
+            llm_call=None,
+            db_connector=db_connector,
+        )
+        picked = (sel.sql or fallback_sql).strip()
+        if picked and picked != fallback_sql.strip():
+            print(
+                f"[Selection] R4 topk_bootstrap: mode={sel.mode} conf={sel.top_confidence:.3f} "
+                f"top_k={top_k} gate={gate.gate_reason}"
+            )
+        return picked or fallback_sql
+
+    @staticmethod
     def _struct_with_bias_pick(
         rollout_stats_list: List[Dict[str, Any]],
         clusters: Dict[str, _Cluster],
@@ -245,7 +466,10 @@ class SQLSelector:
                 )
                 return sql
             return SQLSelector._select_r4_majority_then_reward(
-                rollout_stats_list, db_connector=db_connector
+                rollout_stats_list,
+                db_connector=db_connector,
+                question=question,
+                schema_ddl=schema_ddl,
             )
         if sid == "R2":
             return SQLSelector._select_r2_max_cluster_visit(
@@ -313,6 +537,8 @@ class SQLSelector:
         rollout_stats_list: List[Dict[str, Any]],
         *,
         db_connector=None,
+        question: str = "",
+        schema_ddl: str = "",
     ) -> str:
         rss = SQLSelector._maybe_final_jaccard_rollouts(
             rollout_stats_list, db_connector=db_connector
@@ -324,38 +550,21 @@ class SQLSelector:
         from .r4_vote import collect_r4_cluster_votes
 
         votes = collect_r4_cluster_votes(rss)
-
         if not votes:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
 
-        mode = SQLSelector._r4_score_mode()
-        if mode == "mul_purity":
-            return SQLSelector._mul_purity_pick(
-                rss, clusters, votes, db_connector=db_connector
-            )
-        if SQLSelector._with_bias_enabled():
-            return SQLSelector._struct_with_bias_pick(
-                rss, clusters, votes, db_connector=db_connector
-            )
-
-        top_v = votes.most_common(1)[0][1]
-        tied = [sig for sig, v in votes.items() if v == top_v]
-        top_sig = tied[0][:16] if tied else "?"
-        print(
-            f"[Selection] R4: majority cluster sig={top_sig}… votes={top_v}"
+        cluster_sql = SQLSelector._pick_r4_cluster_sql_from_rss(
+            rss, db_connector=db_connector
         )
-        if len(tied) == 1:
-            return SQLSelector._tiebreak_pick(clusters[tied[0]].variants, db_connector=db_connector)
-
-        best_r, best_sql = -1.0, ""
-        for sig in tied:
-            c = clusters.get(sig)
-            if not c:
-                continue
-            if c.max_rollout_reward > best_r:
-                best_r = c.max_rollout_reward
-                best_sql = SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
-        return best_sql
+        return SQLSelector._maybe_topk_bootstrap_pick(
+            rss,
+            clusters,
+            votes,
+            cluster_sql,
+            question=question,
+            schema_ddl=schema_ddl,
+            db_connector=db_connector,
+        )
 
     @staticmethod
     def _select_r3_reward_x_size(

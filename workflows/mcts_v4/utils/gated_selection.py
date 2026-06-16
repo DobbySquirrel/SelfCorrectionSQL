@@ -50,7 +50,7 @@ def _analyze_r4_gate(rss: List[Dict[str, Any]], vote_margin: float) -> R4GateAna
 
     top_v = ranked[0][1]
     tied_top = [sig for sig, v in ranked if v == top_v]
-    r4_sql = SQLSelector._select_r4_majority_then_reward(rss)
+    r4_sql = SQLSelector._pick_r4_cluster_sql(rss)
 
     if len(tied_top) > 1:
         return R4GateAnalysis(
