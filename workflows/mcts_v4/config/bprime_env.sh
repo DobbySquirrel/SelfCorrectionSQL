@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # B′ production defaults (hard30 verified: recall +4, hit@1 +6 vs plain B′).
-# full498 (2026-06): Scheme A dual + nomin2 (min_subq=1) → 383/498 Hit@1, 451/498 Recall.
+# full498 (2026-06): Scheme A dual + nomin2 → 386/498 Hit@1 est. (mul_purity + gated R8 on ~69 ambiguous q).
 # Runner: workflows/mcts_v4/test/out/cte_diverse/run_sigA_full498.sh
 #
 # 3-temp Mode C + per-temp schema diversity:
@@ -17,8 +17,8 @@
 export MCTS_USE_SIGNATURE_V2="${MCTS_USE_SIGNATURE_V2:-0}"
 export MCTS_FINAL_SIGNATURE_V2="${MCTS_FINAL_SIGNATURE_V2:-1}"
 export MCTS_SELECTOR_STRATEGY="${MCTS_SELECTOR_STRATEGY:-R4}"
-# Pure R4 final pick; set gated only for gated22 patch cohort (offline: 380 vs 377 Hit@1).
-export MCTS_CONFIDENCE_MODE="${MCTS_CONFIDENCE_MODE:-0}"
+# R4 final: mul_purity cluster score; gated → R4 shortcut when clear, R8 LLM pairwise when ambiguous (~14% q).
+export MCTS_CONFIDENCE_MODE="${MCTS_CONFIDENCE_MODE:-gated}"
 export MCTS_R4_GATE_MARGIN="${MCTS_R4_GATE_MARGIN:-0.7}"
 export MCTS_CONFIDENCE_THRESHOLD="${MCTS_CONFIDENCE_THRESHOLD:-0.7}"
 export MCTS_CONFIDENCE_TOP_K="${MCTS_CONFIDENCE_TOP_K:-3}"
@@ -55,7 +55,7 @@ export MCTS_R4_VOTE_MODE="${MCTS_R4_VOTE_MODE:-all_buckets}"
 #   MCTS_FINAL_JACCARD_MERGE=1 + MCTS_FINAL_JACCARD_THRESHOLD=0.85 — final SQL merge at R4
 # R4 cluster score: mul_purity = votes(legacy) × v2 purity within cluster (+1 Hit@1 on full498).
 # MCTS_R4_WITH_BIAS=1 — prefer WITH-cluster on close R4 margin
-# MCTS_R4_TOPK_BOOTSTRAP=ambig_purity — on ambiguous gate, prefer higher v2-purity among top-2 clusters
+# MCTS_R4_TOPK_BOOTSTRAP=ambig_purity — only when MCTS_CONFIDENCE_MODE=0 (no LLM); superseded by gated R8
 export MCTS_CTE_JACCARD_MERGE="${MCTS_CTE_JACCARD_MERGE:-0}"
 export MCTS_CTE_JACCARD_THRESHOLD="${MCTS_CTE_JACCARD_THRESHOLD:-0.85}"
 export MCTS_FINAL_JACCARD_MERGE="${MCTS_FINAL_JACCARD_MERGE:-0}"
@@ -63,5 +63,5 @@ export MCTS_FINAL_JACCARD_THRESHOLD="${MCTS_FINAL_JACCARD_THRESHOLD:-0.85}"
 export MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-mul_purity}"
 export MCTS_R4_WITH_BIAS="${MCTS_R4_WITH_BIAS:-0}"
 export MCTS_R4_WITH_BIAS_MARGIN="${MCTS_R4_WITH_BIAS_MARGIN:-1.5}"
-export MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-ambig_purity}"
+export MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-0}"
 export MCTS_R4_TOPK="${MCTS_R4_TOPK:-3}"

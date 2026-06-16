@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Production full498: Scheme A dual + nomin2 (min_subq=1, bprime_env default).
-# E6 per-expand bootstrap + legacy search / v2 final SQL buckets + pure R4.
+# Production full498: Scheme A dual + nomin2 + mul_purity + gated R8 (bprime_env).
+# E6 per-expand bootstrap + legacy search / v2 final; clear→R4, ambiguous→LLM pairwise.
 #
 #   bash run_sigA_full498.sh start-2-screen
 #   bash run_sigA_full498.sh scale-8-screen
@@ -33,7 +33,6 @@ export MCTS_COLUMN_BINDING_COT="per_subq@0.3+dual"
 export MCTS_COLUMN_BINDING_SCOPE="global"
 export DECOMPOSE_STRATEGY="S2"
 export MCTS_SELECTOR_STRATEGY="R4"
-export MCTS_CONFIDENCE_MODE="0"
 export MCTS_R4_GATE_MARGIN="0.7"
 export MCTS_CONFIDENCE_THRESHOLD="0.7"
 export MCTS_R4_VOTE_MODE="${MCTS_R4_VOTE_MODE:-all_buckets}"
@@ -98,7 +97,6 @@ export MCTS_COLUMN_BINDING_COT='per_subq@0.3+dual'
 export MCTS_COLUMN_BINDING_SCOPE='global'
 export DECOMPOSE_STRATEGY='S2'
 export MCTS_SELECTOR_STRATEGY='R4'
-export MCTS_CONFIDENCE_MODE='0'
 export MCTS_R4_GATE_MARGIN='0.7'
 export MCTS_CONFIDENCE_THRESHOLD='0.7'
 export MCTS_R4_VOTE_MODE='${MCTS_R4_VOTE_MODE:-all_buckets}'

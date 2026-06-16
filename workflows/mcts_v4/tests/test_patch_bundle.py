@@ -290,7 +290,8 @@ class TestClusterSignatureAndTiebreak(unittest.TestCase):
         script = Path(__file__).resolve().parents[1] / "config" / "bprime_env.sh"
         text = script.read_text(encoding="utf-8")
         self.assertIn('MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-mul_purity}"', text)
-        self.assertIn('MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-ambig_purity}"', text)
+        self.assertIn('MCTS_CONFIDENCE_MODE="${MCTS_CONFIDENCE_MODE:-gated}"', text)
+        self.assertIn('MCTS_R4_TOPK_BOOTSTRAP="${MCTS_R4_TOPK_BOOTSTRAP:-0}"', text)
 
     def test_topk_bootstrap_skips_clear_gate(self):
         from workflows.mcts_v4.utils.sql_selector import SQLSelector
