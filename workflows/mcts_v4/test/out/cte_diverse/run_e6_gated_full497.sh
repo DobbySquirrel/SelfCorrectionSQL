@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# E6 per-expand + gated R4→R8 + signature v2 + all_buckets on Alpha 497 cohort.
+# E6 per-expand + pure R4 + signature v2 + all_buckets on Alpha 497 cohort.
+# (gated R4→R8 removed — full497 gated rerun underperformed overlay; use gated22 patch only.)
 # Independent outputs — safe to run alongside gated_rerun22 workers (shared vLLM ok).
 #
 #   bash run_e6_gated_full497.sh prepare-manifest
@@ -36,7 +37,7 @@ export MCTS_COLUMN_BINDING_SCOPE="global"
 export DECOMPOSE_STRATEGY="S2"
 export MCTS_DECOMPOSE_MIN_SUBQUESTIONS="2"
 export MCTS_SELECTOR_STRATEGY="R4"
-export MCTS_CONFIDENCE_MODE="gated"
+export MCTS_CONFIDENCE_MODE="0"
 export MCTS_R4_GATE_MARGIN="0.7"
 export MCTS_CONFIDENCE_THRESHOLD="0.7"
 export MCTS_CONFIDENCE_TOP_K="${MCTS_CONFIDENCE_TOP_K:-3}"

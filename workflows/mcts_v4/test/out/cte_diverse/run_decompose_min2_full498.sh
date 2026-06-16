@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# min2 decompose: full 498q rerun aligned with production (R4 + gated R8 + filter)
+# min2 decompose: full 498q rerun aligned with production (pure R4 + filter)
 #
 #   bash run_decompose_min2_full498.sh prepare-manifest
 #   bash run_decompose_min2_full498.sh full
@@ -28,7 +28,7 @@ export MCTS_COLUMN_BINDING_SCOPE="global"
 export DECOMPOSE_STRATEGY="S2"
 export MCTS_DECOMPOSE_MIN_SUBQUESTIONS="2"
 export MCTS_SELECTOR_STRATEGY="R4"
-export MCTS_CONFIDENCE_MODE="gated"
+export MCTS_CONFIDENCE_MODE="0"
 export MCTS_R4_GATE_MARGIN="0.7"
 export MCTS_CONFIDENCE_THRESHOLD="0.7"
 export ROLL_OUTS="${ROLL_OUTS:-12}"

@@ -7,6 +7,7 @@ CTE处理器
 import re
 from typing import Dict, List, Any, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+from .cluster_merge import cte_jaccard_enabled, jaccard_threshold, merge_cte_buckets
 from .mcts_helpers import MCTSUtils
 from .cte_error_handler import CTEErrorHandler
 from ..core.mcts_node import MCTSNode
@@ -236,6 +237,12 @@ class CTEProcessor:
         invalid_buckets = sum(1 for k in buckets.keys() if k.startswith("invalid_"))
         valid_buckets = total_buckets - end_buckets - empty_result_buckets - invalid_buckets
         
+        if cte_jaccard_enabled() and valid_buckets >= 2:
+            tau = jaccard_threshold()
+            buckets = merge_cte_buckets(buckets, tau)
+            total_buckets = len(buckets)
+            valid_buckets = total_buckets - end_buckets - empty_result_buckets - invalid_buckets
+
         # 总是打印统计信息（即使buckets为空，也要显示原因）
         print(f"[去重统计] 总桶数: {total_buckets} (有效: {valid_buckets}, 空结果: {empty_result_buckets}, 失败: {invalid_buckets}, <END>: {end_buckets})")
         if total_buckets == 0:

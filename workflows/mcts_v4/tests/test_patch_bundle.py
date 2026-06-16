@@ -20,6 +20,8 @@ from workflows.mcts_v4.utils.cte_diverse import (
     dedup_before_revise_enabled,
     reversed_bootstrap_direct_sql_enabled,
     bootstrap_once_per_question_enabled,
+    skeleton_replace_plain_enabled,
+    render_diverse_prompt,
 )
 from workflows.mcts_v4.utils.execution_tiebreak import (
     tiebreak_pick_variants,
@@ -91,6 +93,25 @@ class TestReversedSchema(unittest.TestCase):
         os.environ["MCTS_BOOTSTRAP_ONCE_PER_QUESTION"] = "1"
         self.assertTrue(bootstrap_once_per_question_enabled())
         os.environ.pop("MCTS_BOOTSTRAP_ONCE_PER_QUESTION", None)
+
+    def test_skeleton_replace_plain_flag(self):
+        os.environ["MCTS_CTE_SKELETON_REPLACE_PLAIN"] = "1"
+        self.assertTrue(skeleton_replace_plain_enabled())
+        prompt = render_diverse_prompt(
+            n=2,
+            original_question="oq",
+            sub_question="sq",
+            sub_question_index=0,
+            sub_questions_total=1,
+            schema_info="schema",
+            additional_context="",
+            preceding_cte_info="",
+            used_cte_names=[],
+            prompt_mode="skeleton",
+        )
+        self.assertIn("Plan", prompt)
+        self.assertIn("Skeleton", prompt)
+        os.environ.pop("MCTS_CTE_SKELETON_REPLACE_PLAIN", None)
 
     def test_combined_schema_linking_flag(self):
         os.environ["MCTS_COMBINED_SCHEMA_LINKING"] = "1"

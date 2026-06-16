@@ -265,7 +265,10 @@ class SQLResultProcessor:
                     except Exception:
                         query_result = []
                 if query_result and len(query_result) > 0:
+                    legacy, v2 = MCTSUtils.dual_signatures_from_execution(res)
                     sql_info['result_signature'] = MCTSUtils.bucket_key_for_final(res)
+                    sql_info['result_signature_legacy'] = legacy
+                    sql_info['result_signature_v2'] = v2
                     sql_info['result_row_count'] = len(query_result)
             all_sql_variants.append(sql_info)
         

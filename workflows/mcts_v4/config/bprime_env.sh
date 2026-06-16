@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # B′ production defaults (hard30 verified: recall +4, hit@1 +6 vs plain B′).
+# full498 (2026-06): Scheme A dual + nomin2 (min_subq=1) → 383/498 Hit@1, 451/498 Recall.
+# Runner: workflows/mcts_v4/test/out/cte_diverse/run_sigA_full498.sh
 #
 # 3-temp Mode C + per-temp schema diversity:
 #   0.3 full schema original | 0.6 relevance-sorted | 0.9 two-step linking
@@ -47,3 +49,16 @@ export MCTS_R4_TIMEOUT_VOTE_MODE="${MCTS_R4_TIMEOUT_VOTE_MODE:-off}"
 export MCTS_R4_TIMEOUT_VOTE_WEIGHT="${MCTS_R4_TIMEOUT_VOTE_WEIGHT:-0.5}"
 # mc: per-rollout vote max-count bucket only; all_buckets: every sig in result_buckets +1
 export MCTS_R4_VOTE_MODE="${MCTS_R4_VOTE_MODE:-all_buckets}"
+
+# Online clustering ablations (gap30):
+#   MCTS_CTE_JACCARD_MERGE=1 + MCTS_CTE_JACCARD_THRESHOLD=0.85  — CTE probe row-set merge
+#   MCTS_FINAL_JACCARD_MERGE=1 + MCTS_FINAL_JACCARD_THRESHOLD=0.85 — final SQL merge at R4
+#   MCTS_R4_SCORE_MODE=mul_purity — legacy votes × v2 purity (needs legacy final sig)
+#   MCTS_R4_WITH_BIAS=1 — prefer WITH-cluster on close R4 margin
+export MCTS_CTE_JACCARD_MERGE="${MCTS_CTE_JACCARD_MERGE:-0}"
+export MCTS_CTE_JACCARD_THRESHOLD="${MCTS_CTE_JACCARD_THRESHOLD:-0.85}"
+export MCTS_FINAL_JACCARD_MERGE="${MCTS_FINAL_JACCARD_MERGE:-0}"
+export MCTS_FINAL_JACCARD_THRESHOLD="${MCTS_FINAL_JACCARD_THRESHOLD:-0.85}"
+export MCTS_R4_SCORE_MODE="${MCTS_R4_SCORE_MODE:-votes}"
+export MCTS_R4_WITH_BIAS="${MCTS_R4_WITH_BIAS:-0}"
+export MCTS_R4_WITH_BIAS_MARGIN="${MCTS_R4_WITH_BIAS_MARGIN:-1.5}"

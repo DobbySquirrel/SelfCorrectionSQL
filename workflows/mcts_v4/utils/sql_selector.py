@@ -7,10 +7,14 @@ SQL选择策略
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Tuple
 
 STRATEGY_ENV = "MCTS_SELECTOR_STRATEGY"
+SCORE_MODE_ENV = "MCTS_R4_SCORE_MODE"
+WITH_BIAS_ENV = "MCTS_R4_WITH_BIAS"
+WITH_BIAS_MARGIN_ENV = "MCTS_R4_WITH_BIAS_MARGIN"
 
 _STRATEGY_ALIASES = {
     "R0": "R0",
@@ -43,6 +47,173 @@ class _Cluster:
 
 class SQLSelector:
     """SQL选择策略工具类"""
+
+    @staticmethod
+    def _r4_score_mode() -> str:
+        return os.environ.get(SCORE_MODE_ENV, "votes").strip().lower()
+
+    @staticmethod
+    def _with_bias_enabled() -> bool:
+        return os.environ.get(WITH_BIAS_ENV, "0").strip().lower() in ("1", "true", "yes", "on")
+
+    @staticmethod
+    def _with_bias_margin() -> float:
+        raw = os.environ.get(WITH_BIAS_MARGIN_ENV, "1.5").strip()
+        try:
+            return float(raw)
+        except ValueError:
+            return 1.5
+
+    @staticmethod
+    def _norm_sql(sql: str) -> str:
+        return " ".join((sql or "").split()).strip().lower()
+
+    @staticmethod
+    def _maybe_final_jaccard_rollouts(
+        rollout_stats_list: List[Dict[str, Any]],
+        *,
+        db_connector=None,
+    ) -> List[Dict[str, Any]]:
+        from .cluster_merge import (
+            final_jaccard_enabled,
+            jaccard,
+            jaccard_threshold,
+            remap_rollout_signatures_by_jaccard,
+            rowset_from_execution,
+        )
+
+        if not final_jaccard_enabled() or not db_connector:
+            return rollout_stats_list
+
+        tau = jaccard_threshold("MCTS_FINAL_JACCARD_THRESHOLD", 0.85)
+        seen: Dict[str, str] = {}
+        sql_list: List[str] = []
+        rowsets: List[Any] = []
+
+        for rs in rollout_stats_list or []:
+            for v in rs.get("all_sql_variants") or []:
+                sql = (v.get("sql") or "").strip()
+                if not sql or not v.get("valid"):
+                    continue
+                nk = SQLSelector._norm_sql(sql)
+                if nk in seen:
+                    continue
+                seen[nk] = sql
+                sql_list.append(sql)
+                try:
+                    df, err = db_connector.execute_query(sql)
+                    if err or df is None:
+                        rowsets.append(None)
+                    else:
+                        res = {"valid": True, "query_result": df}
+                        rowsets.append(rowset_from_execution(res))
+                except Exception:
+                    rowsets.append(None)
+
+        if len(sql_list) < 2:
+            return rollout_stats_list
+
+        n = len(sql_list)
+        edges: List[Tuple[int, int]] = []
+        for i in range(n):
+            if rowsets[i] is None:
+                continue
+            for j in range(i + 1, n):
+                if rowsets[j] is None:
+                    continue
+                if jaccard(rowsets[i], rowsets[j]) >= tau:
+                    edges.append((i, j))
+
+        if not edges:
+            return rollout_stats_list
+
+        parent = list(range(n))
+
+        def find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        for i, j in edges:
+            ri, rj = find(i), find(j)
+            if ri != rj:
+                parent[rj] = ri
+
+        sql_to_super = {
+            SQLSelector._norm_sql(sql_list[i]): f"super_{find(i)}" for i in range(n)
+        }
+        print(f"[Final Jaccard] tau>={tau:.2f} remap {len(sql_list)} SQLs → super-clusters")
+        return remap_rollout_signatures_by_jaccard(rollout_stats_list, sql_to_super)
+
+    @staticmethod
+    def _mul_purity_pick(
+        rollout_stats_list: List[Dict[str, Any]],
+        clusters: Dict[str, _Cluster],
+        votes,
+        *,
+        db_connector=None,
+    ) -> str:
+        from collections import Counter
+
+        best_sig, best_score = "", -1.0
+        for sig, v in votes.items():
+            c = clusters.get(sig)
+            if not c:
+                score = float(v)
+            else:
+                v2c: Counter = Counter()
+                for variant in c.variants:
+                    sql = variant[0]
+                    v2 = ""
+                    for rs in rollout_stats_list or []:
+                        for item in rs.get("all_sql_variants") or []:
+                            if SQLSelector._norm_sql(item.get("sql", "")) == SQLSelector._norm_sql(sql):
+                                v2 = (item.get("result_signature_v2") or "").strip()
+                                break
+                        if v2:
+                            break
+                    if v2:
+                        v2c[v2] += 1
+                purity = max(v2c.values()) / max(sum(v2c.values()), 1) if v2c else 1.0
+                score = float(v) * purity
+            if score > best_score:
+                best_score, best_sig = score, sig
+        print(f"[Selection] R4 mul_purity: sig={best_sig[:16]}… score={best_score:.2f}")
+        c = clusters.get(best_sig)
+        if not c:
+            return ""
+        return SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
+
+    @staticmethod
+    def _struct_with_bias_pick(
+        rollout_stats_list: List[Dict[str, Any]],
+        clusters: Dict[str, _Cluster],
+        votes,
+        *,
+        db_connector=None,
+    ) -> str:
+        ranked = votes.most_common()
+        if not ranked:
+            return ""
+        top_v = ranked[0][1]
+        margin = SQLSelector._with_bias_margin()
+        close = [ranked[0][0]]
+        if len(ranked) >= 2 and ranked[1][1] * margin >= top_v:
+            close.append(ranked[1][0])
+        with_sigs = []
+        for sig in close:
+            c = clusters.get(sig)
+            if not c:
+                continue
+            if any(re.search(r"\bWITH\b", sql, re.I) for sql, _, _ in c.variants):
+                with_sigs.append(sig)
+        pick_sig = with_sigs[0] if with_sigs else ranked[0][0]
+        print(f"[Selection] R4 struct_with_bias: pick sig={pick_sig[:16]}…")
+        c = clusters.get(pick_sig)
+        if not c:
+            return ""
+        return SQLSelector._tiebreak_pick(c.variants, db_connector=db_connector)
 
     @staticmethod
     def resolve_strategy(strategy: Optional[str] = None) -> str:
@@ -143,16 +314,29 @@ class SQLSelector:
         *,
         db_connector=None,
     ) -> str:
-        clusters = SQLSelector._build_clusters(rollout_stats_list)
+        rss = SQLSelector._maybe_final_jaccard_rollouts(
+            rollout_stats_list, db_connector=db_connector
+        )
+        clusters = SQLSelector._build_clusters(rss)
         if not clusters:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
 
         from .r4_vote import collect_r4_cluster_votes
 
-        votes = collect_r4_cluster_votes(rollout_stats_list)
+        votes = collect_r4_cluster_votes(rss)
 
         if not votes:
             return SQLSelector.select_by_highest_reward(rollout_stats_list)
+
+        mode = SQLSelector._r4_score_mode()
+        if mode == "mul_purity":
+            return SQLSelector._mul_purity_pick(
+                rss, clusters, votes, db_connector=db_connector
+            )
+        if SQLSelector._with_bias_enabled():
+            return SQLSelector._struct_with_bias_pick(
+                rss, clusters, votes, db_connector=db_connector
+            )
 
         top_v = votes.most_common(1)[0][1]
         tied = [sig for sig, v in votes.items() if v == top_v]

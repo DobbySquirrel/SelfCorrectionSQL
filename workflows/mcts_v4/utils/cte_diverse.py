@@ -31,7 +31,11 @@ ENV_PARALLEL_WORKERS = "MCTS_CTE_PARALLEL_WORKERS"
 ENV_DEDUP_BEFORE_REVISE = "MCTS_DEDUP_BEFORE_REVISE"
 ENV_REVERSED_BOOTSTRAP_DIRECT_SQL = "MCTS_REVERSED_BOOTSTRAP_DIRECT_SQL"
 ENV_BOOTSTRAP_ONCE_PER_QUESTION = "MCTS_BOOTSTRAP_ONCE_PER_QUESTION"
+ENV_SKELETON_REPLACE_PLAIN = "MCTS_CTE_SKELETON_REPLACE_PLAIN"
 TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_template.txt"
+SKELETON_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_skeleton_template.txt"
+)
 ALPHA_TEMPLATE_PATH = (
     Path(__file__).resolve().parent.parent / "prompts" / "decompose_diverse_alpha_divide_conquer.txt"
 )
@@ -99,6 +103,12 @@ def reversed_bootstrap_direct_sql_enabled() -> bool:
 def bootstrap_once_per_question_enabled() -> bool:
     """When bootstrap is on: 1 = one LLM call per question (v2); 0 = per expand (legacy E6)."""
     raw = os.environ.get(ENV_BOOTSTRAP_ONCE_PER_QUESTION, "1").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def skeleton_replace_plain_enabled() -> bool:
+    """At dual@0.3: use Plan/Skeleton/Complete prompt instead of plain diverse template."""
+    raw = os.environ.get(ENV_SKELETON_REPLACE_PLAIN, "0").strip().lower()
     return raw in ("1", "true", "yes", "on")
 
 
@@ -228,7 +238,9 @@ def create_structure_signature(sql: str) -> str:
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
 
-def load_template() -> str:
+def load_template(*, prompt_mode: str = "default") -> str:
+    if prompt_mode == "skeleton":
+        return SKELETON_TEMPLATE_PATH.read_text(encoding="utf-8")
     path = ALPHA_TEMPLATE_PATH if alpha_divide_conquer_prompt_enabled() else TEMPLATE_PATH
     return path.read_text(encoding="utf-8")
 
@@ -244,8 +256,9 @@ def render_diverse_prompt(
     additional_context: str,
     preceding_cte_info: str,
     used_cte_names: List[str],
+    prompt_mode: str = "default",
 ) -> str:
-    template = load_template()
+    template = load_template(prompt_mode=prompt_mode)
     used = ", ".join(used_cte_names) if used_cte_names else "None"
     return template.format(
         N=n,
@@ -440,6 +453,7 @@ def collect_diverse_ctes(
     schema_strategy_audit: Optional[Dict[str, Any]] = None,
     additional_context: Optional[str] = None,
     model_config: Optional[Dict[str, Any]] = None,
+    prompt_mode: str = "default",
 ) -> Tuple[List[str], Dict[str, Any]]:
     """
     CT1-v2/CT2: fetch N diverse CTEs in one LLM call (no dedupe vs temp children).
@@ -461,6 +475,7 @@ def collect_diverse_ctes(
         "temperature": temperature,
         "n_llm_calls": (schema_strategy_audit or {}).get("llm_calls_per_cte", 1),
         "sub_question": getattr(node, "sub_question", node.question),
+        "prompt_mode": prompt_mode,
         "parsed": [],
         "candidates": [],
     }
@@ -476,6 +491,7 @@ def collect_diverse_ctes(
         additional_context=ctx_for_prompt,
         preceding_cte_info=preceding_cte_info,
         used_cte_names=used_cte_names,
+        prompt_mode=prompt_mode,
     )
     raw = call_diverse_prompt(
         llm_config=llm_config,
@@ -650,6 +666,7 @@ def _execute_mode_c_call_spec(
 
     model_config = _pick_model_config(llm_config, multi_model_configs, model_counter, model_lock)
     endpoint = (model_config.get("base_url") or "").rstrip("/")
+    prompt_mode = "skeleton" if binding_branch == "skeleton" else "default"
     ctes, audit = collect_diverse_ctes(
         node=node,
         llm_config=llm_config,
@@ -662,6 +679,7 @@ def _execute_mode_c_call_spec(
         schema_strategy_audit=schema_audit,
         additional_context=ctx_for_prompt,
         model_config=model_config,
+        prompt_mode=prompt_mode,
     )
     if binding_branch is not None:
         audit["binding_branch"] = binding_branch
@@ -803,8 +821,9 @@ def generate_diverse_mode_c(
         call_specs: List[Dict[str, Any]] = []
         for temp in temps:
             if column_binding_dual_at_temp(temp):
+                low_branch = "skeleton" if skeleton_replace_plain_enabled() else "plain"
                 call_specs.append(
-                    {"temp": temp, "n": diverse_n(n_per_call), "use_binding": False, "binding_branch": "plain"}
+                    {"temp": temp, "n": diverse_n(n_per_call), "use_binding": False, "binding_branch": low_branch}
                 )
                 call_specs.append(
                     {"temp": temp, "n": diverse_n_hint(), "use_binding": True, "binding_branch": "hint"}
