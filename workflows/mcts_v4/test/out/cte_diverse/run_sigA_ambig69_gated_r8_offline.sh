@@ -55,16 +55,7 @@ set -euo pipefail
 cd '${ROOT_DIR}'
 source '${ROOT_DIR}/workflows/mcts_v4/config/bprime_env.sh'
 export MCTS_R4_GATE_MARGIN='${VOTE_MARGIN}'
-python3 -u '${PY_RUN}' \\
-  --input '${INPUT_JSON}' \\
-  --manifest '${MANIFEST}' \\
-  --vote-margin '${VOTE_MARGIN}' \\
-  --base-urls '${BASE_URLS}' \\
-  --model '${VLLM_MODEL}' \\
-  --output-json '${OUT_JSON}' \\
-  --output-md '${OUT_MD}' \\
-  --resume \\
-  2>&1 | tee -a '${LOG}'
+python3 -u '${PY_RUN}' --input '${INPUT_JSON}' --manifest '${MANIFEST}' --vote-margin '${VOTE_MARGIN}' --base-urls '${BASE_URLS}' --model '${VLLM_MODEL}' --output-json '${OUT_JSON}' --output-md '${OUT_MD}' --resume 2>&1 | tee -a '${LOG}'
 EOF
 )"
   sleep 1
