@@ -1,0 +1,2501 @@
+{
+  "saved_at": "2026-06-18T02:55:07.420993+00:00",
+  "groups": {
+    "both_fail": {
+      "name": "both_fail",
+      "n": 29,
+      "qids": [
+        "11",
+        "23",
+        "24",
+        "36",
+        "37",
+        "41",
+        "48",
+        "85",
+        "173",
+        "197",
+        "352",
+        "465",
+        "518",
+        "639",
+        "685",
+        "701",
+        "829",
+        "1011",
+        "1037",
+        "1136",
+        "1148",
+        "1149",
+        "1166",
+        "1175",
+        "1265",
+        "1376",
+        "1387",
+        "1482",
+        "1529"
+      ],
+      "siga_primary": {
+        "wrong_result": 25,
+        "exec_timeout": 1,
+        "exec_error": 3
+      },
+      "alpha_primary": {
+        "wrong_result": 22,
+        "exec_error": 5,
+        "exec_timeout": 1,
+        "empty_paths": 1
+      },
+      "siga_subtag": {
+        "low_diversity_same_wrong_answer": 9,
+        "semantic_wrong": 12,
+        "schema_partial_missing_table": 4
+      },
+      "db_dist": {
+        "california_schools": 8,
+        "financial": 1,
+        "toxicology": 1,
+        "card_games": 3,
+        "codebase_community": 3,
+        "superhero": 1,
+        "formula_1": 1,
+        "european_football_2": 3,
+        "thrombosis_prediction": 4,
+        "student_club": 2,
+        "debit_card_specializing": 2
+      },
+      "low_pool_le5": 3,
+      "reward1_but_no_correct": 27,
+      "schema_link_miss": 4,
+      "rows": [
+        {
+          "qid": "11",
+          "db_id": "california_schools",
+          "question": "Please list the codes of the schools with a total enrollment of over 500.",
+          "n_subq": 1,
+          "n_pool": 3,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 3
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "frpm",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 7806.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 10
+          },
+          "n_paths": 38,
+          "n_unique_sql": 10,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "23",
+          "db_id": "california_schools",
+          "question": "List the names of schools with more than 30 difference in enrollements between K-12 and ages 5-17? Please also give the full street adress of the schools.",
+          "n_subq": 3,
+          "n_pool": 30,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 8,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 30
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "frpm",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1413.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 16
+          },
+          "n_paths": 36,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "24",
+          "db_id": "california_schools",
+          "question": "Give the names of the schools with the percent eligible for free meals in K-12 is more than 0.1 and test takers whose test score is greater than or equal to 150",
+          "n_subq": 4,
+          "n_pool": 39,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 36,
+            "exec_error": 3
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "frpm",
+            "satscores"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 180.6,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 22
+          },
+          "n_paths": 35,
+          "n_unique_sql": 22,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "36",
+          "db_id": "california_schools",
+          "question": "Under whose administration is the school with the highest number of students scoring 1500 or more on the SAT? Indicate their full names.",
+          "n_subq": 1,
+          "n_pool": 38,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 4,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 38
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "satscores",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 6,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 27
+          },
+          "n_paths": 40,
+          "n_unique_sql": 27,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "37",
+          "db_id": "california_schools",
+          "question": "What is the complete address of the school with the lowest excellence rate? Indicate the Street, City, State, and Zip.",
+          "n_subq": 1,
+          "n_pool": 15,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 15
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "satscores",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 0.9,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 20
+          },
+          "n_paths": 35,
+          "n_unique_sql": 20,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "41",
+          "db_id": "california_schools",
+          "question": "List the names of virtual schools that are among the top 5 in their respective counties based on average reading scores.",
+          "n_subq": 1,
+          "n_pool": 22,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 22
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "ranked",
+            "satscores",
+            "schools"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 31.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 17
+          },
+          "n_paths": 33,
+          "n_unique_sql": 17,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "48",
+          "db_id": "california_schools",
+          "question": "What is the ratio of merged Unified School District schools in Orange County to merged Elementary School District schools?",
+          "n_subq": 1,
+          "n_pool": 28,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 28
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.1,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 25
+          },
+          "n_paths": 39,
+          "n_unique_sql": 25,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "85",
+          "db_id": "california_schools",
+          "question": "What is the Percent (%) Eligible Free (K-12) in the school administered by an administrator whose first name is Alusine. List the district code of the school.",
+          "n_subq": 2,
+          "n_pool": 32,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 5,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 30,
+            "exec_error": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "frpm",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 0.4,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 17,
+            "exec_error": 1
+          },
+          "n_paths": 35,
+          "n_unique_sql": 18,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "173",
+          "db_id": "financial",
+          "question": "How often does account number 3 request an account statement to be released? What was the aim of debiting 3539 in total?",
+          "n_subq": 2,
+          "n_pool": 40,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 5,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 38,
+            "exec_error": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "account",
+            "order"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 0.8,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 24
+          },
+          "n_paths": 31,
+          "n_unique_sql": 24,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "197",
+          "db_id": "toxicology",
+          "question": "Calculate the average number of oxygen atoms in single-bonded molecules.",
+          "n_subq": 1,
+          "n_pool": 23,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 23
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "atom",
+            "bond",
+            "oxygen_atoms_per_molecule",
+            "single_bond_molecules"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 23
+          },
+          "n_paths": 35,
+          "n_unique_sql": 23,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "352",
+          "db_id": "card_games",
+          "question": "Calculate the percentage of the cards availabe in Chinese Simplified.",
+          "n_subq": 4,
+          "n_pool": 28,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 6,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 28
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "foreign_data"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 14
+          },
+          "n_paths": 38,
+          "n_unique_sql": 14,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "465",
+          "db_id": "card_games",
+          "question": "Which sets of cards with \"Ancestor's Chosen\" in it have a Korean version?",
+          "n_subq": 1,
+          "n_pool": 26,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 20,
+            "exec_error": 6
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "set_translations",
+            "sets"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 0.2,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 18
+          },
+          "n_paths": 33,
+          "n_unique_sql": 18,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "518",
+          "db_id": "card_games",
+          "question": "Which of the play format has the highest number of banned status? Indicate the play format and the names of all the card meet the condition.",
+          "n_subq": 4,
+          "n_pool": 32,
+          "n_rollouts": 8,
+          "max_reward": 1.0,
+          "n_reward_ge1": 2,
+          "primary": "exec_timeout",
+          "subtag": null,
+          "pool_cats": {
+            "gold_fail": 23,
+            "exec_timeout": 9
+          },
+          "top1_cat": "gold_fail",
+          "gold_tables": [
+            "cards",
+            "legalities",
+            "maxbanned"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": null,
+          "alpha_primary": "exec_timeout",
+          "alpha_pool_cats": {
+            "gold_fail": 24,
+            "exec_timeout": 1
+          },
+          "n_paths": 31,
+          "n_unique_sql": 25,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "639",
+          "db_id": "codebase_community",
+          "question": "Based on posts posted by Community, calculate the percentage of posts that use the R language.",
+          "n_subq": 3,
+          "n_pool": 53,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 9,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 53
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "posthistory",
+            "tags",
+            "users"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 23
+          },
+          "n_paths": 36,
+          "n_unique_sql": 23,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "685",
+          "db_id": "codebase_community",
+          "question": "Identify the total views on the post 'Computer Game Datasets'. Name the user who posted it last time.",
+          "n_subq": 1,
+          "n_pool": 35,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 35
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "posthistory",
+            "posts",
+            "users"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 0.7,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 17
+          },
+          "n_paths": 29,
+          "n_unique_sql": 17,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "701",
+          "db_id": "codebase_community",
+          "question": "Among all the posts posted by the most influential user, identify the percentage with a score above 50.",
+          "n_subq": 3,
+          "n_pool": 39,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "exec_error",
+          "subtag": null,
+          "pool_cats": {
+            "gold_fail": 39
+          },
+          "top1_cat": "gold_fail",
+          "gold_tables": [
+            "posts",
+            "users"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": null,
+          "alpha_primary": "empty_paths",
+          "alpha_pool_cats": {
+            "gold_fail": 19
+          },
+          "n_paths": 33,
+          "n_unique_sql": 19,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "829",
+          "db_id": "superhero",
+          "question": "Which publisher created more superheroes: DC or Marvel Comics? Find the difference in the number of superheroes.",
+          "n_subq": 3,
+          "n_pool": 35,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 34,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "publisher",
+            "superhero"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 12
+          },
+          "n_paths": 37,
+          "n_unique_sql": 12,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1011",
+          "db_id": "formula_1",
+          "question": "List the full names of the top 20 drivers, ranked by their shortest lap time ever record in a Formula_1 race.",
+          "n_subq": 0,
+          "n_pool": 0,
+          "n_rollouts": 0,
+          "max_reward": null,
+          "n_reward_ge1": 0,
+          "primary": "exec_error",
+          "subtag": null,
+          "pool_cats": {},
+          "top1_cat": "blank",
+          "gold_tables": [
+            "drivers",
+            "laptimes"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 8,
+          "avg_wrong_rows": null,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 24
+          },
+          "n_paths": 37,
+          "n_unique_sql": 24,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1037",
+          "db_id": "european_football_2",
+          "question": "Calculate the percentage of players who prefer left foot, who were born between 1987 and 1992.",
+          "n_subq": 5,
+          "n_pool": 44,
+          "n_rollouts": 9,
+          "max_reward": 1.0,
+          "n_reward_ge1": 6,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 44
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "player",
+            "player_attributes"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "exec_error": 10,
+            "wrong_result": 19
+          },
+          "n_paths": 35,
+          "n_unique_sql": 29,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1136",
+          "db_id": "european_football_2",
+          "question": "How many players had the highest potential score for crossing that preferred to use their left foots while attacking?",
+          "n_subq": 3,
+          "n_pool": 28,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 28
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "player_attributes"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 12
+          },
+          "n_paths": 36,
+          "n_unique_sql": 12,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1148",
+          "db_id": "european_football_2",
+          "question": "What is the percentage of players that are under 180 cm who have an overall strength of more than 70?",
+          "n_subq": 4,
+          "n_pool": 6,
+          "n_rollouts": 3,
+          "max_reward": 1.0,
+          "n_reward_ge1": 3,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 6
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "player",
+            "player_attributes"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 16
+          },
+          "n_paths": 37,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1149",
+          "db_id": "thrombosis_prediction",
+          "question": "Are there more in-patient or outpatient who were male? What is the deviation in percentage?",
+          "n_subq": 1,
+          "n_pool": 51,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 2,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 51
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "male_counts",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 17,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 26
+          },
+          "n_paths": 35,
+          "n_unique_sql": 26,
+          "alpha_full_table_cover": false,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1166",
+          "db_id": "thrombosis_prediction",
+          "question": "What are the symptoms observed by the youngest patient to ever did a medical examination? Identify the patient diagnosis.",
+          "n_subq": 0,
+          "n_pool": 0,
+          "n_rollouts": 0,
+          "max_reward": null,
+          "n_reward_ge1": 0,
+          "primary": "exec_error",
+          "subtag": null,
+          "pool_cats": {},
+          "top1_cat": "blank",
+          "gold_tables": [
+            "examination",
+            "patient"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": null,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 15
+          },
+          "n_paths": 37,
+          "n_unique_sql": 15,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1175",
+          "db_id": "thrombosis_prediction",
+          "question": "How old was the patient who had the highest hemoglobin count at the time of the examination, and what is the doctor's diagnosis?",
+          "n_subq": 1,
+          "n_pool": 34,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 4,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 34
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 0.1,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 22,
+            "exec_error": 2
+          },
+          "n_paths": 33,
+          "n_unique_sql": 24,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1265",
+          "db_id": "thrombosis_prediction",
+          "question": "How many patients have a normal level of anti-ribonuclear protein and have been admitted to the hospital?",
+          "n_subq": 1,
+          "n_pool": 12,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 12
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 15,
+            "exec_error": 1
+          },
+          "n_paths": 35,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1376",
+          "db_id": "student_club",
+          "question": "Among all the closed events, which event has the highest spend-to-budget ratio?",
+          "n_subq": 1,
+          "n_pool": 20,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 19,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "budget",
+            "event"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 15
+          },
+          "n_paths": 35,
+          "n_unique_sql": 15,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1387",
+          "db_id": "student_club",
+          "question": "Which student has been entrusted to manage the budget for the Yearly Kickoff?",
+          "n_subq": 1,
+          "n_pool": 34,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 29,
+            "exec_error": 5
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "budget",
+            "event",
+            "expense",
+            "member"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 6,
+          "avg_wrong_rows": 1.5,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 12,
+            "exec_error": 3
+          },
+          "n_paths": 32,
+          "n_unique_sql": 15,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1482",
+          "db_id": "debit_card_specializing",
+          "question": "Provide the percentage increase or decrease in consumption paid in EUR between 2012 and 2013 for SME, LAM, and KAM respectively.",
+          "n_subq": 4,
+          "n_pool": 31,
+          "n_rollouts": 7,
+          "max_reward": 1.0,
+          "n_reward_ge1": 2,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 31
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "customers",
+            "yearmonth"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 3.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 26
+          },
+          "n_paths": 34,
+          "n_unique_sql": 26,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        },
+        {
+          "qid": "1529",
+          "db_id": "debit_card_specializing",
+          "question": "What is the amount spent by customer \"38508\" at the gas stations? How much had the customer spent in August 2012?",
+          "n_subq": 1,
+          "n_pool": 45,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 45
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "transactions_1k"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 6,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 30
+          },
+          "n_paths": 36,
+          "n_unique_sql": 30,
+          "alpha_full_table_cover": true,
+          "group": "both_fail",
+          "alpha_any_ok": false,
+          "siga_rec": false
+        }
+      ]
+    },
+    "only_alpha": {
+      "name": "only_alpha",
+      "n": 18,
+      "qids": [
+        "17",
+        "77",
+        "82",
+        "125",
+        "145",
+        "159",
+        "169",
+        "212",
+        "219",
+        "263",
+        "366",
+        "694",
+        "861",
+        "955",
+        "1002",
+        "1169",
+        "1389",
+        "1531"
+      ],
+      "siga_primary": {
+        "wrong_result": 16,
+        "exec_timeout": 1,
+        "exec_error": 1
+      },
+      "alpha_primary": {
+        "correct": 18
+      },
+      "siga_subtag": {
+        "semantic_wrong": 6,
+        "low_diversity_same_wrong_answer": 8,
+        "schema_partial_missing_table": 3,
+        "empty_result": 1
+      },
+      "db_dist": {
+        "california_schools": 3,
+        "financial": 4,
+        "toxicology": 3,
+        "card_games": 1,
+        "codebase_community": 1,
+        "formula_1": 3,
+        "thrombosis_prediction": 1,
+        "student_club": 1,
+        "debit_card_specializing": 1
+      },
+      "low_pool_le5": 0,
+      "reward1_but_no_correct": 17,
+      "schema_link_miss": 3,
+      "rows": [
+        {
+          "qid": "17",
+          "db_id": "california_schools",
+          "question": "Rank schools by their average score in Writing where the score is greater than 499, showing their charter numbers, average score, and rank.",
+          "n_subq": 3,
+          "n_pool": 44,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 2,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 44
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "satscores",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 81.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 16,
+            "correct": 7
+          },
+          "n_paths": 35,
+          "n_unique_sql": 23,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "77",
+          "db_id": "california_schools",
+          "question": "Which schools served a grade span of Kindergarten to 9th grade in the county of Los Angeles and what is its Percent (%) Eligible FRPM (Ages 5-17)?",
+          "n_subq": 2,
+          "n_pool": 31,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 31
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "frpm",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 12.4,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 13,
+            "exec_error": 1,
+            "correct": 8
+          },
+          "n_paths": 35,
+          "n_unique_sql": 22,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "82",
+          "db_id": "california_schools",
+          "question": "What is the grade span offered in the school with the highest longitude?",
+          "n_subq": 2,
+          "n_pool": 20,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 20
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 8,
+            "correct": 5
+          },
+          "n_paths": 33,
+          "n_unique_sql": 13,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "125",
+          "db_id": "financial",
+          "question": "For loans contracts which are still running where client are in debt, state their district percentage unemployment rate increment from year 1995 to 1996.",
+          "n_subq": 1,
+          "n_pool": 14,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 14
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "account",
+            "district",
+            "loan"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 867.4,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 19,
+            "correct": 6
+          },
+          "n_paths": 37,
+          "n_unique_sql": 25,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "145",
+          "db_id": "financial",
+          "question": "Who are the account holder identification numbers whose who have transactions on the credit card with the amount is less than the overall average, in 1998?",
+          "n_subq": 4,
+          "n_pool": 41,
+          "n_rollouts": 9,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 41
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "account",
+            "trans"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 741.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 13,
+            "correct": 8
+          },
+          "n_paths": 39,
+          "n_unique_sql": 21,
+          "alpha_full_table_cover": false,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "159",
+          "db_id": "financial",
+          "question": "List all the withdrawals in cash transactions that the client with the id 3356 makes.",
+          "n_subq": 1,
+          "n_pool": 11,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 9,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 11
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "account",
+            "client",
+            "disp",
+            "trans"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 140.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "correct": 12,
+            "wrong_result": 6
+          },
+          "n_paths": 37,
+          "n_unique_sql": 18,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "169",
+          "db_id": "financial",
+          "question": "What was the growth rate of the total amount of loans across all accounts owned by a male client between 1996 and 1997?",
+          "n_subq": 4,
+          "n_pool": 26,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 26
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "account",
+            "client",
+            "disp",
+            "loan"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 29,
+            "correct": 1
+          },
+          "n_paths": 35,
+          "n_unique_sql": 30,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "212",
+          "db_id": "toxicology",
+          "question": "Which element is the least numerous in non-carcinogenic molecules?",
+          "n_subq": 1,
+          "n_pool": 12,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 12
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "atom",
+            "molecule"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 18,
+            "correct": 1
+          },
+          "n_paths": 33,
+          "n_unique_sql": 19,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "219",
+          "db_id": "toxicology",
+          "question": "What is the percentage of molecules in triple type bonds are carcinogenic?",
+          "n_subq": 4,
+          "n_pool": 32,
+          "n_rollouts": 11,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 31,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "atom",
+            "bond",
+            "molecule"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 19,
+            "correct": 2
+          },
+          "n_paths": 38,
+          "n_unique_sql": 21,
+          "alpha_full_table_cover": false,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "263",
+          "db_id": "toxicology",
+          "question": "What is the composition of element chlorine in percentage among the single bond molecules?",
+          "n_subq": 1,
+          "n_pool": 31,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 8,
+          "primary": "exec_timeout",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 29,
+            "exec_timeout": 1,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "atom",
+            "bond",
+            "molecule"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 14,
+            "correct": 4
+          },
+          "n_paths": 38,
+          "n_unique_sql": 18,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "366",
+          "db_id": "card_games",
+          "question": "What is the rule of playing card \"Benalish Knight\"?",
+          "n_subq": 1,
+          "n_pool": 13,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 13
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "legalities"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 3.7,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "correct": 9,
+            "wrong_result": 6
+          },
+          "n_paths": 36,
+          "n_unique_sql": 15,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "694",
+          "db_id": "codebase_community",
+          "question": "Provide the text of the latest 10 comments to the post with the title 'Analysing wind data with R' and the display name of the user who left it.",
+          "n_subq": 1,
+          "n_pool": 6,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "schema_partial_missing_table",
+          "pool_cats": {
+            "wrong_result": 6
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "comments",
+            "posts",
+            "users"
+          ],
+          "full_table_cover": false,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 10.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 7,
+            "correct": 3
+          },
+          "n_paths": 35,
+          "n_unique_sql": 10,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "861",
+          "db_id": "formula_1",
+          "question": "What is his number of the driver who finished 0:01:54 in the Q3 of qualifying race No.903?",
+          "n_subq": 1,
+          "n_pool": 24,
+          "n_rollouts": 12,
+          "max_reward": 0.0,
+          "n_reward_ge1": 0,
+          "primary": "wrong_result",
+          "subtag": "empty_result",
+          "pool_cats": {
+            "wrong_result": 24
+          },
+          "top1_cat": "blank",
+          "gold_tables": [
+            "drivers",
+            "qualifying"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 0.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 13,
+            "correct": 3
+          },
+          "n_paths": 36,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "955",
+          "db_id": "formula_1",
+          "question": "For each year before year 1975, what was the average time in seconds of the champion?",
+          "n_subq": 1,
+          "n_pool": 32,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "exec_error",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 11,
+            "exec_error": 21
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "races",
+            "results"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 25.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 12,
+            "correct": 20
+          },
+          "n_paths": 34,
+          "n_unique_sql": 32,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "1002",
+          "db_id": "formula_1",
+          "question": "As of the present, what is the full name of the youngest racer? Indicate her nationality and the name of the race to which he/she first joined.",
+          "n_subq": 2,
+          "n_pool": 37,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 11,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 37
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "drivers",
+            "driverstandings",
+            "races"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.4,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 21,
+            "correct": 6
+          },
+          "n_paths": 35,
+          "n_unique_sql": 27,
+          "alpha_full_table_cover": false,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "1169",
+          "db_id": "thrombosis_prediction",
+          "question": "What is the ratio of male to female patients among all those with abnormal uric acid counts?",
+          "n_subq": 4,
+          "n_pool": 27,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 27
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 12,
+            "correct": 1
+          },
+          "n_paths": 39,
+          "n_unique_sql": 13,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "1389",
+          "db_id": "student_club",
+          "question": "Which event has the lowest cost? Break ties by name in alphabetical order.",
+          "n_subq": 2,
+          "n_pool": 24,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "wrong_result",
+          "subtag": "semantic_wrong",
+          "pool_cats": {
+            "wrong_result": 24
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "budget",
+            "event",
+            "expense"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 0.8,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 15,
+            "correct": 1,
+            "exec_error": 3
+          },
+          "n_paths": 32,
+          "n_unique_sql": 19,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        },
+        {
+          "qid": "1531",
+          "db_id": "debit_card_specializing",
+          "question": "Who is the top spending customer and how much is the average price per single item purchased by this customer? What currency was being used?",
+          "n_subq": 3,
+          "n_pool": 37,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 11,
+          "primary": "wrong_result",
+          "subtag": "low_diversity_same_wrong_answer",
+          "pool_cats": {
+            "wrong_result": 36,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "customers",
+            "transactions_1k"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "correct",
+          "alpha_pool_cats": {
+            "wrong_result": 24,
+            "correct": 2
+          },
+          "n_paths": 36,
+          "n_unique_sql": 26,
+          "alpha_full_table_cover": true,
+          "group": "only_alpha",
+          "alpha_any_ok": true,
+          "siga_rec": false
+        }
+      ]
+    },
+    "only_siga": {
+      "name": "only_siga",
+      "n": 21,
+      "qids": [
+        "50",
+        "234",
+        "260",
+        "349",
+        "383",
+        "407",
+        "462",
+        "587",
+        "683",
+        "750",
+        "788",
+        "794",
+        "948",
+        "1028",
+        "1080",
+        "1189",
+        "1227",
+        "1235",
+        "1241",
+        "1243",
+        "1490"
+      ],
+      "siga_primary": {
+        "correct": 21
+      },
+      "alpha_primary": {
+        "wrong_result": 15,
+        "exec_timeout": 1,
+        "exec_error": 4,
+        "missing_pkl": 1
+      },
+      "siga_subtag": {},
+      "db_dist": {
+        "california_schools": 1,
+        "toxicology": 2,
+        "card_games": 4,
+        "codebase_community": 2,
+        "superhero": 3,
+        "formula_1": 1,
+        "european_football_2": 2,
+        "thrombosis_prediction": 5,
+        "debit_card_specializing": 1
+      },
+      "low_pool_le5": 0,
+      "reward1_but_no_correct": 0,
+      "schema_link_miss": 0,
+      "rows": [
+        {
+          "qid": "50",
+          "db_id": "california_schools",
+          "question": "What is the postal street address for the school with the 7th highest Math average? Indicate the school's name.",
+          "n_subq": 4,
+          "n_pool": 36,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 34,
+            "correct": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "satscores",
+            "schools"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 0.9,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 16
+          },
+          "n_paths": 37,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "234",
+          "db_id": "toxicology",
+          "question": "How many bonds which involved atom 12 does molecule TR009 have?",
+          "n_subq": 3,
+          "n_pool": 42,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 9,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 31,
+            "correct": 10,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "connected"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 17
+          },
+          "n_paths": 35,
+          "n_unique_sql": 17,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "260",
+          "db_id": "toxicology",
+          "question": "Calculate the total atoms with triple-bond molecules containing the element phosphorus or bromine.",
+          "n_subq": 1,
+          "n_pool": 42,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 28,
+            "correct": 12,
+            "exec_error": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "atom",
+            "bond"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 25
+          },
+          "n_paths": 34,
+          "n_unique_sql": 25,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "349",
+          "db_id": "card_games",
+          "question": "Name the card with the most ruling information and its artist. Also state if the card is a promotional printing.",
+          "n_subq": 3,
+          "n_pool": 25,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 8,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 19,
+            "correct": 2,
+            "exec_timeout": 4
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "rulings"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 8,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "exec_timeout",
+          "alpha_pool_cats": {
+            "wrong_result": 22,
+            "exec_timeout": 1
+          },
+          "n_paths": 38,
+          "n_unique_sql": 23,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "383",
+          "db_id": "card_games",
+          "question": "How many of the banned cards are white border?",
+          "n_subq": 1,
+          "n_pool": 8,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "correct": 1,
+            "wrong_result": 7
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "legalities"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 13
+          },
+          "n_paths": 35,
+          "n_unique_sql": 13,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "407",
+          "db_id": "card_games",
+          "question": "Lists all types of cards in German.",
+          "n_subq": 3,
+          "n_pool": 40,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 4,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "exec_error": 2,
+            "wrong_result": 26,
+            "correct": 12
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "cards",
+            "foreign_data"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 7,
+          "avg_wrong_rows": 1159.5,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 19,
+            "exec_error": 2
+          },
+          "n_paths": 30,
+          "n_unique_sql": 21,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "462",
+          "db_id": "card_games",
+          "question": "What's the Italian name of the set of cards with \"Ancestor's Chosen\" is in?",
+          "n_subq": 1,
+          "n_pool": 29,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 6,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 2,
+            "correct": 27
+          },
+          "top1_cat": "correct",
+          "gold_tables": [
+            "cards",
+            "set_translations"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "missing_pkl",
+          "n_paths": 0,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "587",
+          "db_id": "codebase_community",
+          "question": "Calculate the average view count of each post tagged as 'humor' and list the title and the comment of each post.",
+          "n_subq": 1,
+          "n_pool": 44,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 1,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 37,
+            "correct": 7
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "comments",
+            "posts"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 15,
+          "avg_wrong_rows": 8.4,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 29,
+            "exec_error": 1
+          },
+          "n_paths": 34,
+          "n_unique_sql": 30,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "683",
+          "db_id": "codebase_community",
+          "question": "What is the percentage of posts that were both created in 2011 and whose owners had a reputation of over 1000?",
+          "n_subq": 1,
+          "n_pool": 34,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 9,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 20,
+            "correct": 14
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "posts",
+            "users"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 4,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 11,
+            "exec_error": 5
+          },
+          "n_paths": 35,
+          "n_unique_sql": 16,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "750",
+          "db_id": "superhero",
+          "question": "What is the average weight of all female superheroes?",
+          "n_subq": 1,
+          "n_pool": 7,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 11,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 5,
+            "correct": 1,
+            "exec_error": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "gender",
+            "superhero"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 4
+          },
+          "n_paths": 36,
+          "n_unique_sql": 4,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "788",
+          "db_id": "superhero",
+          "question": "How many percent of female heroes were published by Marvel Comics?",
+          "n_subq": 5,
+          "n_pool": 24,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 9,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "correct": 16,
+            "wrong_result": 7,
+            "exec_error": 1
+          },
+          "top1_cat": "correct",
+          "gold_tables": [
+            "gender",
+            "publisher",
+            "superhero"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 10
+          },
+          "n_paths": 33,
+          "n_unique_sql": 10,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "794",
+          "db_id": "superhero",
+          "question": "Which hero was the fastest?",
+          "n_subq": 1,
+          "n_pool": 11,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 9,
+            "correct": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "attribute",
+            "hero_attribute",
+            "superhero"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 2,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 6
+          },
+          "n_paths": 40,
+          "n_unique_sql": 6,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "948",
+          "db_id": "formula_1",
+          "question": "What are the maximum points of British constructors?",
+          "n_subq": 1,
+          "n_pool": 13,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 12,
+            "correct": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "constructors",
+            "constructorstandings"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 5
+          },
+          "n_paths": 30,
+          "n_unique_sql": 5,
+          "alpha_full_table_cover": false,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1028",
+          "db_id": "european_football_2",
+          "question": "In Scotland Premier League, which away team won the most during the 2010 season?",
+          "n_subq": 1,
+          "n_pool": 30,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 29,
+            "correct": 1
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "league",
+            "match",
+            "team"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 10
+          },
+          "n_paths": 36,
+          "n_unique_sql": 10,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1080",
+          "db_id": "european_football_2",
+          "question": "Among the players whose preferred foot was the left foot when attacking, how many of them would remain in his position when the team attacked?",
+          "n_subq": 1,
+          "n_pool": 17,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 8,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "correct": 7,
+            "wrong_result": 10
+          },
+          "top1_cat": "correct",
+          "gold_tables": [
+            "player_attributes"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 2
+          },
+          "n_paths": 30,
+          "n_unique_sql": 2,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1189",
+          "db_id": "thrombosis_prediction",
+          "question": "What number of patients with a degree of thrombosis level 2 and ANA pattern of only S, have a level of anti-Cardiolip in antibody (IgM) 20% higher than average?",
+          "n_subq": 4,
+          "n_pool": 43,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 12,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 37,
+            "correct": 6
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "examination"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 13
+          },
+          "n_paths": 32,
+          "n_unique_sql": 13,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1227",
+          "db_id": "thrombosis_prediction",
+          "question": "What is the average age of the male patient with high cholesterol?",
+          "n_subq": 1,
+          "n_pool": 10,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 10,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 8,
+            "correct": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "exec_error",
+          "alpha_pool_cats": {
+            "wrong_result": 10,
+            "exec_error": 1
+          },
+          "n_paths": 35,
+          "n_unique_sql": 11,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1235",
+          "db_id": "thrombosis_prediction",
+          "question": "What are the patient's diagnosis for those who has lower red blood blood cell? State their ID and age.",
+          "n_subq": 2,
+          "n_pool": 33,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 7,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 31,
+            "correct": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 494.1,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 18
+          },
+          "n_paths": 40,
+          "n_unique_sql": 18,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1241",
+          "db_id": "thrombosis_prediction",
+          "question": "For patients with abnormal platelet level, state the number of patients with lower than normal range. How is it compare to the number of patients with higher th",
+          "n_subq": 5,
+          "n_pool": 14,
+          "n_rollouts": 6,
+          "max_reward": 1.0,
+          "n_reward_ge1": 4,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 4,
+            "correct": 10
+          },
+          "top1_cat": "correct",
+          "gold_tables": [
+            "laboratory"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 3,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 10
+          },
+          "n_paths": 33,
+          "n_unique_sql": 10,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1243",
+          "db_id": "thrombosis_prediction",
+          "question": "For all patients who are older than 55 years old, what is the percentage of those with abnormal prothrombin time (PT) that are female?",
+          "n_subq": 4,
+          "n_pool": 27,
+          "n_rollouts": 7,
+          "max_reward": 1.0,
+          "n_reward_ge1": 4,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 25,
+            "correct": 2
+          },
+          "top1_cat": "wrong_result",
+          "gold_tables": [
+            "laboratory",
+            "patient"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 1,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 17
+          },
+          "n_paths": 34,
+          "n_unique_sql": 17,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        },
+        {
+          "qid": "1490",
+          "db_id": "debit_card_specializing",
+          "question": "How many percent of LAM customer consumed more than 46.73?",
+          "n_subq": 4,
+          "n_pool": 43,
+          "n_rollouts": 12,
+          "max_reward": 1.0,
+          "n_reward_ge1": 6,
+          "primary": "correct",
+          "subtag": null,
+          "pool_cats": {
+            "wrong_result": 30,
+            "correct": 13
+          },
+          "top1_cat": "correct",
+          "gold_tables": [
+            "customers",
+            "yearmonth"
+          ],
+          "full_table_cover": true,
+          "n_unique_exec_results": 5,
+          "avg_wrong_rows": 1.0,
+          "alpha_primary": "wrong_result",
+          "alpha_pool_cats": {
+            "wrong_result": 15
+          },
+          "n_paths": 35,
+          "n_unique_sql": 15,
+          "alpha_full_table_cover": true,
+          "group": "only_siga",
+          "alpha_any_ok": false,
+          "siga_rec": true
+        }
+      ]
+    }
+  }
+}

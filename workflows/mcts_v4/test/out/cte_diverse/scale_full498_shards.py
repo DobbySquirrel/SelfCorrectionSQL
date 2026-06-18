@@ -16,7 +16,15 @@ def main() -> None:
     ap.add_argument("--shard-basename", required=True)
     ap.add_argument("--new-shards", type=int, default=8)
     ap.add_argument("--roll-outs", type=int, default=12)
+    ap.add_argument("--skip-errors", action="store_true", help="treat shard entries with error= as not done")
     args = ap.parse_args()
+
+    def _is_done(rec: dict) -> bool:
+        if not isinstance(rec, dict):
+            return False
+        if args.skip_errors and rec.get("error"):
+            return False
+        return bool(rec.get("sql") or rec.get("all_sqls_with_attributes") or rec.get("stats"))
 
     manifest_path = Path(args.manifest)
     shard_dir = Path(args.shard_dir)
@@ -34,6 +42,9 @@ def main() -> None:
         done.update(json.loads(p.read_text(encoding="utf-8")))
         old_shards = i + 1
         i += 1
+
+    if args.skip_errors:
+        done = {q: v for q, v in done.items() if _is_done(v)}
 
     checkpoint = out_dir / f"{args.shard_basename}_done_checkpoint.json"
     checkpoint.write_text(json.dumps(done, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

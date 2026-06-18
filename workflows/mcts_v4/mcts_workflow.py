@@ -1944,6 +1944,7 @@ class MCTSWorkflow:
                 prior_rollout_sqls=list(self._prior_rollout_sqls),
                 bootstrap_sql=self._bootstrap_direct_sql,
                 bootstrap_audit=self._bootstrap_direct_sql_audit,
+                question_id=getattr(self, "_solve_qid", 0),
             )
             for ba in self._column_binding_expand_audits[before_bind_n:]:
                 self._timing["column_binding_s"] += float(ba.get("elapsed_s") or 0.0)

@@ -569,10 +569,12 @@ def _execute_mode_c_call_spec(
     use_schema_div: bool,
     prior_rollout_sqls: Optional[List[str]] = None,
     cached_narrow_linking: Optional[Dict[str, Any]] = None,
+    question_id: int | str = 0,
 ) -> Dict[str, Any]:
     """Run one Mode C LLM branch (thread-safe; does not mutate node.additional_context)."""
     from .column_binding_cot import augment_additional_context_for_expand
     from .schema_diversity import prepare_schema_for_temp, reversed_schema_linking_enabled, combined_schema_linking_enabled
+    from .value_schema_linking import prepare_schema_value_linked, value_schema_linking_enabled
 
     temp = spec["temp"]
     n_req = spec["n"]
@@ -651,6 +653,25 @@ def _execute_mode_c_call_spec(
                 schema_strategy_override="combined_narrow_reversed",
                 cached_narrow_linking=cached_narrow_linking,
             )
+        elif schema_strategy == "value_linked_alpha":
+            if not value_schema_linking_enabled():
+                return {
+                    "ctes": [],
+                    "audit": {"skipped": True, "reason": "value_schema_disabled"},
+                    "meta": [],
+                    "binding_audit": None,
+                    "schema_audit": None,
+                    "checker_revision": [],
+                    "n_checker_llm_calls": 0,
+                    "n_checker_revised": 0,
+                }
+            schema_override, value_block, schema_audit = prepare_schema_value_linked(
+                question_id=question_id,
+                schema_info=original_schema,
+                question=question,
+            )
+            if value_block:
+                ctx_for_prompt = (ctx_for_prompt + "\n\n" + value_block).strip() if ctx_for_prompt else value_block
         else:
             schema_override, schema_audit = prepare_schema_for_temp(
                 temperature=temp,
@@ -742,6 +763,7 @@ def generate_diverse_mode_c(
     prior_rollout_sqls: Optional[List[str]] = None,
     bootstrap_sql: Optional[str] = None,
     bootstrap_audit: Optional[Dict[str, Any]] = None,
+    question_id: int | str = 0,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """Mode C: dual@0.3 plain+hint, per-temp schema diversity, parallel call specs."""
     temps = temperatures if temperatures is not None else MODE_C_TEMPERATURES
@@ -773,6 +795,7 @@ def generate_diverse_mode_c(
         "reversed_bootstrap_direct_sql": False,
         "bootstrap_direct_sql": None,
         "prior_rollout_sql_count": len(prior_rollout_sqls or []),
+        "value_schema_linking": False,
     }
     all_ctes: List[str] = []
     meta_by_cte: Dict[str, Dict[str, Any]] = {}
@@ -793,6 +816,7 @@ def generate_diverse_mode_c(
             precompute_narrow_linking_cache,
             reversed_schema_linking_enabled,
         )
+        from .value_schema_linking import MODE_C_VALUE_PATH_TEMP, value_schema_linking_enabled
 
         rollout1 = not (prior_rollout_sqls or [])
         bootstrap_for_reversed = ""
@@ -864,6 +888,18 @@ def generate_diverse_mode_c(
                 }
             )
             trace["combined_schema_linking"] = True
+        if value_schema_linking_enabled():
+            value_temp = MODE_C_VALUE_PATH_TEMP
+            call_specs.append(
+                {
+                    "temp": value_temp,
+                    "n": diverse_n_for_temp(value_temp, default=n_per_call),
+                    "use_binding": False,
+                    "binding_branch": "value",
+                    "schema_strategy": "value_linked_alpha",
+                }
+            )
+            trace["value_schema_linking"] = True
         call_specs = expand_call_specs_with_temp_swap(call_specs)
         trace["n_llm_calls"] = len(call_specs)
 
@@ -916,6 +952,7 @@ def generate_diverse_mode_c(
                 use_schema_div=use_schema_div,
                 prior_rollout_sqls=effective_prior,
                 cached_narrow_linking=cached_narrow_linking,
+                question_id=question_id,
             )
 
         spec_results: List[Dict[str, Any]] = []

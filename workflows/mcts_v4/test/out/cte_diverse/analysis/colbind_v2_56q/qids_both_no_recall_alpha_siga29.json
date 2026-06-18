@@ -1,0 +1,183 @@
+{
+  "saved_at": "2026-06-18T02:51:31.358094+00:00",
+  "description": "498 manifest: Alpha-SQL any_ok=false AND sigA pool has no is_correct SQL",
+  "n": 29,
+  "qids": [
+    "11",
+    "23",
+    "24",
+    "36",
+    "37",
+    "41",
+    "48",
+    "85",
+    "173",
+    "197",
+    "352",
+    "465",
+    "518",
+    "639",
+    "685",
+    "701",
+    "829",
+    "1011",
+    "1037",
+    "1136",
+    "1148",
+    "1149",
+    "1166",
+    "1175",
+    "1265",
+    "1376",
+    "1387",
+    "1482",
+    "1529"
+  ],
+  "questions": [
+    {
+      "qid": "11",
+      "db_id": "california_schools",
+      "question": "Please list the codes of the schools with a total enrollment of over 500."
+    },
+    {
+      "qid": "23",
+      "db_id": "california_schools",
+      "question": "List the names of schools with more than 30 difference in enrollements between K-12 and ages 5-17? Please also give the full street adress of the schools."
+    },
+    {
+      "qid": "24",
+      "db_id": "california_schools",
+      "question": "Give the names of the schools with the percent eligible for free meals in K-12 is more than 0.1 and test takers whose test score is greater than or equal to 1500?"
+    },
+    {
+      "qid": "36",
+      "db_id": "california_schools",
+      "question": "Under whose administration is the school with the highest number of students scoring 1500 or more on the SAT? Indicate their full names."
+    },
+    {
+      "qid": "37",
+      "db_id": "california_schools",
+      "question": "What is the complete address of the school with the lowest excellence rate? Indicate the Street, City, State, and Zip."
+    },
+    {
+      "qid": "41",
+      "db_id": "california_schools",
+      "question": "List the names of virtual schools that are among the top 5 in their respective counties based on average reading scores."
+    },
+    {
+      "qid": "48",
+      "db_id": "california_schools",
+      "question": "What is the ratio of merged Unified School District schools in Orange County to merged Elementary School District schools?"
+    },
+    {
+      "qid": "85",
+      "db_id": "california_schools",
+      "question": "What is the Percent (%) Eligible Free (K-12) in the school administered by an administrator whose first name is Alusine. List the district code of the school."
+    },
+    {
+      "qid": "173",
+      "db_id": "financial",
+      "question": "How often does account number 3 request an account statement to be released? What was the aim of debiting 3539 in total?"
+    },
+    {
+      "qid": "197",
+      "db_id": "toxicology",
+      "question": "Calculate the average number of oxygen atoms in single-bonded molecules."
+    },
+    {
+      "qid": "352",
+      "db_id": "card_games",
+      "question": "Calculate the percentage of the cards availabe in Chinese Simplified."
+    },
+    {
+      "qid": "465",
+      "db_id": "card_games",
+      "question": "Which sets of cards with \"Ancestor's Chosen\" in it have a Korean version?"
+    },
+    {
+      "qid": "518",
+      "db_id": "card_games",
+      "question": "Which of the play format has the highest number of banned status? Indicate the play format and the names of all the card meet the condition."
+    },
+    {
+      "qid": "639",
+      "db_id": "codebase_community",
+      "question": "Based on posts posted by Community, calculate the percentage of posts that use the R language."
+    },
+    {
+      "qid": "685",
+      "db_id": "codebase_community",
+      "question": "Identify the total views on the post 'Computer Game Datasets'. Name the user who posted it last time."
+    },
+    {
+      "qid": "701",
+      "db_id": "codebase_community",
+      "question": "Among all the posts posted by the most influential user, identify the percentage with a score above 50."
+    },
+    {
+      "qid": "829",
+      "db_id": "superhero",
+      "question": "Which publisher created more superheroes: DC or Marvel Comics? Find the difference in the number of superheroes."
+    },
+    {
+      "qid": "1011",
+      "db_id": "formula_1",
+      "question": "List the full names of the top 20 drivers, ranked by their shortest lap time ever record in a Formula_1 race."
+    },
+    {
+      "qid": "1037",
+      "db_id": "european_football_2",
+      "question": "Calculate the percentage of players who prefer left foot, who were born between 1987 and 1992."
+    },
+    {
+      "qid": "1136",
+      "db_id": "european_football_2",
+      "question": "How many players had the highest potential score for crossing that preferred to use their left foots while attacking?"
+    },
+    {
+      "qid": "1148",
+      "db_id": "european_football_2",
+      "question": "What is the percentage of players that are under 180 cm who have an overall strength of more than 70?"
+    },
+    {
+      "qid": "1149",
+      "db_id": "thrombosis_prediction",
+      "question": "Are there more in-patient or outpatient who were male? What is the deviation in percentage?"
+    },
+    {
+      "qid": "1166",
+      "db_id": "thrombosis_prediction",
+      "question": "What are the symptoms observed by the youngest patient to ever did a medical examination? Identify the patient diagnosis."
+    },
+    {
+      "qid": "1175",
+      "db_id": "thrombosis_prediction",
+      "question": "How old was the patient who had the highest hemoglobin count at the time of the examination, and what is the doctor's diagnosis?"
+    },
+    {
+      "qid": "1265",
+      "db_id": "thrombosis_prediction",
+      "question": "How many patients have a normal level of anti-ribonuclear protein and have been admitted to the hospital?"
+    },
+    {
+      "qid": "1376",
+      "db_id": "student_club",
+      "question": "Among all the closed events, which event has the highest spend-to-budget ratio?"
+    },
+    {
+      "qid": "1387",
+      "db_id": "student_club",
+      "question": "Which student has been entrusted to manage the budget for the Yearly Kickoff?"
+    },
+    {
+      "qid": "1482",
+      "db_id": "debit_card_specializing",
+      "question": "Provide the percentage increase or decrease in consumption paid in EUR between 2012 and 2013 for SME, LAM, and KAM respectively."
+    },
+    {
+      "qid": "1529",
+      "db_id": "debit_card_specializing",
+      "question": "What is the amount spent by customer \"38508\" at the gas stations? How much had the customer spent in August 2012?"
+    }
+  ]
+}
