@@ -2,9 +2,10 @@
 """DeepEye-aligned FULL CTE plugin v2 (step-level).
 
 Modules (aligned with official pipeline, CTE grain):
-  1) Schema: reused linked schema (+ value-retrieval examples already in snapshot)
-  2) Gen: PromptFactory DC×4 + Skeleton×4 + ICL×4
-  3) Revise: execution_checker + common_checker (PromptFactory; official uses 8 specialized checkers)
+  1) Schema: linked schema; VR → schema footer (same as fullsql fair)
+  2) Gen: PromptFactory DC/Skeleton/ICL with evidence-only HINT + step context postfix;
+     progressive schema fit; fixed temp 0.7 × n completions (not temp ladder)
+  3) Revise: execution_checker + common_checker (PromptFactory)
   4) Select: consistency shortcut (≥0.6) else BR×5 on top-2
 """
 
@@ -16,7 +17,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from openai import OpenAI
 
@@ -30,6 +31,12 @@ from workflows.mcts_v4.actions.deepeye_cte_plugin import (
     _llm,
     _parse_ab,
 )
+from workflows.mcts_v4.actions.deepeye_fullsql_fair_plugin import (
+    _fit_prompt_with_schema,
+    _llm_max_model_len,
+    _llm_n,
+    _max_prompt_chars,
+)
 
 
 def _env_flag(name: str, default: str = "0") -> bool:
@@ -37,8 +44,13 @@ def _env_flag(name: str, default: str = "0") -> bool:
 
 
 def _fix_revise_multicte() -> bool:
-    """Bugfix #4: multi-CTE-aware _sql_to_cte (default OFF for ablation)."""
-    return _env_flag("MCTS_BUGFIX_REVISE_MULTICTE", "0")
+    """Bugfix #4: multi-CTE-aware _sql_to_cte.
+
+    Default ON: models often emit full WITH chains for a step; keep leaf only when
+    preceding CTEs exist (matches progressive DAG / chain ingest expectations).
+    Set MCTS_BUGFIX_REVISE_MULTICTE=0 to restore legacy pass-through.
+    """
+    return _env_flag("MCTS_BUGFIX_REVISE_MULTICTE", "1")
 
 
 def _fix_cte_names_multi() -> bool:
@@ -242,76 +254,171 @@ def _revise_candidate(
     client,
     model: str,
     PF,
-    checker_budget: int = 2,
+    checker_budget: int = 3,
+    sql_compose_fn: Optional[Callable[[str], str]] = None,
+    exec_timeout_s: float = 600.0,
+    linked_schema: Optional[Dict[str, Any]] = None,
+    extra_evidence: str = "",
+    max_model_len: Optional[int] = None,
 ) -> Tuple[str, Dict[str, Any]]:
-    """Execution + common checker revision (PromptFactory)."""
-    audit = {"rounds": [], "final_ok": False}
-    cur = cte
-    hint = f"{evidence or 'None'}\nCurrent sub-step: {sub_question}"
+    """Revise composed step SQL; default = official DeepEye checkers (same as full SQL).
 
+    Flow: compose(CTE) → official_revise_full_sql → wrap leaf back to CTE.
+    Falls back to legacy exec/common loop only if official revise is disabled/errors.
+    """
+    audit: Dict[str, Any] = {"rounds": [], "final_ok": False, "mode": "legacy"}
+    cur = (cte or "").strip()
+    evidence_s = (evidence or "").strip() or "None"
+    # Official HINT = evidence only (do not stuff sub-step into HINT).
+    q = (question or sub_question or "").strip()
+
+    def _compose(blob: str) -> str:
+        if sql_compose_fn is not None:
+            try:
+                out = (sql_compose_fn(blob) or "").strip()
+                if out:
+                    return out
+            except Exception:
+                pass
+        return build_sql_from_chain(preceding_ctes, blob)
+
+    def _step_name(blob: str) -> str:
+        m = re.search(r"\bWITH\s+(\w+)\s+AS\b", blob or "", re.I)
+        return m.group(1) if m else "revised"
+
+    # --- preferred: official revise import (Syntax→rules→Result empty-trigger) ---
+    try:
+        from workflows.mcts_v4.actions.deepeye_plugin import (
+            official_revise_enabled,
+            revise_full_sql_official,
+        )
+
+        if official_revise_enabled() and cur:
+            sql0 = _compose(cur)
+            if not sql0.strip():
+                audit["rounds"].append({"mode": "official_skip_empty_compose"})
+            else:
+                def _exec_fn(p: Path, s: str):
+                    return exec_rows(p, s, timeout_s=float(exec_timeout_s))
+
+                fixed_sql, raudit = revise_full_sql_official(
+                    sql=sql0,
+                    question=q,
+                    evidence=evidence_s,
+                    schema=schema,
+                    db_path=db_path,
+                    client=client,
+                    model=model,
+                    exec_fn=_exec_fn,
+                    sampling_budget=max(1, int(checker_budget)),
+                    linked_schema=linked_schema,
+                    max_model_len=max_model_len,
+                    exec_timeout_s=float(exec_timeout_s),
+                    extra_evidence=extra_evidence,
+                )
+                fixed_sql = (fixed_sql or sql0).strip()
+                new_cte = _sql_to_cte(
+                    fixed_sql,
+                    step_name=_step_name(cur),
+                    preceding_ctes=list(preceding_ctes or []),
+                )
+                if new_cte:
+                    cur = new_cte
+                audit["mode"] = getattr(raudit, "mode", "") or "official_revise_import"
+                audit["n_llm_calls"] = getattr(raudit, "n_llm_calls", 0)
+                audit["fallback"] = getattr(raudit, "fallback", "") or ""
+                audit["events"] = [
+                    {
+                        "checker": getattr(e, "checker", ""),
+                        "action": getattr(e, "action", ""),
+                        "note": (getattr(e, "note", "") or "")[:160],
+                    }
+                    for e in (getattr(raudit, "events", None) or [])
+                ]
+                sql_f = _compose(cur)
+                _, err_f = exec_rows(db_path, sql_f, timeout_s=float(exec_timeout_s))
+                audit["final_ok"] = err_f is None
+                # Keep candidate even if still failing (official keep-in-pool).
+                return cur, audit
+    except Exception as e:
+        audit["rounds"].append({"mode": "official_revise_fallback", "error": str(e)[:160]})
+
+    # --- legacy fallback ---
+    audit["mode"] = "legacy_exec_common"
+    hint = f"{evidence_s}\nCurrent sub-step: {sub_question}"
     for round_i in range(max(1, checker_budget)):
-        sql = build_sql_from_chain(preceding_ctes, cur)
-        rows, err = exec_rows(db_path, sql)
+        sql = _compose(cur)
+        rows, err = exec_rows(db_path, sql, timeout_s=float(exec_timeout_s))
         if err is None:
-            # common checker polish
             try:
                 prompt = PF.format_common_checker_prompt(
                     schema[:8000],
-                    question,
+                    q,
                     hint,
                     sql[:2500],
                     "Check JOIN/SELECT/NULL/ORDER issues for THIS sub-step only; keep one CTE/SQL.",
                 )
-                text = _llm(prompt, client=client, model=model, temperature=0.3)
+                text = _llm(prompt, client=client, model=model, temperature=0.7)
                 fixed = _extract_sql(text)
                 if fixed:
                     new_cte = _sql_to_cte(
-                        fixed, step_name="revised", preceding_ctes=preceding_ctes
+                        fixed,
+                        step_name=_step_name(cur),
+                        preceding_ctes=preceding_ctes,
                     )
                     if new_cte:
-                        sql2 = build_sql_from_chain(preceding_ctes, new_cte)
-                        rows2, err2 = exec_rows(db_path, sql2)
+                        sql2 = _compose(new_cte)
+                        rows2, err2 = exec_rows(
+                            db_path, sql2, timeout_s=float(exec_timeout_s)
+                        )
                         if err2 is None:
                             cur = new_cte
                             audit["rounds"].append({"round": round_i, "mode": "common_ok"})
                             audit["final_ok"] = True
                             return cur, audit
             except Exception as e:
-                audit["rounds"].append({"round": round_i, "mode": "common_err", "error": str(e)[:120]})
+                audit["rounds"].append(
+                    {"round": round_i, "mode": "common_err", "error": str(e)[:120]}
+                )
             audit["final_ok"] = True
             audit["rounds"].append({"round": round_i, "mode": "exec_ok_keep"})
             return cur, audit
 
-        # execution checker fix
         try:
             prompt = PF.format_execution_checker_prompt(
                 schema[:8000],
-                question,
+                q,
                 hint,
                 sql[:2500],
                 f"ERROR: {err}",
             )
-            text = _llm(prompt, client=client, model=model, temperature=0.4)
+            text = _llm(prompt, client=client, model=model, temperature=0.7)
             fixed = _extract_sql(text)
             if fixed:
                 new_cte = _sql_to_cte(
-                    fixed, step_name="fixed", preceding_ctes=preceding_ctes
+                    fixed,
+                    step_name=_step_name(cur),
+                    preceding_ctes=preceding_ctes,
                 )
                 if new_cte:
                     cur = new_cte
-                    audit["rounds"].append({"round": round_i, "mode": "exec_fix", "err": (err or "")[:120]})
+                    audit["rounds"].append(
+                        {"round": round_i, "mode": "exec_fix", "err": (err or "")[:120]}
+                    )
                     continue
         except Exception as e:
-            audit["rounds"].append({"round": round_i, "mode": "exec_fix_err", "error": str(e)[:120]})
+            audit["rounds"].append(
+                {"round": round_i, "mode": "exec_fix_err", "error": str(e)[:120]}
+            )
             break
         audit["rounds"].append({"round": round_i, "mode": "exec_fail", "err": (err or "")[:120]})
         break
 
-    # last check
-    sql = build_sql_from_chain(preceding_ctes, cur)
-    _, err = exec_rows(db_path, sql)
+    sql = _compose(cur)
+    _, err = exec_rows(db_path, sql, timeout_s=float(exec_timeout_s))
     audit["final_ok"] = err is None
-    return (cur if err is None else ""), audit
+    # Keep last CTE (do not drop from pool).
+    return cur, audit
 
 
 def deepeye_cte_full_plugin(
@@ -331,7 +438,7 @@ def deepeye_cte_full_plugin(
     filter_top_k: int = 2,
     evaluator_votes: int = 5,
     shortcut_threshold: float = 0.6,
-    checker_budget: int = 2,
+    checker_budget: int = 3,
     max_workers: int = 12,
     revise_max_unique: int = 0,
     progress_prefix: str = "",
@@ -339,9 +446,14 @@ def deepeye_cte_full_plugin(
     chain_mode: str = "soft",
     require_refs: bool = False,
     prior_exec_hint: str = "",
+    prompt_preceding_ctes: Optional[List[str]] = None,
+    sql_compose_fn: Optional[Callable[[str], str]] = None,
     cum_plan_prefix: bool = False,
     trim_cte: bool = False,
     parallel_mode: str = "",
+    subq_as_gen: bool = False,
+    hide_full_q: bool = False,
+    linked_schema: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """chain_mode: off | soft | strict
 
@@ -351,28 +463,77 @@ def deepeye_cte_full_plugin(
     require_refs: if preceding CTEs exist and no candidate references them, abort
     this layer (selection_mode=no_refs_stop) instead of accepting a base-table restart.
     prior_exec_hint: optional text from prior-prefix exec summary / agent analysis.
+    prompt_preceding_ctes: if set, only this list is shown in the LLM hint as
+      "Preceding CTEs" (exec/compose still uses ``preceding_ctes`` unless
+      ``sql_compose_fn`` is set). Pass ``[]`` when a CTE DAG table already
+      carries full brick SQL (avoid duplicate dump).
+    sql_compose_fn: optional ``cte_blob -> executable SQL``. When set (e.g.
+      ``CteDAG.compose_candidate_sql``), replaces flat ``build_sql_from_chain``.
     cum_plan_prefix: gen target is the cumulative plan prefix (steps 1..k), not the
     full original question — matches models that prefer emitting a complete SQL.
     trim_cte: after gen, LLM-trim each unique CTE to current sub-step only (drop over-solve).
     parallel_mode: '' | 'leaf' | 'assemble' — parallel-slot planning.
       leaf: independent slot (no full question; gen=sub_question; ignore preceding).
       assemble: final combine from preceding CTEs answering the full question.
+    subq_as_gen: force PromptFactory gen target = Current sub-step (even under soft).
+      Intended for question-form plan steps (plan_mode=subquestion).
+    hide_full_q: never put the original end-user question into gen/revise/BR prompts
+      (only sub-question + evidence + schema + preceding CTEs).
     """
     t_step = time.time()
     client, model = _client_model(llm_config)
     PF = _load_deepeye_prompt_factory()
-    schema_s = (schema or "")[:12000]
-    evidence_s = evidence or "None"
-    if value_retrieval_hint:
-        evidence_s = f"{evidence_s}\n{value_retrieval_hint}"
+    # Align with fair_plugin / official DeepEye:
+    #   PF HINT = evidence only; VR footer only when caller still passes a hint
+    #   (official SchemaService profile already embeds value_examples).
+    schema_profile = (schema or "").strip()
+    evidence_s = (evidence or "").strip() or "None"
+    vr = (value_retrieval_hint or "").strip()
+    if vr:
+        schema_s = (
+            f"{schema_profile}\n\n-- Value retrieval (column values / keywords):\n{vr}"
+            if schema_profile
+            else f"-- Value retrieval:\n{vr}"
+        )
+    else:
+        schema_s = schema_profile
     sub_q = (sub_question or question or "").strip()
-    preceding = "\n\n".join(preceding_ctes) if preceding_ctes else "(none)"
-    hint = f"{evidence_s}\n\nCurrent sub-step only: {sub_q}\nPreceding CTEs:\n{preceding}"
+    # What revise / BR see as "question" — hide when requested.
+    q_for_aux = "" if hide_full_q else question
+    prec_for_prompt = (
+        list(preceding_ctes)
+        if prompt_preceding_ctes is None
+        else list(prompt_preceding_ctes)
+    )
+    if prec_for_prompt:
+        preceding = "\n\n".join(prec_for_prompt)
+    elif prompt_preceding_ctes is not None:
+        preceding = (
+            "(omitted here — reuse bricks from the CTE DAG table in "
+            "PRIOR INTERMEDIATE EXEC below; reference StepK_k by name)"
+        )
+    else:
+        preceding = "(none)"
+    # Step context (NOT stuffed into PF HINT — official HINT is evidence-only).
+    step_ctx = f"Current sub-step only: {sub_q}\nPreceding CTEs:\n{preceding}"
     if (prior_exec_hint or "").strip():
         from workflows.mcts_v4.actions.prior_exec_guidance import build_prior_exec_hint_block
 
-        hint = f"{hint}{build_prior_exec_hint_block(prior_exec_hint)}"
+        step_ctx = f"{step_ctx}{build_prior_exec_hint_block(prior_exec_hint)}"
+    # Legacy combined hint string kept for hide_full_q replacements below.
+    hint = f"{evidence_s}\n\n{step_ctx}"
     pref = progress_prefix or "[cte-plugin]"
+
+    def _compose(cte_blob: str) -> str:
+        """Executable SQL for a candidate CTE blob (DAG-aware when provided)."""
+        if sql_compose_fn is not None:
+            try:
+                out = (sql_compose_fn(cte_blob) or "").strip()
+                if out:
+                    return out
+            except Exception:
+                pass
+        return build_sql_from_chain(preceding_ctes, cte_blob)
 
     mode = (chain_mode or "soft").strip().lower()
     if strict_chain:
@@ -440,8 +601,9 @@ def deepeye_cte_full_plugin(
             "- If Preceding CTEs exist, prefer FROM/JOIN their names and extend them; "
             "avoid ignoring them and restarting from base tables when possible.\n"
             "- Output one new CTE: WITH step_k AS ( ... ) SELECT * FROM step_k;\n"
-            f"- Original full question (context only): {question}\n"
         )
+        if not hide_full_q:
+            chain_rules += f"- Original full question (context only): {question}\n"
         hint = f"{hint}{chain_rules}"
     elif mode == "strict":
         # Intent: each DeepEye layer solves ONLY the sub-task (primary prompt target).
@@ -455,8 +617,11 @@ def deepeye_cte_full_plugin(
                 "- Output one intermediate CTE for THIS step only "
                 "(WITH step_k AS ( ... ) SELECT * FROM step_k;).\n"
                 "- Do NOT emit the final answer columns unless the Current sub-step explicitly asks for them.\n"
-                f"- Original question (context only, do not solve it now): {question}\n"
             )
+            if not hide_full_q:
+                chain_rules += (
+                    f"- Original question (context only, do not solve it now): {question}\n"
+                )
         else:
             chain_rules = (
                 "\n\n# SUB-STEP RULES (MANDATORY)\n"
@@ -465,11 +630,15 @@ def deepeye_cte_full_plugin(
                 "- Prefer a narrow projection needed for THIS sub-step "
                 "(e.g. filtered keys/rows), not the final answer.\n"
                 "- Output one CTE: WITH step_0 AS ( ... ) SELECT * FROM step_0;\n"
-                f"- Original question (context only, do not solve it now): {question}\n"
             )
+            if not hide_full_q:
+                chain_rules += (
+                    f"- Original question (context only, do not solve it now): {question}\n"
+                )
         hint = f"{hint}{chain_rules}"
     elif preceding_ctes and mode == "soft":
         # Keep original question as gen target (PromptFactory), but steer chaining.
+        # (Overridden below when subq_as_gen / trim_cte / hide_full_q.)
         chain_rules = (
             "\n\n# CTE CHAIN GUIDANCE (important)\n"
             "- Build on Preceding CTEs: prefer FROM/JOIN their CTE names.\n"
@@ -479,6 +648,58 @@ def deepeye_cte_full_plugin(
             "- Output one new CTE step (WITH ... AS (...)).\n"
         )
         hint = f"{hint}{chain_rules}"
+
+    # subq_as_gen: put Current sub-step into PromptFactory gen_question even under soft.
+    if (
+        subq_as_gen
+        and not cum_plan_prefix
+        and pm not in ("leaf", "assemble")
+        and not trim_cte
+    ):
+        gen_question = sub_q
+        subq_gen_rules = (
+            "\n\n# SUB-QUESTION AS GENERATION TARGET\n"
+            f"- Answer THIS sub-question as SQL (intermediate CTE):\n  {sub_q}\n"
+            "- Prefer a result that answers the sub-question only.\n"
+            "- Do NOT invent later filters, ORDER BY/LIMIT ranking, or final-answer-only "
+            "columns unless this sub-question text explicitly requires them.\n"
+            "- If Preceding CTEs exist, prefer FROM/JOIN their names.\n"
+            "- Output one CTE: WITH step_k AS ( ... ) SELECT * FROM step_k;\n"
+        )
+        if hide_full_q:
+            subq_gen_rules += (
+                "- You are NOT given the full end-user question; do not guess a larger task.\n"
+            )
+        else:
+            subq_gen_rules += (
+                f"- Original full question (context only): {question}\n"
+            )
+        chain_rules = (chain_rules or "") + subq_gen_rules
+        hint = f"{hint}{subq_gen_rules}"
+
+    # hide_full_q alone (without trim): force gen=sub_q and strip any full-Q leaks.
+    if hide_full_q and not cum_plan_prefix and pm not in ("leaf", "assemble"):
+        gen_question = sub_q
+        if chain_rules:
+            chain_rules = re.sub(
+                r"(?m)^- Original (?:full )?question \(context only[^)]*\): .*\n?",
+                "",
+                chain_rules,
+            )
+            chain_rules = re.sub(
+                r"(?m)^- Original question \(context only[^)]*\): .*\n?",
+                "",
+                chain_rules,
+            )
+        if question and question.strip() and question.strip() in hint:
+            hint = hint.replace(question.strip(), "[hidden full question]")
+        hide_rules = (
+            "\n\n# NO FULL QUESTION (MANDATORY)\n"
+            "- The full end-user question is hidden. Solve ONLY the Current sub-step.\n"
+            "- Do not invent phone/email/LIMIT-1 final answers unless the sub-step asks for them.\n"
+        )
+        chain_rules = (chain_rules or "") + hide_rules
+        hint = f"{hint}{hide_rules}"
 
     # When trim_cte is on: generation itself must target ONLY the current sub-step
     # (not the full original question), then trim agent further strips leftovers.
@@ -506,46 +727,149 @@ def deepeye_cte_full_plugin(
         chain_rules = (chain_rules or "") + only_step_rules
         hint = f"{hint}{only_step_rules}"
 
-    dc_prompt = PF.format_dc_sql_generation_prompt(schema_s, gen_question, hint) + chain_rules
-    sk_prompt = PF.format_skeleton_sql_generation_prompt(schema_s, gen_question, hint) + chain_rules
+    # Hard dependency: this step is marked depends_on prior result tables.
+    if require_refs and preceding_ctes and pm not in ("leaf",):
+        must_ref = (
+            "\n\n# MUST REUSE PRECEDING CTEs (MANDATORY)\n"
+            "- This sub-step DEPENDS on preceding CTE result(s).\n"
+            "- You MUST FROM/JOIN at least one preceding CTE name in the new CTE body.\n"
+            "- Do NOT restart the whole query from base tables while ignoring preceding CTEs.\n"
+        )
+        chain_rules = (chain_rules or "") + must_ref
+        hint = f"{hint}{must_ref}"
+
+    # --- PromptFactory gen (aligned with fullsql fair) ---
+    # PF HINT = evidence only; step/chain/VR already handled via schema footer + postfix.
+    if (hint or "").startswith(evidence_s):
+        step_postfix = (hint[len(evidence_s) :] or "").lstrip("\n")
+    else:
+        step_postfix = (hint or "").strip()
+    # chain_rules already folded into hint in the branches above — do not append twice.
+    max_prompt_chars = _max_prompt_chars(llm_config)
+    strip_levels: Dict[str, int] = {}
+    gen_temperature = 0.7
+
+    def _with_step_ctx(base_prompt: str) -> str:
+        if not step_postfix and not chain_rules:
+            return base_prompt
+        # Prefer step_postfix (already includes chain_rules when branches appended).
+        extra = step_postfix if step_postfix else chain_rules
+        return f"{base_prompt}\n\n# STEP / CHAIN CONTEXT\n{extra}"
+
+    def _fmt_dc(sch: str) -> str:
+        return _with_step_ctx(
+            PF.format_dc_sql_generation_prompt(sch, gen_question, evidence_s)
+        )
+
+    def _fmt_sk(sch: str) -> str:
+        return _with_step_ctx(
+            PF.format_skeleton_sql_generation_prompt(sch, gen_question, evidence_s)
+        )
+
+    def _fmt_icl(sch: str) -> str:
+        return _with_step_ctx(
+            PF.format_icl_sql_generation_prompt(few_shots, sch, gen_question, evidence_s)
+        )
+
+    fit_schema = schema_profile if linked_schema else schema_s
+    _fit_kw = dict(
+        max_prompt_chars=max_prompt_chars,
+        linked_schema=linked_schema,
+        encoding_model_name=model,
+    )
+    dc_prompt, strip_levels["dc"] = _fit_prompt_with_schema(
+        _fmt_dc, fit_schema, **_fit_kw
+    )
+    sk_prompt, strip_levels["skeleton"] = _fit_prompt_with_schema(
+        _fmt_sk, fit_schema, **_fit_kw
+    )
     icl_prompt = None
     if n_icl > 0 and few_shots:
-        icl_prompt = PF.format_icl_sql_generation_prompt(few_shots, schema_s, gen_question, hint) + chain_rules
+        icl_prompt, strip_levels["icl"] = _fit_prompt_with_schema(
+            _fmt_icl, fit_schema, **_fit_kw
+        )
 
-    jobs: List[Tuple[str, str, float]] = []
-    for i in range(max(0, n_dc)):
-        jobs.append(("dc", dc_prompt, 0.2 + 0.2 * (i % 4)))
-    for i in range(max(0, n_skeleton)):
-        jobs.append(("skeleton", sk_prompt, 0.3 + 0.2 * (i % 4)))
-    if icl_prompt:
-        for i in range(max(0, n_icl)):
-            jobs.append(("icl", icl_prompt, 0.25 + 0.2 * (i % 4)))
+    arm_jobs: List[Tuple[str, str, int]] = []
+    if n_dc > 0:
+        arm_jobs.append(("dc", dc_prompt, int(n_dc)))
+    if n_skeleton > 0:
+        arm_jobs.append(("skeleton", sk_prompt, int(n_skeleton)))
+    if icl_prompt and n_icl > 0:
+        arm_jobs.append(("icl", icl_prompt, int(n_icl)))
 
+    n_gen_calls = sum(n for _, _, n in arm_jobs)
     print(
-        f"  {pref} gen start chain_mode={mode} n_jobs={len(jobs)} "
-        f"workers={min(max_workers, max(1, len(jobs)))}",
+        f"  {pref} gen start chain_mode={mode} arms={len(arm_jobs)} "
+        f"n_samples={n_gen_calls} temp={gen_temperature} "
+        f"strip={strip_levels} workers={min(max_workers, max(1, len(arm_jobs)))}",
         flush=True,
     )
     raw_items: List[Dict[str, Any]] = []
 
-    def _gen(kind: str, prompt: str, temp: float) -> Dict[str, Any]:
+    def _gen_arm(kind: str, prompt: str, n_samp: int) -> List[Dict[str, Any]]:
+        outs: List[Dict[str, Any]] = []
         try:
-            text = _llm(prompt, client=client, model=model, temperature=temp)
-            sql = _extract_sql(text)
-            cte = _sql_to_cte(sql, step_name=f"{kind}_step")
-            return {"kind": kind, "temp": temp, "sql": sql, "cte": cte, "ok": bool(cte)}
+            texts = _llm_n(
+                prompt,
+                client=client,
+                model=model,
+                temperature=gen_temperature,
+                n=max(1, int(n_samp)),
+            )
         except Exception as e:
-            return {"kind": kind, "temp": temp, "sql": "", "cte": "", "ok": False, "error": str(e)}
+            return [
+                {
+                    "kind": kind,
+                    "temp": gen_temperature,
+                    "sql": "",
+                    "cte": "",
+                    "ok": False,
+                    "error": str(e)[:200],
+                }
+            ]
+        for text in texts:
+            try:
+                sql = _extract_sql(text)
+                cte = _sql_to_cte(
+                    sql,
+                    step_name=f"{kind}_step",
+                    preceding_ctes=list(preceding_ctes or []),
+                )
+                outs.append(
+                    {
+                        "kind": kind,
+                        "temp": gen_temperature,
+                        "sql": sql,
+                        "cte": cte,
+                        "ok": bool(cte),
+                    }
+                )
+            except Exception as e:
+                outs.append(
+                    {
+                        "kind": kind,
+                        "temp": gen_temperature,
+                        "sql": "",
+                        "cte": "",
+                        "ok": False,
+                        "error": str(e)[:200],
+                    }
+                )
+        return outs
 
-    if jobs:
-        with ThreadPoolExecutor(max_workers=min(max_workers, len(jobs))) as ex:
-            futs = [ex.submit(_gen, k, p, t) for k, p, t in jobs]
+    if arm_jobs:
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(arm_jobs))) as ex:
+            futs = [ex.submit(_gen_arm, k, p, n) for k, p, n in arm_jobs]
             done_n = 0
             for fut in as_completed(futs):
-                raw_items.append(fut.result())
+                raw_items.extend(fut.result())
                 done_n += 1
-                if done_n == 1 or done_n == len(jobs) or done_n % 4 == 0:
-                    print(f"  {pref} gen progress {done_n}/{len(jobs)}", flush=True)
+                if done_n == 1 or done_n == len(arm_jobs):
+                    print(
+                        f"  {pref} gen progress arms {done_n}/{len(arm_jobs)} "
+                        f"cands={len(raw_items)}",
+                        flush=True,
+                    )
 
     n_raw_ok = sum(1 for x in raw_items if x.get("ok"))
     n_raw_err = sum(1 for x in raw_items if x.get("error"))
@@ -608,7 +932,7 @@ def deepeye_cte_full_plugin(
     if revise_max_unique and revise_max_unique > 0 and len(uniq) > revise_max_unique:
         scored = []
         for it in uniq:
-            sql = build_sql_from_chain(preceding_ctes, it["cte"])
+            sql = _compose(it["cte"])
             rows, err = exec_rows(db_path, sql)
             # Prefer exec-ok, then refs_prev when chaining.
             refs = (
@@ -636,7 +960,7 @@ def deepeye_cte_full_plugin(
             out = trim_cte_to_substep(
                 cte=it.get("cte") or "",
                 sub_question=sub_q,
-                question=question,
+                question=(q_for_aux or sub_q),
                 preceding_ctes=preceding_ctes,
                 client=client,
                 model=model,
@@ -683,18 +1007,24 @@ def deepeye_cte_full_plugin(
 
     def _revise_one(it: Dict[str, Any]) -> Dict[str, Any]:
         cte = (it.get("cte") or "").strip()
+        revise_extra = ""
+        # Keep step postfix out of official schema strip; fold into evidence if needed.
         fixed, raudit = _revise_candidate(
             cte=cte,
             preceding_ctes=preceding_ctes,
             db_path=db_path,
             schema=schema_s,
-            question=question,
+            question=(q_for_aux or sub_q),
             evidence=evidence_s,
             sub_question=sub_q,
             client=client,
             model=model,
             PF=PF,
             checker_budget=checker_budget,
+            sql_compose_fn=sql_compose_fn,
+            linked_schema=linked_schema,
+            extra_evidence=revise_extra,
+            max_model_len=_llm_max_model_len(llm_config),
         )
         out = dict(it)
         if not fixed:
@@ -724,7 +1054,7 @@ def deepeye_cte_full_plugin(
     clusters_map: Dict[str, Dict[str, Any]] = {}
     for it in revised:
         cte = (it.get("cte") or "").strip()
-        sql = build_sql_from_chain(preceding_ctes, cte)
+        sql = _compose(cte)
         rows, err = exec_rows(db_path, sql)
         if err is not None:
             continue
@@ -767,13 +1097,14 @@ def deepeye_cte_full_plugin(
             else:
                 # Hard require under strict: no reuse of priors → abort this layer.
                 pool = []
-        # require_refs: also abort soft when nothing references priors.
+        # require_refs: prefer refs; if none reference priors, keep pool but mark
+        # unsatisfied (caller may continue with best no-ref instead of freezing).
         if (
             require_refs
             and pool
             and not any(c.get("refs_prev") for c in pool)
         ):
-            pool = []
+            chain_filter_audit["require_refs_unsatisfied"] = True
         clusters = sorted(
             pool,
             key=lambda c: (
@@ -789,6 +1120,10 @@ def deepeye_cte_full_plugin(
         chain_filter_audit["require_refs"] = bool(require_refs)
         if not clusters:
             selection_mode = "no_refs_stop"
+        elif chain_filter_audit.get("require_refs_unsatisfied"):
+            # Keep going with best non-ref; do not abort the layer.
+            selection_mode = ""  # filled below by normal BR/shortcut path
+            chain_filter_audit["selection_note"] = "no_refs_fallback"
     else:
         clusters = sorted(raw_clusters, key=lambda c: (-c["size"], c["sig"]))
 
@@ -834,8 +1169,8 @@ def deepeye_cte_full_plugin(
                 try:
                     text = _llm(
                         PROMPT_BR.format(
-                            schema=schema_s[:6000],
-                            question=question,
+                            schema=schema_s,
+                            question=(q_for_aux or "(hidden — use Current Sub-question only)"),
                             evidence=evidence_s,
                             sub_question=sub_q,
                             preceding=preceding,
@@ -872,6 +1207,9 @@ def deepeye_cte_full_plugin(
             br_audit.append({"votes": votes})
 
     elapsed = time.time() - t_step
+    if chain_filter_audit.get("require_refs_unsatisfied") and winner:
+        if not winner.get("refs_prev"):
+            selection_mode = f"{selection_mode}+no_refs_fallback" if selection_mode else "no_refs_fallback"
     print(
         f"  {pref} select mode={selection_mode} clusters={len(clusters)} "
         f"revised={len(revised)} picked={bool(winner)} cons="
@@ -912,10 +1250,15 @@ def deepeye_cte_full_plugin(
             "n_unique": len(uniq),
             "n_revised_ok": len(revised),
             "n_clusters": len(clusters),
-            "n_gen_jobs": len(jobs),
+            "n_gen_jobs": n_gen_calls,
+            "schema_strip_levels": strip_levels,
+            "gen_temperature": gen_temperature,
             "selection_mode": selection_mode,
             "prior_exec_hint_len": len((prior_exec_hint or "").strip()),
             "trim_cte": bool(trim_cte),
+            "subq_as_gen": bool(subq_as_gen),
+            "hide_full_q": bool(hide_full_q),
+            "gen_question_preview": (gen_question or "")[:160],
             "trim_audit": trim_audit,
             "filter_top_k": filter_top_k,
             "evaluator_votes": evaluator_votes,

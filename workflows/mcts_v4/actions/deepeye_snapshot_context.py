@@ -412,26 +412,41 @@ def filter_context_for_step(
     }
 
 
-def load_few_shots(qid: str, k: int = 4) -> List[Dict[str, str]]:
+def load_few_shots(qid: str, k: Optional[int] = None) -> List[Dict[str, str]]:
+    """Load ICL few-shots. Default k=None keeps all entries (DeepEye: 9/qid)."""
     global _few_cache
     if _few_cache is None:
         _few_cache = json.loads(_FEW.read_text(encoding="utf-8"))
     raw = _few_cache.get(str(qid)) or _few_cache.get(int(qid) if str(qid).isdigit() else qid) or []
     out = []
-    for ex in raw[:k]:
+    seq = raw if k is None else raw[: max(0, int(k))]
+    for ex in seq:
         if isinstance(ex, dict) and ex.get("question") and ex.get("sql"):
             out.append({"question": ex["question"], "sql": ex["sql"]})
     return out
 
 
 def load_deepeye_context(qid: str) -> Dict[str, Any]:
-    """Return linked schema profile + value-retrieval meta for one qid."""
+    """Return linked schema profile + value-retrieval meta for one qid.
+
+    Default schema rendering uses official DeepEye SchemaService (via
+    deepeye_plugin) so CTE gen and Full SQL gen share the same profile text.
+    """
+    from workflows.mcts_v4.actions.deepeye_plugin import (
+        official_schema_enabled,
+        schema_profile_from_linked,
+        vr_footer_enabled,
+    )
+
     qid = str(qid)
-    if qid in _cache:
-        return _cache[qid]
+    mode = "off" if official_schema_enabled() else "loc"
+    cache_key = f"{qid}|{mode}"
+    if cache_key in _cache:
+        return _cache[cache_key]
 
     paths = [_C14, _FULL]
     found = None
+    found_path = None
     for path in paths:
         if not path.is_file():
             continue
@@ -443,37 +458,45 @@ def load_deepeye_context(qid: str) -> Dict[str, Any]:
                 if str((o.get("input") or {}).get("question_id")) != qid:
                     continue
                 found = o
+                found_path = path
                 break
         if found:
             break
 
     if not found:
-        ctx = {"ok": False, "schema_profile": "", "source": None}
-        _cache[qid] = ctx
+        ctx = {"ok": False, "schema_profile": "", "source": None, "schema_source": None}
+        _cache[cache_key] = ctx
         return ctx
 
     art = found.get("pipeline_artifacts") or {}
     sl = art.get("schema_linking") or {}
     vr = art.get("value_retrieval") or {}
     sch = sl.get("database_schema_after_schema_linking") or {}
-    profile = _schema_profile_from_linked(sch)
+    profile, schema_source = schema_profile_from_linked(
+        sch, fallback=_schema_profile_from_linked
+    )
     keywords = vr.get("question_keywords") or []
     retrieved = vr.get("retrieved_values") or {}
-    vr_hint = _vr_hint_from(keywords, retrieved if isinstance(retrieved, dict) else {})
+    vr_hint_raw = _vr_hint_from(keywords, retrieved if isinstance(retrieved, dict) else {})
+    # Official profile already embeds value_examples; avoid double-feeding VR
+    # into Full SQL / CTE prompts unless explicitly forced.
+    vr_hint = vr_hint_raw if vr_footer_enabled(schema_source=schema_source) else ""
 
     ctx = {
         "ok": bool(profile),
         "schema_profile": profile,
+        "schema_source": schema_source,
         "linked_schema": sch,
         "final_linked": sl.get("final_linked_tables_and_columns") or {},
         "value_keywords": keywords,
         "retrieved_values": retrieved if isinstance(retrieved, dict) else {},
         "value_retrieval_hint": vr_hint,
-        "few_shots": load_few_shots(qid, k=4),
-        "source": str(_C14 if found else _FULL),
+        "value_retrieval_hint_raw": vr_hint_raw,
+        "few_shots": load_few_shots(qid),  # all shots (DeepEye: 9)
+        "source": str(found_path) if found_path else None,
         "db_id": (found.get("input") or {}).get("database_id"),
         "question": (found.get("input") or {}).get("question"),
         "evidence": (found.get("input") or {}).get("evidence"),
     }
-    _cache[qid] = ctx
+    _cache[cache_key] = ctx
     return ctx

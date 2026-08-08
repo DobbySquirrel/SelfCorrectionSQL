@@ -20,9 +20,9 @@ Not the original DeepEye end-to-end; keeps DC/Skeleton + BR pattern at CTE grain
 from __future__ import annotations
 
 import os
-
 import re
 import sqlite3
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -297,12 +297,18 @@ def _cte_name_and_inner(cte: str) -> Tuple[str, str]:
 
 def _is_synthetic_cte_name(name: str) -> bool:
     """Names safe to remap across chain steps (not real base tables)."""
-    n = (name or "").strip().lower()
-    if re.match(r"^step(_\d+)?$", n):
+    n = (name or "").strip()
+    # DAG brick ids: Step{K}_{k} (case-sensitive form used in prompts)
+    if re.match(r"^Step\d+_\d+$", n):
         return True
-    if n in {"revised", "fixed", "step"}:
+    nl = n.lower()
+    if re.match(r"^step(_\d+)?$", nl):
         return True
-    return n.startswith(
+    if re.match(r"^step\d+_\d+$", nl):
+        return True
+    if nl in {"revised", "fixed", "step"}:
+        return True
+    return nl.startswith(
         ("dc_", "sk_", "icl_", "skeleton_", "revised", "fixed", "cte_", "gen_")
     )
 
@@ -312,6 +318,97 @@ def _apply_cte_rename(body: str, rename: Dict[str, str]) -> str:
     for old in sorted(rename.keys(), key=len, reverse=True):
         out = re.sub(rf"\b{re.escape(old)}\b", rename[old], out)
     return out
+
+
+def _norm_sql_body(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
+
+def _near_dup_cte_body(a: str, b: str) -> bool:
+    """True only if CTE bodies are identical after whitespace/case normalize.
+
+    Do NOT use prefix/containment: those mis-bind LIMIT vs no-LIMIT (qid 656)
+    and treat unrelated SQLs that share a long SELECT head as duplicates.
+    """
+    na, nb = _norm_sql_body(a), _norm_sql_body(b)
+    return bool(na) and na == nb
+
+
+def normalize_yi_cte_against_preceding(
+    cte: str,
+    *,
+    step_name: str,
+    preceding_ctes: Optional[List[str]] = None,
+) -> str:
+    """Fix multi-CTE Yi blobs that re-emit priors then append a leaf.
+
+    Models often output:
+      WITH step_k AS (<copy of prior>), step_k AS (<new logic FROM step_0>)
+    Naively chaining duplicates priors (dead CTEs / wrong step binding).
+
+    Strategy:
+      1) Drop leading CTE defs that near-duplicate any preceding body.
+      2) Keep remaining defs as the real new work (1+ CTEs).
+      3) Remap dropped names (+ common step_0) to the matched preceding CTE name.
+      4) Emit kept defs under their *original* model names (no forced step_{i}).
+    """
+    raw = (cte or "").strip().rstrip(";")
+    if not raw:
+        return ""
+    preceding_ctes = list(preceding_ctes or [])
+    defs = extract_cte_defs(raw)
+    if len(defs) <= 1 or not preceding_ctes:
+        return cte
+
+    # preceding leaf names/bodies in order (last def of each prior Yi blob)
+    prev_leaves: List[Tuple[str, str]] = []
+    for p in preceding_ctes:
+        pd = extract_cte_defs(p or "")
+        if pd:
+            prev_leaves.append((pd[-1][0], pd[-1][1]))
+    if not prev_leaves:
+        return cte
+    last_prev_name = prev_leaves[-1][0]
+
+    def _match_prev(body: str) -> Optional[str]:
+        # Prefer the latest matching prior (closest step).
+        hit: Optional[str] = None
+        for pname, pbody in prev_leaves:
+            if _near_dup_cte_body(body, pbody):
+                hit = pname
+        return hit
+
+    kept: List[Tuple[str, str]] = []
+    rename: Dict[str, str] = {}
+    for name, body in defs:
+        matched = _match_prev(body)
+        if matched is not None:
+            # Restated prior → do not re-append; bind this name to that prior.
+            rename[name] = matched
+            continue
+        kept.append((name, body))
+    if not kept:
+        kept = [defs[-1]]
+        for n, _b in defs[:-1]:
+            rename.setdefault(n, last_prev_name)
+
+    # Default: bare step_0 usually means the earliest / main prior filter.
+    rename.setdefault("step_0", prev_leaves[0][0])
+    rename.setdefault(last_prev_name, last_prev_name)
+
+    # Keep model CTE names; build_sql_from_chain uniquifies at compose time.
+    # ``step_name`` is only a fallback when a kept def has an empty name.
+    parts: List[str] = []
+    local = dict(rename)
+    last = step_name
+    for old_name, inner in kept:
+        new_name = old_name or step_name
+        body = _apply_cte_rename(inner, local)
+        parts.append(f"{new_name} AS (\n{body}\n)")
+        local[old_name] = new_name
+        local[new_name] = new_name
+        last = new_name
+    return f"WITH {', '.join(parts)}\nSELECT * FROM {last}"
 
 
 def build_sql_from_chain(cte_chain: List[str], extra: Optional[str] = None) -> str:
@@ -368,17 +465,35 @@ def _cte_body_frag(cte: str) -> Tuple[str, str]:
 
 
 def exec_rows(db_path: Path, sql: str, timeout_s: float = 30.0) -> Tuple[Optional[List[tuple]], Optional[str]]:
+    """Run SQL and fetch all rows.
+
+    Note: sqlite3.connect(timeout=...) only bounds *lock busy* waits, not query
+    runtime. We additionally install a progress_handler wall-clock abort so
+    pathological joins cannot peg CPU for hours.
+    """
     sql = (sql or "").strip().rstrip(";")
     if not sql:
         return None, "empty"
     if not db_path.is_file():
         return None, f"missing_db:{db_path}"
     try:
-        conn = sqlite3.connect(str(db_path), timeout=timeout_s)
+        # connect timeout = busy lock wait only
+        conn = sqlite3.connect(str(db_path), timeout=min(float(timeout_s), 30.0))
         try:
+            t0 = time.time()
+            limit = max(0.5, float(timeout_s))
+
+            def _progress() -> int:
+                # return non-zero → abort with OperationalError("interrupted")
+                return 1 if (time.time() - t0) >= limit else 0
+
+            # fire often enough for ~sub-second abort granularity on heavy queries
+            conn.set_progress_handler(_progress, 1000)
             cur = conn.cursor()
             cur.execute(sql)
-            return cur.fetchall(), None
+            rows = cur.fetchall()
+            conn.set_progress_handler(None, 0)
+            return rows, None
         finally:
             conn.close()
     except Exception as e:
