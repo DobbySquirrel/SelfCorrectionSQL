@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .openai_client_pool import get_openai_client
+from .llm_chat import create_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,8 @@ def _call_per_subq_binding(
         schema=_schema_for_prompt(schema_info),
         additional_context=additional_context.strip() or "(none)",
     )
-    response = client.chat.completions.create(
+    response = create_chat_completion(
+        client,
         model=config.get("model"),
         messages=[{"role": "user", "content": prompt}],
         temperature=0.0,
@@ -251,7 +253,8 @@ def _call_unified_binding(
         schema=_schema_for_prompt(schema_info),
         additional_context=additional_context.strip() or "(none)",
     )
-    response = client.chat.completions.create(
+    response = create_chat_completion(
+        client,
         model=config.get("model"),
         messages=[{"role": "user", "content": prompt}],
         temperature=0.0,
@@ -341,6 +344,7 @@ def run_column_binding_per_subq(
         block, audit = cache[key]
         audit = dict(audit)
         audit["cache_hit"] = True
+        audit["llm_calls"] = 0
         if block:
             base = additional_context or ""
             if base.strip():
